@@ -2362,14 +2362,14 @@ public class Vehicle extends Instance {
    speed *= grip <= 100 && !flipped && Math.abs(speed) > netSpeedXZ && Math.abs(Math.abs(speed) - netSpeedXZ) > Math.abs(speed) * .5 && !terrainProperties.contains(" ice ") ? .5 : 1;
    if (terrainProperties.contains(" bounce ")) {
     for (Wheel wheel : wheels) {
-     wheel.speedY -= U.random(.004) * Math.abs(speed) * clearanceY * bounce;
+     wheel.speedY -= U.random(.4) * Math.abs(speed) * bounce;
     }
     if (netSpeedY < -50 && bounce > .9) {
      U.soundPlayIfNotPlaying(sounds, landType + U.random(landType.equals("tires") ? 2 : 1), vehicleToCameraSoundDistance);
     }
    } else if (terrainProperties.contains(" maxbounce ")) {
     for (Wheel wheel : wheels) {
-     wheel.speedY -= U.random(.006) * Math.abs(speed) * clearanceY * bounce;
+     wheel.speedY -= U.random(.6) * Math.abs(speed) * bounce;
     }
     if (netSpeedY < -50 && bounce > .9) {
      U.soundPlayIfNotPlaying(sounds, landType + U.random(landType.equals("tires") ? 2 : 1), vehicleToCameraSoundDistance);

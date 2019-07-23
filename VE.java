@@ -122,7 +122,7 @@ public class VE extends Application {
  public static double limitY;
  public static double speedLimitAI;
  private static double stuntTimer;
- private static double time;
+ private static double matchTime;
  public static double printTimer;
  private static double creditsQuantity;
  public static double tick;
@@ -2537,8 +2537,8 @@ public class VE extends Application {
   }
   U.fillRGB(1, 1, 1);
   U.text("Move Camera with the T, G, U, and J Keys. Rotate with the Arrow Keys", .95);
-  U.text("RE-LOAD MAP FILE", .85);
-  U.text("BACK TO MAIN MENU", .875);
+  U.text("RE-LOAD MAP FILE", .85 + textOffset);
+  U.text("BACK TO MAIN MENU", .875 + textOffset);
   if (selectionTimer > selectionWait && (keyUp || keyDown)) {
    selected = selected < 1 ? 1 : 0;
    usingKeys = true;
@@ -3044,7 +3044,7 @@ public class VE extends Application {
   if (ending) {
    if (modeLAN == LAN.OFF) {
     scene.setCursor(Cursor.WAIT);
-    if (tournament > 0 && time <= 0 && !tournamentOver) {
+    if (tournament > 0 && matchTime <= 0 && !tournamentOver) {
      event = event.mapJump;
      tournament++;
     } else {
@@ -3114,7 +3114,7 @@ public class VE extends Application {
   U.text("REPLAY", .475 + extraY);
   U.text("OPTIONS", .5 + extraY);
   U.text("HOW TO PLAY", .525 + extraY);
-  U.text(tournament > 0 ? (time > 0 ? "CANCEL TOURNAMENT" : tournamentOver ? "BACK TO MAIN MENU" : "NEXT ROUND") : modeLAN == LAN.JOIN && !hostLeftMatch ? "Please Wait for Host to exit Match first" : "END MATCH", .55 + extraY);
+  U.text(tournament > 0 ? (matchTime > 0 ? "CANCEL TOURNAMENT" : tournamentOver ? "BACK TO MAIN MENU" : "NEXT ROUND") : modeLAN == LAN.JOIN && !hostLeftMatch ? "Please Wait for Host to exit Match first" : "END MATCH", .55 + extraY);
   if (!usingKeys) {
    selected =
    Math.abs(.45 + clickOffset - mouseY) < clickRangeY ? 0 :
@@ -3732,7 +3732,7 @@ public class VE extends Application {
 
  private void manageMatch() {
   boolean gamePlay = event == event.play || event == event.replay;
-  time -= time > 0 && event == event.play && matchStarted ? tick : 0;
+  matchTime -= matchTime > 0 && event == event.play && matchStarted ? tick : 0;
   tournamentOver = tournament > 0 && ((tournament > 4 && Math.abs(tournamentWins[0] - tournamentWins[1]) > 0) || (tournament > 2 && Math.abs(tournamentWins[0] - tournamentWins[1]) > 1));
   if (matchStarted && (keyEnter || keyEscape) && gamePlay) {
    keyUp = keyDown = keyEnter = keyEscape = false;
@@ -3743,7 +3743,7 @@ public class VE extends Application {
   arrow.setVisible(headsUpDisplay);
   Vehicle V = vehicles.get(vehiclePerspective);
   if (headsUpDisplay) {
-   if (time <= 0) {
+   if (matchTime <= 0) {
     double titleHeight = .12625;
     if (vehiclesInMatch > 1) {
      String[] formatFinal = {DF.format(finalScore[0]), DF.format(finalScore[1])};
@@ -3754,10 +3754,6 @@ public class VE extends Application {
       U.text("IT'S A TIE!", titleHeight + .001);
       U.fillRGB(1, 1, 1);
       U.text("IT'S A TIE!", titleHeight);
-      U.font(.01);
-      double color = globalFlick ? 1 : 0;
-      U.fillRGB(color, color, color);
-      U.text("Both sides have the exact same Score!", .125);
      } else {
       String announce = tournament > 0 && !tournamentOver ? "ROUND " + tournament + " OVER" : (finalScore[0] > finalScore[1] ? "GREEN" : "RED") + " TEAM WINS" + (tournamentOver ? " THE TOURNAMENT!" : "!");
       U.font(.025);
@@ -3821,14 +3817,14 @@ public class VE extends Application {
    manageArrow();
    U.font(.00875);
    U.fillRGB(E.skyInverse);
-   U.textL("Remaining Time: " + Math.round(time), .0125, .05);
+   U.textL("Remaining Time: " + Math.round(matchTime), .0125, .05);
    //try {
    //U.textR("" + Math.round(FPS), .9, .5);
    //} catch (Exception e) {
    // }
    U.fillRGB(0, 0, 0, .5);
-   U.fillRectangle(.025, .775, .05, .45);
-   U.fillRectangle(.975, .775, .05, .45);
+   U.fillRectangle(.025, .8, .05, .425);
+   U.fillRectangle(.975, .8, .05, .425);
    if (destructionLog) {
     double x1 = .4725, x2 = .5275, y1 = .0375, y2 = .05, y3 = .0625, y4 = .075, y5 = .0875;
     U.fillRectangle(.5, .05, .4, .08);
@@ -3914,10 +3910,12 @@ public class VE extends Application {
     U.text("STALL", .95);
    }
    if (printTimer > 0) {
-    U.font(.01);
-    double color = globalFlick ? 0 : 1;
-    U.fillRGB(color, color, color);
-    U.text(print, .125);
+    if (matchTime > 0) {
+     U.font(.01);
+     double color = globalFlick ? 0 : 1;
+     U.fillRGB(color, color, color);
+     U.text(print, .125);
+    }
     printTimer -= gamePlay ? tick : 0;
    } else {
     messageWait = false;
@@ -4041,7 +4039,7 @@ public class VE extends Application {
     U.textR("Current Score: " + DF.format(score[1]), .9875, .35);
    }
   }
-  if (time < 0) {
+  if (matchTime < 0) {
    finalScore[0] = score[0];
    finalScore[1] = score[1];
    if (vehiclesInMatch > 1 && headsUpDisplay) {
@@ -4057,7 +4055,7 @@ public class VE extends Application {
    } else if (score[1] > score[0]) {
     tournamentWins[1]++;
    }
-   time = 0;
+   matchTime = 0;
   }
  }
 
@@ -4273,7 +4271,7 @@ public class VE extends Application {
  private void reset() {
   matchStarted = cameraFlowFlip = false;
   vehiclePerspective = userPlayer;
-  time = matchLength;
+  matchTime = matchLength;
   arrowTarget = Math.min(vehiclesInMatch - 1, arrowTarget);
   scoreCheckpoint[0] = scoreCheckpoint[1] = scoreLap[0] = scoreLap[1] = scoreKill[0] = scoreKill[1] = 1;
   scoreDamage[0] = scoreDamage[1] = aroundXZ[1] = printTimer = lookAround = scoreStunt[0] = scoreStunt[1] = 0;

@@ -21,9 +21,16 @@ public class Meteor {
 
  public void run(boolean update) {
   meteorParts.get(0).onFire = U.random() < .1;
-  if (meteorParts.get(meteorParts.size() - 1).Y >= 0) {
+  boolean deploy = false;
+  if (update) {
+   meteorParts.get(0).X += speedX * tick;
+   meteorParts.get(0).Y += E.meteorSpeed * tick;
+   meteorParts.get(0).Z += speedZ * tick;
+   deploy = Math.abs(meteorParts.get(0).Y - cameraY) > 375000 || Math.abs(meteorParts.get(0).X - cameraX) > 500000 || Math.abs(meteorParts.get(0).Z - cameraZ) > 500000;
+  }
+  if (meteorParts.get(meteorParts.size() - 1).Y >= 0 || deploy) {
    meteorParts.get(0).X = cameraX + U.randomPlusMinus(500000.);
-   meteorParts.get(0).Y = -125000 - U.random(250000.);
+   meteorParts.get(0).Y = cameraY - 125000 - U.random(250000.);
    meteorParts.get(0).Z = cameraZ + U.randomPlusMinus(500000.);
    double speedsXZ = U.random(2.) * E.meteorSpeed;
    speedX = U.random() < .5 ? speedsXZ : -speedsXZ;
@@ -36,11 +43,6 @@ public class Meteor {
    meteorParts.get(meteorParts.size() - 1).Y = meteorParts.get(0).Y;
    speedX = meteorParts.get(0).X > cameraX ? -Math.abs(speedX) : meteorParts.get(0).X < cameraX ? Math.abs(speedX) : speedX;
    speedZ = meteorParts.get(0).Z > cameraZ ? -Math.abs(speedZ) : meteorParts.get(0).Z < cameraZ ? Math.abs(speedZ) : speedZ;
-  }
-  if (update) {
-   meteorParts.get(0).X += speedX * tick;
-   meteorParts.get(0).Y += E.meteorSpeed * tick;
-   meteorParts.get(0).Z += speedZ * tick;
   }
   for (int n = 1; n < meteorParts.size(); n++) {
    meteorParts.get(n).X = meteorParts.get(0).X - (speedX * n);
