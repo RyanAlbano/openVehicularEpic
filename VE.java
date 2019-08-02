@@ -41,8 +41,7 @@ import ve.converter.*;
 public class VE extends Application {
 
  private Scene scene;
- private SubScene scene3D;
- private SubScene arrowScene;
+ private SubScene scene3D, arrowScene;
  public static final Group group = new Group();
  private static final Group group2 = new Group();
  private final PerspectiveCamera camera = new PerspectiveCamera(true);
@@ -221,7 +220,7 @@ public class VE extends Application {
  private static final List<String> mapModels = Arrays.asList("", "road", "roadshort", "roadturn", "roadbendL", "roadbendR", "roadend", "roadincline", "offroad", "offroadshort", "offroadturn", "offroadbump", "offroadrocky", "offroadend", "offroadincline", "mixroad",
  "checkpoint", "fixring",
  "ramp", "rampcurved", "ramptrapezoid", "ramptriangle", "rampwall", "quarterpipe", "pyramid", "plateau",
- "offbump", "offramp", "offrampflat", "offpile0", "offpile1", "offplateau",
+ "offplateau", "mound",//<-'mound' is needed!
  "floor", "offfloor", "wall", "cube", "offcube", "spike", "spikes", "block", "blocktower", "border", "beam", "grid", "tunnel", "roadlift", "speedgate", "slowgate", "antigravity",
  "tree0", "tree1", "tree2", "treepalm", "cactus0", "cactus1", "cactus2", "rainbow", "crescent");
  public static final List<String> maps = new ArrayList<>(Arrays.asList("basic", "lapsglory", "checkpoint", "gunpowder", "underover", "antigravity", "versus1", "versus2", "versus3", "trackless", "desert", "3drace", "trip", "racenowhere", "moonlight", "bottleneck", "railing", "twisted", "pit", "falls", "pyramid", "fusion", "darkdivide", "arctic", "scenic", "wintermode", "mountainhop", "damage", "cavern", "southpole", "aerialcontrol", "matrix", "mist", "vansland", "dustdevil", "forest", "zipcross", "tornado", "volcanic", "tsunami", "boulder", "sands", "meteor", "speedway", "endurance", "tunnel", "circle", "circleXL", "circles", "everything", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "laststand", "parkinglot", "city", "machine", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "summit", "portal", "blackhole", "doomsday", "+UserMap & TUTORIAL+"));
@@ -248,7 +247,7 @@ public class VE extends Application {
 
  public enum AIBehavior {adapt, race, fight}
 
- public class Point {
+ public static class Point {
 
   public double X, Y, Z;
   public String type = "";
@@ -256,7 +255,7 @@ public class VE extends Application {
 
  public static final List<Point> points = new ArrayList<>();
 
- public class Checkpoint {
+ public static class Checkpoint {
 
   public double X, Y, Z;
   public String type = "";
@@ -265,7 +264,7 @@ public class VE extends Application {
 
  public static final List<Checkpoint> checkpoints = new ArrayList<>();
 
- class BonusBall extends Sphere {
+ static class BonusBall extends Sphere {
 
   double X, Y, Z, speedX, speedY, speedZ;
  }
@@ -829,7 +828,7 @@ public class VE extends Application {
       if (matchStarted) {
        for (Vehicle vehicle : vehicles) {
         for (Explosion explosion : vehicle.explosions) {
-         explosion.run(vehicle, gamePlay);
+         explosion.run(gamePlay);
         }
         for (Special special : vehicle.specials) {
          if (!U.startsWith(special.type, "particledisintegrator", "phantom", "teleport")) {
@@ -1187,7 +1186,7 @@ public class VE extends Application {
       }
      } else if (s.startsWith("rocks")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
-       trackParts.add(new TrackPart());
+       trackParts.add(new TrackPart(U.randomPlusMinus(800000.), U.randomPlusMinus(800000.), 0, 100 + U.random(400.), U.random(100.), U.random(200.), true));
       }
      } else if (s.startsWith("fire")) {
       E.fires.add(new Fire(s));
@@ -1260,7 +1259,7 @@ public class VE extends Application {
      randomY = s.startsWith("randomY") ? U.getValue(s, 0) : randomY;
      randomZ = s.startsWith("randomZ") ? U.getValue(s, 0) : randomZ;
      if (s.startsWith("(") || s.startsWith("curve(")) {
-      int trackNumber = getTrackPart(U.getString(s, 0) + (U.getString(s, 0).equals("offpile") ? U.random(2) : ""));
+      int trackNumber = getTrackPart(U.getString(s, 0));
       if (trackNumber < 0) {
        trackNumber = 0;
        System.out.println("Map Part List Exception (" + mapName + ")");
@@ -1286,17 +1285,18 @@ public class VE extends Application {
       if (s.startsWith("curve(")) {
        double angle = 90;
        try {
-        angle += U.getValue(s, 7);
+        angle += U.getValue(s, 8);
        } catch (Exception ignored) {
        }
-       for (double iteration = U.getValue(s, 4); ; iteration += iteration < U.getValue(s, 5) ? 1 : -1) {
-        trackParts.add(new TrackPart(trackNumber, mapModels, summedPositionX + U.getValue(s, 6) * U.sin(iteration), summedPositionY, summedPositionZ + U.getValue(s, 6) * U.cos(iteration), -iteration + angle, false, instanceSize, instanceScale));
-        if (Math.abs(iteration - U.getValue(s, 5)) < 1) {
+       double iterationRate = U.getValue(s, 6);
+       for (double iteration = U.getValue(s, 4); ; iteration += iteration < U.getValue(s, 5) ? iterationRate : -iterationRate) {
+        trackParts.add(new TrackPart(trackNumber, mapModels, summedPositionX + U.getValue(s, 7) * U.sin(iteration), summedPositionY, summedPositionZ + U.getValue(s, 7) * U.cos(iteration), -iteration + angle, false, instanceSize, instanceScale));
+        if (Math.abs(iteration - U.getValue(s, 5)) < iterationRate) {
          break;
         }
        }
       } else {
-       double rotation = mapName.equals("Phantom Cavern") && (trackNumber == getTrackPart("offpile0") || trackNumber == getTrackPart("offpile1")) ? U.random(360.) : U.getValue(s, 4);
+       double rotation = U.getValue(s, 4);
        instanceScale[1] = mapName.equals("Ghost City") && trackNumber == getTrackPart("cube") && instanceSize == 10000 ? 1 + U.random(3.) : instanceScale[1];
        if (mapName.equals("Meteor Fields") && trackNumber == getTrackPart("ramp")) {
         if (rotation == 0) {
@@ -1330,7 +1330,7 @@ public class VE extends Application {
          while (inside) {
           inside = false;
           for (TrackPart trackPart : trackParts) {
-           inside = (trackPart.modelNumber == getTrackPart("offpile0") || trackPart.modelNumber == getTrackPart("offpile1")) && U.distance(summedPositionX, trackPart.X, summedPositionZ, trackPart.Z) <= trackPart.renderRadius || inside;
+           inside = !trackPart.scenery && trackPart.mound != null && U.distance(summedPositionX, trackPart.X, summedPositionZ, trackPart.Z) <= trackPart.mound.getMajorRadius() || inside;
           }
           if (inside) {
            summedPositionX = U.getValue(s, 1) + U.randomPlusMinus(randomX);
@@ -1391,7 +1391,17 @@ public class VE extends Application {
          }
         }
        }
-       trackParts.add(new TrackPart(trackNumber, mapModels, summedPositionX, summedPositionY, summedPositionZ, rotation, false, instanceSize, instanceScale));
+       if (U.getString(s, 0).equals("mound")) {
+        try {
+         trackParts.add(new TrackPart(summedPositionX, summedPositionZ, summedPositionY,
+         U.getValue(s, 4) * instanceSize, U.getValue(s, 5) * instanceSize, U.getValue(s, 6) * instanceSize, false));
+        } catch (Exception E) {
+         trackParts.add(new TrackPart(summedPositionX, summedPositionZ, summedPositionY,
+         U.getValue(s, 4) * instanceSize * U.random(), U.getValue(s, 4) * instanceSize * U.random(), U.getValue(s, 4) * instanceSize * U.random(), false));
+        }
+       } else {
+        trackParts.add(new TrackPart(trackNumber, mapModels, summedPositionX, summedPositionY, summedPositionZ, rotation, false, instanceSize, instanceScale));
+       }
        if (trackNumber == getTrackPart("rainbow")) {
         trackParts.get(trackParts.size() - 1).modelProperties += " rainbow ";
        } else if (trackNumber == getTrackPart("crescent")) {
@@ -1480,10 +1490,12 @@ public class VE extends Application {
      userRandomRGB[0] = U.random();
      userRandomRGB[1] = U.random();
      userRandomRGB[2] = U.random();
-     /*double vehicleCircle = 360 * n / (double) vehicleModels.size();//<-This block's used to get the V.E. logo image on the World's Biggest Parking Lot
-     xRandom = 4000 * U.sin(vehicleCircle);
-     zRandom = 4000 * U.cos(vehicleCircle);
-     randomXZ = -vehicleCircle + 180;*/
+     /*{//<-This block's used to get the V.E. logo image on the World's Biggest Parking Lot
+      double vehicleCircle = 360 * n / (double) vehicleModels.size();
+      xRandom = 4000 * U.sin(vehicleCircle);
+      zRandom = 4000 * U.cos(vehicleCircle);
+      randomXZ = -vehicleCircle + 180;
+     }*/
      trackParts.add(new TrackPart(n, vehicleModels, xRandom, 0, zRandom, randomXZ, true));
      trackParts.get(trackParts.size() - 1).Y = -trackParts.get(trackParts.size() - 1).clearanceY - trackParts.get(trackParts.size() - 1).turretBaseY;
      points.add(new Point());
@@ -2205,7 +2217,7 @@ public class VE extends Application {
    U.textR("Acceleration Phases:", lineLL, Y2);
    U.textL(V.vehicleType == type.turret ? "N/A" : "+" + V.accelerationStages[0] + ",  +" + V.accelerationStages[1], lineLR, Y2);
    U.textR("Handling Response:", lineLL, Y3);
-   U.textL(V.turnRate < 0 ? "Instant" : "" + V.turnRate, lineLR, Y3);
+   U.textL(V.turnRate == Double.POSITIVE_INFINITY ? "Instant" : "" + V.turnRate, lineLR, Y3);
    U.textR("Stunt Response:", lineLL, Y4);
    U.textL(V.vehicleType == type.vehicle ? "" + (V.airAcceleration == Double.POSITIVE_INFINITY ? "Instant" : (float) V.airAcceleration) : "N/A", lineLR, Y4);
    U.textR("Special(s):", lineLL, Y5);
@@ -2756,7 +2768,7 @@ public class VE extends Application {
    U.text("+", .55, .3);
    U.fillRGB(1, 1, 1);
    U.text("While driving on the GROUND, Spacebar is the Handbrake", .5);
-   U.text("If flying in the AIR, Spacebar enables aerial control of the vehicle, which can include Stunts and/or Flying", .525);
+   U.text("While AIRBORNE, Spacebar enables aerial control of the vehicle, which can include Stunts and/or Flying", .525);
    U.text("(If you're on the ground and using a flying vehicle, press Spacebar + Down Arrow to Take-off at any time)", .55);
    U.text("When flying, hold Spacebar to yaw-steer instead of steer by banking", .575);
    U.text("For TURRET vehicles, Spacebar enables finer Precision for Aiming", .6);
@@ -3334,11 +3346,11 @@ public class VE extends Application {
    U.fillRGB(1, 1, 1);
    if (modeLAN != LAN.OFF) {
     if (globalFlick) {
-     String s = "Players in: " + userName;
+     StringBuilder s = new StringBuilder("Players in: " + userName);
      for (n = 0; n < vehiclesInMatch; n++) {
-      s += n != userPlayer ? ", " + playerNames[n] : "";
+      s.append(n != userPlayer ? ", " + playerNames[n] : "");
      }
-     U.text(s, .45);
+     U.text(s.toString(), .45);
     }
     U.text("(Hit ESCAPE to Cancel)", .5);
    } else {
@@ -3475,16 +3487,16 @@ public class VE extends Application {
   U.font(.05);
   U.text("OPTIONS", .15);
   U.font(.015);
-  U.text("RETURN", .875);
+  U.text("RETURN", .875 + textOffset);
   U.fillRGB(1, 1, 1);
-  U.text("DriverSeat [" + (driverSeat > 0 ? "RIGHT->" : driverSeat < 0 ? "<-LEFT" : "CENTER") + "]", .3);
-  U.text("Units [" + (units == .5364466667 ? "METRIC" : units == 1 / 3. ? "U.S." : "VEs") + "]", .35);
-  U.text("Limit FPS to [" + (userFPS > U.refreshRate ? "JavaFX Default" : userFPS) + "]", .4);
+  U.text("DriverSeat [" + (driverSeat > 0 ? "RIGHT->" : driverSeat < 0 ? "<-LEFT" : "CENTER") + "]", .3 + textOffset);
+  U.text("Units [" + (units == .5364466667 ? "METRIC" : units == 1 / 3. ? "U.S." : "VEs") + "]", .35 + textOffset);
+  U.text("Limit FPS to [" + (userFPS > U.refreshRate ? "JavaFX Default" : userFPS) + "]", .4 + textOffset);
   if (fromMenu) {
-   U.text("Normal-Mapping [" + (normalMapping ? "ON" : "OFF") + "]", .45);
-   U.text("Match Length [" + matchLength + "]", .5);
-   U.text("Game Mode [" + (tournament > 0 ? "TOURNAMENT" : "NORMAL") + "]", .55);
-   U.text("# of Players [" + vehiclesInMatch + "]", .6);
+   U.text("Normal-Mapping [" + (normalMapping ? "ON" : "OFF") + "]", .45 + textOffset);
+   U.text("Match Length [" + matchLength + "]", .5 + textOffset);
+   U.text("Game Mode [" + (tournament > 0 ? "TOURNAMENT" : "NORMAL") + "]", .55 + textOffset);
+   U.text("# of Players [" + vehiclesInMatch + "]", .6 + textOffset);
   }
   if (selectionTimer > selectionWait) {
    if (keyUp) {
@@ -3615,9 +3627,10 @@ public class VE extends Application {
   }
   vehiclesInMatch = tournament > 0 ? Math.max(2, vehiclesInMatch) : vehiclesInMatch;
   if (!usingKeys) {
-   selected = Math.abs(.825 - mouseY) < clickRangeY ? 0 : Math.abs(.25 - mouseY) < clickRangeY ? 1 : Math.abs(.3 - mouseY) < clickRangeY ? 2 : Math.abs(.35 - mouseY) < clickRangeY ? 3 : selected;
+   double clickOffset = .025;
+   selected = Math.abs(.825 + clickOffset - mouseY) < clickRangeY ? 0 : Math.abs(.25 + clickOffset - mouseY) < clickRangeY ? 1 : Math.abs(.3 + clickOffset - mouseY) < clickRangeY ? 2 : Math.abs(.35 + clickOffset - mouseY) < clickRangeY ? 3 : selected;
    if (event == event.optionsMenu) {
-    selected = Math.abs(.4 - mouseY) < clickRangeY ? 4 : Math.abs(.45 - mouseY) < clickRangeY ? 5 : Math.abs(.5 - mouseY) < clickRangeY ? 6 : Math.abs(.55 - mouseY) < clickRangeY ? 7 : selected;
+    selected = Math.abs(.4 + clickOffset - mouseY) < clickRangeY ? 4 : Math.abs(.45 + clickOffset - mouseY) < clickRangeY ? 5 : Math.abs(.5 + clickOffset - mouseY) < clickRangeY ? 6 : Math.abs(.55 + clickOffset - mouseY) < clickRangeY ? 7 : selected;
    }
   }
  }
@@ -3791,8 +3804,7 @@ public class VE extends Application {
      U.font(.0175);
      double color = globalFlick ? .5 : 0;
      U.fillRGB(color, color, color);
-     U.text("FINAL SCORE:", .225);
-     U.text(finalScore[1] + "", .5, .25);
+     U.text("FINAL SCORE: " + finalScore[1], .225);
     }
    }
    if (V.destroyed) {

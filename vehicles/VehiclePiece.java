@@ -64,7 +64,7 @@ public class VehiclePiece extends Piece {
   wheel = type.contains(" wheel ");
   base = type.contains(" base ");
   noCrush = type.contains(" noCrush ");
-  shake = V.realVehicle && (type.contains(" shake ") || (V.engine.equals("hotrod") && !U.contains(type, " driver ", " wheel ")));
+  shake = V.realVehicle && (type.contains(" shake ") || (V.engine == Vehicle.Engine.hotrod && !U.contains(type, " driver ", " wheel ")));
   controller = type.contains(" controller ");
   steer += type.contains(" steerXY ") ? " XY " : "";
   steer += type.contains(" steerYZ ") ? " YZ " : "";
@@ -193,7 +193,7 @@ public class VehiclePiece extends Piece {
    fastCull = type.contains(" fastCullL ") ? 1 : fastCull;
   }
   flickPolarity = type.contains(" flick1 ") ? 1 : type.contains(" flick2 ") ? 2 : flickPolarity;
-  setRenderSizeRequirement(light || blink || thrust != null || VE.vehiclesInMatch < 3, storeX, storeY, storeZ, vertexQuantity);
+  setRenderSizeRequirement(storeX, storeY, storeZ, vertexQuantity, light || blink || thrust != null || VE.vehiclesInMatch < 3);
   MV.setVisible(false);
   damage = new Rotate();
   if (matrix != null) {

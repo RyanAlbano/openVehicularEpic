@@ -33,7 +33,7 @@ class Converter {
     if (sp[0].startsWith("newmtl")) {
      materialName.add(sp[1]);
     } else if (sp[0].startsWith("Kd")) {
-     materialColor.add(new Color(Double.valueOf(sp[1]), Double.valueOf(sp[2]), Double.valueOf(sp[3]), 1.));
+     materialColor.add(new Color(Double.parseDouble(sp[1]), Double.parseDouble(sp[2]), Double.parseDouble(sp[3]), 1.));
     }
    }
   } catch (IOException e) {
@@ -152,7 +152,7 @@ class Converter {
   return n2;
  }
 
- class Vector3<E> {
+ static class Vector3<E> {
 
   final E x;
   final E y;

@@ -428,7 +428,7 @@ public class AI {
      V.reverse = true;
     }
    }
-   if (V.engine.equals("jetfighter")) {
+   if (V.engine== Vehicle.Engine.jetfighter) {
     boosting = !againstWall && V.speed < 400 || (!(V.speed > 600) && boosting);
     V.boost = (boosting || (attacking && (VE.vehicles.get(target).netSpeed >= V.netSpeed || U.distance(V.X, VE.vehicles.get(target).X, V.Z, VE.vehicles.get(target).Z) > 250000))) || V.boost;
     double altitudeFloor = V.localVehicleGround - (E.boulders.size() > 0 ? (E.boulders.get(0).getRadius() * 2) + (V.collisionRadius * 2) : 1000);

@@ -59,8 +59,18 @@ class ExplosionPart extends MeshView {
      Z = U.clamp(limitBack, Z, limitFront);
      Y = U.clamp(limitY, Y, -limitY);
     }
-    if (U.getDepth(X + explosion.X, Y + explosion.Y, Z + explosion.Z) > -size) {
-     U.setTranslate(this, X + explosion.X, Y + explosion.Y, Z + explosion.Z);
+    double setX, setY, setZ;
+    if (explosion.focusVehicle != null) {
+     setX = X + explosion.focusVehicle.X;
+     setY = Y + explosion.focusVehicle.Y;
+     setZ = Z + explosion.focusVehicle.Z;
+    } else {
+     setX = X + explosion.X;
+     setY = Y + explosion.Y;
+     setZ = Z + explosion.Z;
+    }
+    if (U.getDepth(setX, setY, setZ) > -size) {
+     U.setTranslate(this, setX, setY, setZ);
      U.randomRotate(this);
      setVisible(true);
     } else {

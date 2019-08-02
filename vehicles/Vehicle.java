@@ -142,7 +142,6 @@ public class Vehicle extends Instance {
  public String vehicleName = "";
  private String landType = "";
  private String contact = "";
- public String engine = "";
  public String explosionType = "";
  public String terrainProperties = "";
  public VE.mode mode;
@@ -160,6 +159,16 @@ public class Vehicle extends Instance {
  public final List<Explosion> explosions = new ArrayList<>();
  int currentExplosion;
  private final List<NukeBlast> nukeBlasts = new ArrayList<>();
+
+ enum Engine {
+  none, normal, tiny, agera, aventador, veyron, chiron, hotrod, huayra, laferrari, minicooper, p1, s7, turboracer,
+  retro, electric,
+  smalltruck, bigtruck, authentictruck, monstertruck, humvee, tank, smallcraft, turbo, power, massive, train,
+  smallprop, bigprop,
+  jet, brightjet, powerjet, torchjet, jetfighter, turbine, rocket
+ }
+
+ public Engine engine = Engine.none;
 
  public Vehicle(int model, List<String> L, int I, boolean vehicle) {
   realVehicle = vehicle;
@@ -343,7 +352,7 @@ public class Vehicle extends Instance {
     exhaust = s.startsWith("exhaustFire(yes") ? 0 : exhaust;
     othersAvoidAt = s.startsWith("othersAvoidAt(") ? U.getValue(s, 0) : othersAvoidAt;
     if (s.startsWith("engine(")) {
-     engine = U.getString(s, 0);
+     engine = Engine.valueOf(U.getString(s, 0));
      try {
       engineClipQuantity = (int) Math.round(U.getValue(s, 1));
       engineTuneRatio = U.getValue(s, 2);
@@ -479,20 +488,24 @@ public class Vehicle extends Instance {
     modelProperties += s.startsWith("mapTerrain") ? " mapTerrain " : "";
     getSizeScaleTranslate(s, translate);
     if (s.startsWith("wheelColor(")) {
-     try {
-      wheelRGB[0] = U.getValue(s, 0);
-      wheelRGB[1] = U.getValue(s, 1);
-      wheelRGB[2] = U.getValue(s, 2);
-     } catch (Exception e) {
-      wheelRGB[0] = wheelRGB[1] = wheelRGB[2] = .1875;
-      if (s.contains("theRandomColor")) {
-       wheelRGB[0] = theRandomColor[0];
-       wheelRGB[1] = theRandomColor[1];
-       wheelRGB[2] = theRandomColor[2];
-       wheelType += " theRandomColor ";
+     if (s.contains("reflect")) {
+      wheelType += " reflect ";
+     } else {
+      try {
+       wheelRGB[0] = U.getValue(s, 0);
+       wheelRGB[1] = U.getValue(s, 1);
+       wheelRGB[2] = U.getValue(s, 2);
+      } catch (Exception e) {
+       if (s.contains("theRandomColor")) {
+        wheelRGB[0] = theRandomColor[0];
+        wheelRGB[1] = theRandomColor[1];
+        wheelRGB[2] = theRandomColor[2];
+        wheelType += " theRandomColor ";
+       } else {
+        wheelRGB[0] = wheelRGB[1] = wheelRGB[2] = U.getValue(s, 0);
+       }
       }
      }
-     wheelType += s.contains("reflect") ? " reflect " : "";
      wheelType += s.contains("noSpecular") ? " noSpecular " : s.contains("shiny") ? " shiny " : "";
     } else if (s.startsWith("rims(")) {
      if (!showVehicle) {
@@ -506,12 +519,13 @@ public class Vehicle extends Instance {
       rimRGB[1] = U.getValue(s, 3);
       rimRGB[2] = U.getValue(s, 4);
      } catch (Exception e) {
-      rimRGB[0] = rimRGB[1] = rimRGB[2] = .5;
       if (s.contains("theRandomColor")) {
        rimRGB[0] = theRandomColor[0];
        rimRGB[1] = theRandomColor[1];
        rimRGB[2] = theRandomColor[2];
        rimType += " theRandomColor ";
+      } else {
+       rimRGB[0] = rimRGB[1] = rimRGB[2] = U.getValue(s, 2);
       }
      }
      rimType += s.contains("reflect") ? " reflect " : "";
@@ -561,6 +575,7 @@ public class Vehicle extends Instance {
   for (Special special : specials) {
    if (special.type.equals("spinner")) {
     spinnerSpeed = 0;
+    break;
    }
   }
   turnRate = turnRate <= 0 ? Double.POSITIVE_INFINITY : turnRate;
@@ -580,7 +595,7 @@ public class Vehicle extends Instance {
      wheel.sparks.add(new Spark());
     }
    }
-   if (U.contains(engine, "jet", "rocket") || speedBoost > 0 || exhaust == exhaust) {
+   if (U.contains(engine.name(), "jet", "turbine", "rocket") || speedBoost > 0 || exhaust == exhaust) {
     for (n = VE.jetQuantity; --n >= 0; ) {
      jets.add(new Jet());
     }
@@ -2126,10 +2141,10 @@ public class Vehicle extends Instance {
     Z += airPush * U.sin(XZ) * polarity * stuntSpeed[1] * VE.tick;
    } else if (mode != VE.mode.fly) {
     if (reverse) {
-     speed -= speed > 0 && !engine.equals("hotrod") ? brake * .5 * VE.tick : speed > -topSpeeds[0] ? accelerationStages[0] * VE.tick : 0;
+     speed -= speed > 0 && engine != Engine.hotrod ? brake * .5 * VE.tick : speed > -topSpeeds[0] ? accelerationStages[0] * VE.tick : 0;
     }
     if (drive) {
-     if (speed < 0 && !engine.equals("hotrod")) {
+     if (speed < 0 && engine != Engine.hotrod) {
       speed += brake * VE.tick;
      } else {
       int u = 0;
@@ -2171,11 +2186,11 @@ public class Vehicle extends Instance {
    } else {
     if ((turnR && !turnL) || (steerByMouse && speedXZ > VE.mouseSteerX)) {
      speedXZ -= (speedXZ > 0 ? 2 : 1) * turnRate * VE.tick;
-     speedXZ = speedXZ < -turnAmount ? -turnAmount : speedXZ;
+     speedXZ = Math.max(speedXZ, -turnAmount);
     }
     if ((turnL && !turnR) || (steerByMouse && speedXZ < VE.mouseSteerX)) {
      speedXZ += (speedXZ < 0 ? 2 : 1) * turnRate * VE.tick;
-     speedXZ = speedXZ > turnAmount ? turnAmount : speedXZ;
+     speedXZ = Math.min(speedXZ, turnAmount);
     }
     if (speedXZ != 0 && !turnL && !turnR && !steerByMouse) {
      if (Math.abs(speedXZ) < turnRate * 2 * VE.tick) {
@@ -2188,11 +2203,11 @@ public class Vehicle extends Instance {
    if (mode == VE.mode.fly) {
     if (drive || (steerByMouse && speedYZ > VE.mouseSteerY)) {
      speedYZ -= (speedYZ > 0 ? 2 : 1) * turnRate * VE.tick;
-     speedYZ = speedYZ < -maxTurn ? -maxTurn : speedYZ;
+     speedYZ = Math.max(speedYZ, -maxTurn);
     }
     if (reverse || (steerByMouse && speedYZ < VE.mouseSteerY)) {
      speedYZ += (speedYZ < 0 ? 2 : 1) * turnRate * VE.tick;
-     speedYZ = speedYZ > maxTurn ? maxTurn : speedYZ;
+     speedYZ = Math.min(speedYZ, maxTurn);
     }
    }
    if (speedYZ != 0 && (mode != VE.mode.fly || (!drive && !reverse && !steerByMouse))) {
@@ -2229,7 +2244,7 @@ public class Vehicle extends Instance {
    }
    YZ += speedYZ * .135 * U.cos(XY) * VE.tick;
    stuntYZ -= speedYZ * .135 * U.cos(XY) * VE.tick;
-   if (!handbrake && !engine.equals("powerjet")) {
+   if (!handbrake && engine != Engine.powerjet) {
     XZ -= speedYZ * .135 * U.sin(XY) * polarity * VE.tick;
     stuntXZ -= speedYZ * .135 * U.sin(XY) * polarity * VE.tick;
    }
@@ -2246,7 +2261,7 @@ public class Vehicle extends Instance {
    } else {
     stallSpeed += E.gravity * VE.tick;
     if (Math.abs(speed) > 0 && stallSpeed > 0) {
-     stallSpeed -= Math.abs(speed) * VE.tick * (engine.equals("smallprop") ? .04 : .02);
+     stallSpeed -= Math.abs(speed) * VE.tick * (engine == Engine.smallprop ? .04 : .02);
     }
     stallSpeed *= inPool ? Math.min(.95 * VE.tick, 1) : 1;
    }
@@ -2300,8 +2315,8 @@ public class Vehicle extends Instance {
    double speed1 = -(speed * U.sin(XZ) * U.cos(YZ)), speed2 = speed * U.cos(XZ) * U.cos(YZ), speed3 = -(speed * U.sin(YZ));
    for (Wheel wheel : wheels) {
     if (flipped) {
-     wheel.speedX -= wheel.speedX > setGrip ? setGrip : wheel.speedX < -setGrip ? -setGrip : wheel.speedX;
-     wheel.speedZ -= wheel.speedZ > setGrip ? setGrip : wheel.speedZ < -setGrip ? -setGrip : wheel.speedZ;
+     wheel.speedX -= wheel.speedX > setGrip ? setGrip : Math.max(wheel.speedX, -setGrip);
+     wheel.speedZ -= wheel.speedZ > setGrip ? setGrip : Math.max(wheel.speedZ, -setGrip);
     } else {
      if (Math.abs(wheel.speedX - speed1) > setGrip) {
       wheel.speedX += wheel.speedX < speed1 ? setGrip : wheel.speedX > speed1 ? -setGrip : 0;
@@ -2324,7 +2339,7 @@ public class Vehicle extends Instance {
    }
    double netSpeedXZ = U.netValue(netSpeedX, netSpeedZ);
    if (isDrive) {
-    boolean kineticFriction = Math.abs(Math.abs(speed) - netSpeedXZ) > 15, driveEngine = !U.contains(engine, "prop", "jet", "rocket");
+    boolean kineticFriction = Math.abs(Math.abs(speed) - netSpeedXZ) > 15, driveEngine = !U.contains(engine.name(), "prop", "jet", "rocket");
     if (((driveEngine && kineticFriction) || Math.pow(speedXZ, 2) > 300000 / netSpeedXZ) && (kineticFriction || Math.abs(speed) > topSpeeds[1] * .9)) {
      if (terrainProperties.contains(" hard ") && contact.equals("metal")) {
       for (Wheel wheel : wheels) {
@@ -2362,7 +2377,7 @@ public class Vehicle extends Instance {
    speed *= grip <= 100 && !flipped && Math.abs(speed) > netSpeedXZ && Math.abs(Math.abs(speed) - netSpeedXZ) > Math.abs(speed) * .5 && !terrainProperties.contains(" ice ") ? .5 : 1;
    if (terrainProperties.contains(" bounce ")) {
     for (Wheel wheel : wheels) {
-     wheel.speedY -= U.random(.4) * Math.abs(speed) * bounce;
+     wheel.speedY -= U.random(.3) * Math.abs(speed) * bounce;
     }
     if (netSpeedY < -50 && bounce > .9) {
      U.soundPlayIfNotPlaying(sounds, landType + U.random(landType.equals("tires") ? 2 : 1), vehicleToCameraSoundDistance);
@@ -2379,7 +2394,7 @@ public class Vehicle extends Instance {
   }
   lastXZ = XZ;
   boolean crashLand = (Math.abs(YZ) > 30 || Math.abs(XY) > 30) && !(Math.abs(YZ) > 150 && Math.abs(XY) > 150);
-  if (inPool) {
+  if (inPool && !phantomEngaged) {
    if (netSpeed > 0) {
     for (n = 3; --n >= 0; ) {
      for (Wheel wheel : wheels) {
@@ -2676,7 +2691,7 @@ public class Vehicle extends Instance {
   speed = topSpeeds[2] < Long.MAX_VALUE ? U.clamp(-topSpeeds[2], speed, topSpeeds[2]) : speed;
   if (damage > durability && !destroyed) {
    for (n = (int) explosionsWhenDestroyed; --n >= 0; ) {
-    explosions.get(currentExplosion).deploy(X + U.randomPlusMinus(absoluteRadius), Y + U.randomPlusMinus(absoluteRadius), Z + U.randomPlusMinus(absoluteRadius), true);
+    explosions.get(currentExplosion).deploy(U.randomPlusMinus(absoluteRadius), U.randomPlusMinus(absoluteRadius), U.randomPlusMinus(absoluteRadius), this);
     currentExplosion = ++currentExplosion >= VE.explosionQuantity ? 0 : currentExplosion;
     U.soundPlay(sounds, "explode" + U.random(2), vehicleToCameraSoundDistance);
    }
@@ -2797,7 +2812,7 @@ public class Vehicle extends Instance {
     }
    }
   }
-  XY += engine.equals("hotrod") && !destroyed && U.random() < .5 ? U.random() < .5 ? 1 : -1 : 0;
+  XY += engine == Engine.hotrod && !destroyed && U.random() < .5 ? U.random() < .5 ? 1 : -1 : 0;
   if (VE.points.size() > 0) {
    if (VE.points.get(point).type.contains("...") && mode != VE.mode.fly) {
     point += U.distance(X, VE.points.get(point).X, Y, VE.points.get(point).Y, Z, VE.points.get(point).Z) < 500 ? 1 : 0;
@@ -2891,7 +2906,7 @@ public class Vehicle extends Instance {
    speed = XY = YZ = flipTimer = 0;
   }
   speed *= (wheels.get(0).againstWall || wheels.get(1).againstWall || wheels.get(2).againstWall || wheels.get(3).againstWall) && grip > 100 && E.gravity != 0 ? .95 : 1;
-  speed -= drag > 0 && !engine.equals("rocket") && E.gravity != 0 ? speed * Math.abs(speed) * .000001 * drag * VE.tick : 0;
+  speed -= drag > 0 && engine != Engine.rocket && E.gravity != 0 ? speed * Math.abs(speed) * .000001 * drag * VE.tick : 0;
   if (U.listEquals(VE.mapName, "Vicious Versus V3", "Vehicular Fusion", "the Linear Accelerator", "Everybody Everything", "Parallel Universe Portal")) {
    if (X > VE.limitR || X < VE.limitL) {
     wheels.get(U.random(4)).speedX = wheels.get(U.random(4)).speedZ = 0;
@@ -3004,7 +3019,7 @@ public class Vehicle extends Instance {
   }
   if (explosionsWhenDestroyed > 0 && damage > durability && !destroyed) {
    for (n = (int) explosionsWhenDestroyed; --n >= 0; ) {
-    explosions.get(currentExplosion).deploy(X + U.randomPlusMinus(absoluteRadius), Y + U.randomPlusMinus(absoluteRadius), Z + U.randomPlusMinus(absoluteRadius), true);
+    explosions.get(currentExplosion).deploy(U.randomPlusMinus(absoluteRadius), U.randomPlusMinus(absoluteRadius), U.randomPlusMinus(absoluteRadius), this);
     currentExplosion = ++currentExplosion >= VE.explosionQuantity ? 0 : currentExplosion;
    }
    U.soundPlay(sounds, "hugeHit" + U.random(12), vehicleToCameraSoundDistance);
@@ -3141,7 +3156,7 @@ public class Vehicle extends Instance {
     U.soundStop(sounds, "spinner" + spinSound);
    }
   }
-  thrusting = !destroyed && (((drive || mode == VE.mode.fly) && U.contains(engine, "jet", "rocket") && mode != VE.mode.stunt) || (boost && speedBoost > 0) || exhaust > 0);
+  thrusting = !destroyed && ((boost && speedBoost > 0) || exhaust > 0 || (mode != VE.mode.stunt && U.contains(engine.name(), "jet", "turbine", "rocket") && ((drive && !(mode == VE.mode.fly && engine == Engine.turbine)) || (mode == VE.mode.fly && engine != Engine.turbine))));
   if (thrusting) {
    jets.get(currentJet).deploy(this);
    currentJet = ++currentJet >= VE.jetQuantity ? 0 : currentJet;
@@ -3156,7 +3171,7 @@ public class Vehicle extends Instance {
     }
    }
   }
-  XY = !VE.matchStarted && engine.equals("hotrod") ? U.randomPlusMinus(2.) : XY;
+  XY = !VE.matchStarted && engine == Engine.hotrod ? U.randomPlusMinus(2.) : XY;
   for (Special special : specials) {
    if (special.type.startsWith("phantom")) {
     if (useSpecial[specials.indexOf(special)]) {
@@ -3183,7 +3198,7 @@ public class Vehicle extends Instance {
     }
    }
   }
-  if (engine.equals("train") && gamePlay && VE.matchStarted) {
+  if (engine == Engine.train && gamePlay && VE.matchStarted) {
    n = U.random(9);
    if (Math.abs(speed) * VE.tick > U.random(5000.)) {
     U.soundPlayIfNotPlaying(sounds, "train" + n, vehicleToCameraSoundDistance);
@@ -3217,13 +3232,14 @@ public class Vehicle extends Instance {
     if (mode != VE.mode.stunt) {
      n = vehicleType == VE.type.vehicle && steerInPlace && (turnL || turnR) ? 1 : n;
      if (drive || reverse || mode == VE.mode.fly) {
-      n = drive && !(flipped && mode.name().startsWith("drive")) && U.contains(engine, "prop", "jet", "rocket") && mode != VE.mode.fly ? engineClipQuantity - 1 : Math.max((int) (engineClipQuantity * (Math.abs(speed) / topSpeeds[1])), 1);
+      n = drive && !(flipped && mode.name().startsWith("drive")) && U.contains(engine.name(), "prop", "jet", "turbine", "rocket") && mode != VE.mode.fly ? engineClipQuantity - 1 : Math.max((int) (engineClipQuantity * (Math.abs(speed) / topSpeeds[1])), 1);
       if (sounds.containsKey("grind")) {
        againstEngine = (drive && speed < 0) || (reverse && speed > 0);
        wheelDiscord = mode.name().startsWith("drive") && (Math.abs(wheels.get(U.random(4)).speedZ - (wheels.get(0).speedZ + wheels.get(1).speedZ + wheels.get(2).speedZ + wheels.get(3).speedZ) * .25) > 1 || Math.abs(wheels.get(U.random(4)).speedX - (wheels.get(0).speedX + wheels.get(1).speedX + wheels.get(2).speedX + wheels.get(3).speedX) * .25) > 1);
       }
      }
     }
+    n = engine == Engine.turbine ? Math.max((int) (engineClipQuantity * (Math.abs(netSpeed) / topSpeeds[1])), n) : n;
     enginePowerSwitch(n);
     engineStage = Math.min(n, engineClipQuantity - 1);
    }
@@ -3346,6 +3362,12 @@ public class Vehicle extends Instance {
    if (wheelDiscord) {
     sounds.get(engine + "-" + n).clip.setFramePosition(U.random(sounds.get(engine + "-" + n).clip.getFrameLength()));
    }
+   if (engine == Engine.turbine) {
+    double thrustGain = Math.max(0, Math.pow(1 / (Math.abs(netSpeed) / topSpeeds[1]), 4));
+    U.soundLoop(sounds, "turbineThrust", vehicleToCameraSoundDistance + (n >= engineClipQuantity - 1 ? 0 : thrustGain));
+   }
+  } else if (engine == Engine.turbine) {
+   U.soundStop(sounds, "turbineThrust");
   }
  }
 
@@ -3431,7 +3453,7 @@ public class Vehicle extends Instance {
  private void setSounds() {
   U.loadSound(sounds, "fix");
   U.loadSound(sounds, "burn");
-  if (speedBoost > 0) {
+  if (speedBoost > 0 && engine != Engine.turbine) {
    U.loadSound(sounds, "boost");
   }
   boolean loadHugeHits = E.boulders.size() > 0 || E.volcanoRocks.size() > 0 || E.meteors.size() > 0;
@@ -3463,7 +3485,7 @@ public class Vehicle extends Instance {
    U.loadSound(sounds, "turret");
   } else {
    if (engineClipQuantity < 1) {
-    File[] engines = new File(U.soundFolder).listFiles((D, name) -> name.startsWith(engine + '-') && name.endsWith(U.soundExtension));
+    File[] engines = new File(U.soundFolder).listFiles((D, name) -> name.startsWith(engine.name() + '-') && name.endsWith(U.soundExtension));
     engineClipQuantity = Objects.requireNonNull(engines).length;
     for (File file : engines) {
      String engineName = file.getName().replace(U.soundExtension, "");
@@ -3473,7 +3495,7 @@ public class Vehicle extends Instance {
     double equalTemperament = 1;
     for (int n = 0; n < engineClipQuantity; n++) {
      try {
-      sounds.put(engine + "-" + n, new Sound(engine, equalTemperament));
+      sounds.put(engine + "-" + n, new Sound(engine.name(), equalTemperament));
      } catch (Exception E) {
       System.out.println("Sound loading exception: " + E);
      }
@@ -3491,7 +3513,7 @@ public class Vehicle extends Instance {
     U.loadSound(sounds, landType, 1 / 0.);
    }
    U.loadSound(sounds, "scrape", 1 / 0.);
-   if (engine.contains("truck") || U.listEquals(engine, "tank", "massive")) {
+   if (engine.name().contains("truck") || engine == Engine.tank || engine == Engine.massive) {
     U.loadSound(sounds, "grind");
    }
    U.loadSound(sounds, "aA");
@@ -3528,14 +3550,16 @@ public class Vehicle extends Instance {
   if (exhaust == exhaust) {
    U.loadSound(sounds, "exhaust", 1 / 0.);
   }
-  if (U.listEquals(engine, "authentictruck", "train")) {
-   if (engine.equals("train")) {
+  if (engine == Engine.authentictruck || engine == Engine.train) {
+   if (engine == Engine.train) {
     U.loadSound(sounds, "chuff", 4);
     U.loadSound(sounds, "train", 11);
    } else {
     U.loadSound(sounds, "chuff", 5);
     U.loadSound(sounds, "backUp");
    }
+  } else if (engine == Engine.turbine) {
+   U.loadSound(sounds, "turbineThrust");
   }
  }
 
@@ -3553,7 +3577,7 @@ public class Vehicle extends Instance {
    U.soundStop(sounds, "turret");
   } else {
    for (int n = engineClipQuantity; --n >= 0; ) {
-    U.soundStop(sounds, engine + '-' + n);
+    U.soundStop(sounds, engine.name() + '-' + n);
    }
   }
  }

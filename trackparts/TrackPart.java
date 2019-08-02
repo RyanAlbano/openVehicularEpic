@@ -19,19 +19,19 @@ public class TrackPart extends Instance {
  private Torus fixRing;
  public boolean vehicleModel;
  public boolean isFixRing;
- private boolean scenery;
+ public boolean scenery;
  public boolean checkpointPerpendicularToX;
  public boolean checkpointSignRotation;
  public long checkpointNumber = -1;
  public final List<TrackPlane> trackPlanes = new ArrayList<>();
- private FrustumMesh pile;
+ public FrustumMesh mound;
 
- class Rock extends Sphere {
+ static class Rock extends Sphere {
 
   double X, Y, Z;
 
   Rock() {
-   super((double) 1, 5);
+   super(1, 5);
   }
  }
 
@@ -171,20 +171,24 @@ public class TrackPart extends Instance {
      modelProperties += s.startsWith("rocky") ? " rocky " : "";
      getSizeScaleTranslate(s, translate);
      if (s.startsWith("wheelColor(")) {
-      try {
-       wheelRGB[0] = U.getValue(s, 0);
-       wheelRGB[1] = U.getValue(s, 1);
-       wheelRGB[2] = U.getValue(s, 2);
-      } catch (Exception e) {
-       wheelRGB[0] = wheelRGB[1] = wheelRGB[2] = .1875;
-       if (s.contains("theRandomColor")) {
-        wheelRGB[0] = theRandomColor[0];
-        wheelRGB[1] = theRandomColor[1];
-        wheelRGB[2] = theRandomColor[2];
-        wheelType += " theRandomColor ";
+      if (s.contains("reflect")) {
+       wheelType += " reflect ";
+      } else {
+       try {
+        wheelRGB[0] = U.getValue(s, 0);
+        wheelRGB[1] = U.getValue(s, 1);
+        wheelRGB[2] = U.getValue(s, 2);
+       } catch (Exception e) {
+        if (s.contains("theRandomColor")) {
+         wheelRGB[0] = theRandomColor[0];
+         wheelRGB[1] = theRandomColor[1];
+         wheelRGB[2] = theRandomColor[2];
+         wheelType += " theRandomColor ";
+        } else {
+         wheelRGB[0] = wheelRGB[1] = wheelRGB[2] = U.getValue(s, 0);
+        }
        }
       }
-      wheelType += s.contains("reflect") ? " reflect " : "";
       wheelType += s.contains("noSpecular") ? " noSpecular " : s.contains("shiny") ? " shiny " : "";
      } else if (s.startsWith("rims(")) {
       rimType = "";
@@ -195,12 +199,13 @@ public class TrackPart extends Instance {
        rimRGB[1] = U.getValue(s, 3);
        rimRGB[2] = U.getValue(s, 4);
       } catch (Exception e) {
-       rimRGB[0] = rimRGB[1] = rimRGB[2] = .5;
        if (s.contains("theRandomColor")) {
         rimRGB[0] = theRandomColor[0];
         rimRGB[1] = theRandomColor[1];
         rimRGB[2] = theRandomColor[2];
         rimType += " theRandomColor ";
+       } else {
+        rimRGB[0] = rimRGB[1] = rimRGB[2] = U.getValue(s, 2);
        }
       }
       rimType += s.contains("reflect") ? " reflect " : "";
@@ -230,9 +235,13 @@ public class TrackPart extends Instance {
      if (onTrackPlane) {
       int index = trackPlanes.size() - 1;
       if (s.startsWith("RGB")) {
-       trackPlanes.get(index).RGB[0] = U.getValue(s, 0);
-       trackPlanes.get(index).RGB[1] = U.getValue(s, 1);
-       trackPlanes.get(index).RGB[2] = U.getValue(s, 2);
+       try {
+        trackPlanes.get(index).RGB[0] = U.getValue(s, 0);
+        trackPlanes.get(index).RGB[1] = U.getValue(s, 1);
+        trackPlanes.get(index).RGB[2] = U.getValue(s, 2);
+       } catch (Exception E) {
+        trackPlanes.get(index).RGB[0] = trackPlanes.get(index).RGB[1] = trackPlanes.get(index).RGB[2] = U.getValue(s, 0);
+       }
       } else if (s.startsWith("pavedColor")) {
        trackPlanes.get(index).RGB[0] = trackPlanes.get(index).RGB[1] = trackPlanes.get(index).RGB[2] = VE.pavedRGB;
       } else if (s.startsWith("wall")) {
@@ -364,25 +373,30 @@ public class TrackPart extends Instance {
   }
  }
 
- public TrackPart() {
-  pile = new FrustumMesh(100 + U.random(400.), U.random(100.), U.random(200.), 0);
-  X = U.randomPlusMinus(800000.);
-  Z = U.randomPlusMinus(800000.);
-  scenery = true;
-  renderRadius = Math.max(pile.getMajorRadius(), Math.max(pile.getMinorRadius(), pile.getHeight()));
+ public TrackPart(double x, double z, double y, double majorRadius, double minorRadius, double height, boolean isScenery) {
+  while (majorRadius > 0 && minorRadius > majorRadius) {
+   minorRadius *= .5;
+  }
+  mound = new FrustumMesh(majorRadius, minorRadius, height, 0);
+  X = x;
+  Z = z;
+  Y = y;
+  scenery = isScenery;
+  renderRadius = Math.max(mound.getMajorRadius(), Math.max(mound.getMinorRadius(), mound.getHeight()));
   PhongMaterial PM = new PhongMaterial();
   U.setDiffuseRGB(PM, E.terrainRGB[0], E.terrainRGB[1], E.terrainRGB[2]);
   U.setSpecularRGB(PM, E.terrainRGB[0], E.terrainRGB[1], E.terrainRGB[2]);
+  PM.setSpecularPower(E.groundSpecularPower);
   PM.setDiffuseMap(U.getImage(VE.terrain.trim()));
   PM.setSpecularMap(U.getImage(VE.terrain.trim()));
   PM.setBumpMap(U.getImageNormal(VE.terrain.trim()));
-  pile.setMaterial(PM);
-  U.add(pile);
-  double averageRadius = (pile.getMinorRadius() + pile.getMajorRadius()) * .5, radiusDifference = Math.abs(pile.getMinorRadius() - pile.getMajorRadius());
+  mound.setMaterial(PM);
+  U.add(mound);
+  double averageRadius = (mound.getMinorRadius() + mound.getMajorRadius()) * .5, radiusDifference = Math.abs(mound.getMinorRadius() - mound.getMajorRadius());
   for (int n = 0; n < 4; n++) {
    trackPlanes.add(new TrackPlane());
-   trackPlanes.get(n).Y = -pile.getHeight() * .5;
-   trackPlanes.get(n).radiusY = pile.getHeight();
+   trackPlanes.get(n).Y = -mound.getHeight() * .5;
+   trackPlanes.get(n).radiusY = mound.getHeight();
    if (n == 0) {
     trackPlanes.get(n).Z = averageRadius;
     trackPlanes.get(n).radiusX = averageRadius;
@@ -411,14 +425,15 @@ public class TrackPart extends Instance {
    trackPlanes.get(n).damage = 1;
   }
   trackPlanes.add(new TrackPlane());
-  trackPlanes.get(4).Y = -pile.getHeight();
-  trackPlanes.get(4).radiusY = pile.getHeight();
-  trackPlanes.get(4).radiusX = trackPlanes.get(4).radiusZ = pile.getMinorRadius();
+  trackPlanes.get(4).Y = -mound.getHeight();
+  trackPlanes.get(4).radiusY = mound.getHeight();
+  trackPlanes.get(4).radiusX = trackPlanes.get(4).radiusZ = mound.getMinorRadius();
   trackPlanes.get(4).RGB[0] = E.groundRGB[0];
   trackPlanes.get(4).RGB[1] = E.groundRGB[1];
   trackPlanes.get(4).RGB[2] = E.groundRGB[2];
-  trackPlanes.get(4).type = VE.terrain + " maxbounce ";
+  trackPlanes.get(4).type = VE.terrain + (scenery ? " maxbounce " : "");
   trackPlanes.get(4).damage = 1;
+  U.rotate(mound, 0, U.random(360.));//<-(For visual variation)
  }
 
  private void computeTrackPlane(String s, List<Double> xx, List<Double> yy, List<Double> zz, double[] RGB) {//Keep as a void?
@@ -498,8 +513,14 @@ public class TrackPart extends Instance {
      for (; Z < VE.cameraZ - 40000; Z += 80000) ;
      Y = U.distance(X, E.poolX, Z, E.poolZ) < E.pool[0].getRadius() ? E.poolDepth : 0;
     }
-    if (pile != null) {
-     U.render(pile, X, -pile.getHeight() * .5 + (E.poolExists && U.distance(X, E.poolX, Z, E.poolZ) < E.pool[0].getRadius() ? E.poolDepth : 0), Z, -renderRadius);
+   }
+   if (mound != null) {
+    double moundY = Y + -mound.getHeight() * .5 + (E.poolExists && U.distance(X, E.poolX, Z, E.poolZ) < E.pool[0].getRadius() ? E.poolDepth : 0);
+    if (U.getDepth(X, moundY, Z) > -renderRadius && renderRadius * VE.renderLevel >= U.distance(X, VE.cameraX, Y, VE.cameraY, Z, VE.cameraZ) * VE.zoom) {
+     U.setTranslate(mound, X, moundY, Z);
+     mound.setVisible(true);
+    } else {
+     mound.setVisible(false);
     }
    }
    if (isFixRing) {

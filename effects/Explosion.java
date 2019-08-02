@@ -17,23 +17,23 @@ public class Explosion extends MeshView {
  public double stage;
  final double radius;
  public final boolean[] doneDamaging;
- private boolean syncVehicleLocation;
+ Vehicle focusVehicle;
  private final List<ExplosionPart> explosionParts = new ArrayList<>();
 
  public Explosion(Vehicle vehicle) {
   TriangleMesh TM = new TriangleMesh();
   radius = vehicle.explosionType.contains("nuclear") ? 20000 : 1500;
   TM.getPoints().setAll(
-   (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
-   (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
-   (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
-   (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
-   (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
-   (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius));
+  (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
+  (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
+  (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
+  (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
+  (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
+  (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius));
   TM.getTexCoords().setAll(0, 0);
   TM.getFaces().setAll(
-   0, 0, 1, 0, 2, 0,
-   3, 0, 4, 0, 5, 0);
+  0, 0, 1, 0, 2, 0,
+  3, 0, 4, 0, 5, 0);
   setMesh(TM);
   setCullFace(CullFace.NONE);
   PhongMaterial PM = new PhongMaterial();
@@ -48,11 +48,11 @@ public class Explosion extends MeshView {
   }
  }
 
- public void deploy(double x, double y, double z, boolean syncVehicle) {
+ public void deploy(double x, double y, double z, Vehicle vehicle) {//<-'vehicle' not always the explosion's parent--can be null!
   X = x;
   Y = y;
   Z = z;
-  syncVehicleLocation = syncVehicle;
+  focusVehicle = vehicle;
   stage = Double.MIN_VALUE;
   for (int n = VE.vehiclesInMatch; --n >= 0; ) {
    doneDamaging[n] = false;
@@ -62,17 +62,17 @@ public class Explosion extends MeshView {
   }
  }
 
- public void run(Vehicle vehicle, boolean gamePlay) {
+ public void run(boolean gamePlay) {
   if (stage > 0) {
    if ((stage += gamePlay ? VE.tick : 0) > 5) {
     stage = 0;
     setVisible(false);
    } else {
     double setX, setY, setZ;
-    if (syncVehicleLocation) {
-     setX = X + vehicle.X;
-     setY = Y + vehicle.Y;
-     setZ = Z + vehicle.Z;
+    if (focusVehicle != null) {
+     setX = X + focusVehicle.X;
+     setY = Y + focusVehicle.Y;
+     setZ = Z + focusVehicle.Z;
     } else {
      setX = X;
      setY = Y;

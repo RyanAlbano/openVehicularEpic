@@ -160,12 +160,12 @@ class Shot extends MeshView {
      }
     } else if (hit == 1) {
      if (U.startsWith(special.type, "shell", "bomb") || special.type.contains("missile")) {
-      V.explosions.get(V.currentExplosion).deploy(X, Y, Z, false);
+      V.explosions.get(V.currentExplosion).deploy(X, Y, Z, null);
       V.currentExplosion = ++V.currentExplosion >= VE.explosionQuantity ? 0 : V.currentExplosion;
       U.soundPlay(V.sounds, "hugeHit" + U.random(7), Math.sqrt(U.distance(X, VE.cameraX, Y, VE.cameraY, Z, VE.cameraZ)) * .08);
      } else if (U.startsWith(special.type, "powershell", "mine")) {
       for (int i = 6; --i >= 0; ) {
-       V.explosions.get(V.currentExplosion).deploy(((X + behindX) * .5) + U.randomPlusMinus(2000.), ((Y + behindY) * .5) + U.randomPlusMinus(2000.), ((Z + behindZ) * .5) + U.randomPlusMinus(2000.), false);
+       V.explosions.get(V.currentExplosion).deploy(((X + behindX) * .5) + U.randomPlusMinus(2000.), ((Y + behindY) * .5) + U.randomPlusMinus(2000.), ((Z + behindZ) * .5) + U.randomPlusMinus(2000.), null);
        V.currentExplosion = ++V.currentExplosion >= VE.explosionQuantity ? 0 : V.currentExplosion;
       }
       double shotToCameraSoundDistance = Math.sqrt(U.distance(X, VE.cameraX, Y, VE.cameraY, Z, VE.cameraZ)) * .08;

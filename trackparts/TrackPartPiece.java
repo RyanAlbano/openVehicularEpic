@@ -132,7 +132,7 @@ class TrackPartPiece extends Piece {
    fastCull = type.contains(" fastCullL ") ? 1 : fastCull;
   }
   flickPolarity = type.contains(" flick1 ") ? 1 : type.contains(" flick2 ") ? 2 : flickPolarity;
-  setRenderSizeRequirement(checkpoint || light || blink, storeX, storeY, storeZ, vertexQuantity);
+  setRenderSizeRequirement(storeX, storeY, storeZ, vertexQuantity, checkpoint || light || blink);// || true);//<-Use 'true' when getting logo image
   MV.setVisible(false);
   if (matrix != null) {
    MV.getTransforms().setAll(matrix);

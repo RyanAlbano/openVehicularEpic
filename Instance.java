@@ -69,7 +69,7 @@ public class Instance {
     RGB[0] = U.getValue(s, 0);
     RGB[1] = U.getValue(s, 1);
     RGB[2] = U.getValue(s, 2);
-   } catch (Exception e) {
+   } catch (Exception E) {
     RGB[0] = RGB[1] = RGB[2] = U.getValue(s, 0);
    }
   } else if (s.contains("theRandomColor")) {
@@ -77,7 +77,7 @@ public class Instance {
     RGB[0] = theRandomColor[0] * U.getValue(s, 0);
     RGB[1] = theRandomColor[1] * U.getValue(s, 0);
     RGB[2] = theRandomColor[2] * U.getValue(s, 0);
-   } catch (Exception e) {
+   } catch (Exception E) {
     RGB[0] = theRandomColor[0];
     RGB[1] = theRandomColor[1];
     RGB[2] = theRandomColor[2];
