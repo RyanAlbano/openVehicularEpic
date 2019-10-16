@@ -2,45 +2,43 @@ package ve.environment;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
-import static ve.VE.*;
+
+import ve.Core;
+import ve.VE;
 import ve.utilities.U;
 
-public class MeteorPart extends Sphere {
+public class MeteorPart extends Core {
 
- public double X;
- public double Y;
- public double Z;
- private double XZ;
- private double YZ;
+ public final Sphere S;
  public final double[] rotation = new double[3];
- public boolean onFire;
+ boolean onFire;
 
- public MeteorPart(double radius, int divisions) {
-  super(radius, divisions);
-  setMaterial(new PhongMaterial());
-  U.add(this);
+ MeteorPart(double radius) {
+  S = new Sphere(radius, 1);
+  S.setMaterial(new PhongMaterial());
+  U.add(S);
  }
 
  public void run() {
-  XZ += rotation[0] * tick;
-  YZ += rotation[1] * tick;
-  if (U.getDepth(X, Y, Z) > -getRadius()) {
+  XZ += rotation[0] * VE.tick;
+  YZ += rotation[1] * VE.tick;
+  if (U.render(this, -S.getRadius())) {
    if (onFire) {
-    U.setDiffuseRGB((PhongMaterial) getMaterial(), 0, 0, 0);
-    U.setSpecularRGB((PhongMaterial) getMaterial(), 0, 0, 0);
-    ((PhongMaterial) getMaterial()).setDiffuseMap(null);
-    ((PhongMaterial) getMaterial()).setSelfIlluminationMap(U.getImage("firelight" + U.random(3)));
+    U.setDiffuseRGB((PhongMaterial) S.getMaterial(), 0, 0, 0);
+    U.setSpecularRGB((PhongMaterial) S.getMaterial(), 0, 0, 0);
+    ((PhongMaterial) S.getMaterial()).setDiffuseMap(null);
+    ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(U.getImage("firelight" + U.random(3)));
    } else {
-    U.setDiffuseRGB((PhongMaterial) getMaterial(), 1, 1, 1);
-    U.setSpecularRGB((PhongMaterial) getMaterial(), 1, 1, 1);
-    ((PhongMaterial) getMaterial()).setDiffuseMap(U.getImage("rock"));
-    ((PhongMaterial) getMaterial()).setSelfIlluminationMap(null);
+    U.setDiffuseRGB((PhongMaterial) S.getMaterial(), 1, 1, 1);
+    U.setSpecularRGB((PhongMaterial) S.getMaterial(), 1, 1, 1);
+    ((PhongMaterial) S.getMaterial()).setDiffuseMap(U.getImage("rock"));
+    ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(null);
    }
-   U.rotate(this, YZ, XZ);
-   U.setTranslate(this, X, Y, Z);
-   setVisible(true);
+   U.rotate(S, YZ, XZ);
+   U.setTranslate(S, this);
+   S.setVisible(true);
   } else {
-   setVisible(false);
+   S.setVisible(false);
   }
  }
 }

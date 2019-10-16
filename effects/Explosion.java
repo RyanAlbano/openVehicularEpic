@@ -6,52 +6,51 @@ import javafx.scene.shape.*;
 import java.util.*;
 
 import ve.*;
+import ve.environment.E;
 import ve.utilities.U;
 import ve.vehicles.*;
 
-public class Explosion extends MeshView {
+public class Explosion extends Core {
 
- public double X;
- public double Y;
- public double Z;
+ private final MeshView MV;
+ double inX, inY, inZ;
  public double stage;
- final double radius;
  public final boolean[] doneDamaging;
  Vehicle focusVehicle;
- private final List<ExplosionPart> explosionParts = new ArrayList<>();
+ private final Collection<ExplosionPart> explosionParts = new ArrayList<>();
 
  public Explosion(Vehicle vehicle) {
   TriangleMesh TM = new TriangleMesh();
-  radius = vehicle.explosionType.contains("nuclear") ? 20000 : 1500;
+  absoluteRadius = vehicle.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) ? 20000 : 1500;
   TM.getPoints().setAll(
-  (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
-  (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
-  (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
-  (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
-  (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius),
-  (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius), (float) U.randomPlusMinus(radius));
+  (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
+  (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
+  (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
+  (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
+  (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
+  (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius));
   TM.getTexCoords().setAll(0, 0);
   TM.getFaces().setAll(
   0, 0, 1, 0, 2, 0,
   3, 0, 4, 0, 5, 0);
-  setMesh(TM);
-  setCullFace(CullFace.NONE);
+  MV = new MeshView(TM);
+  MV.setCullFace(CullFace.NONE);
   PhongMaterial PM = new PhongMaterial();
   U.setDiffuseRGB(PM, 0, 0, 0);
   U.setSpecularRGB(PM, 0, 0, 0);
-  setMaterial(PM);
-  U.add(this);
-  setVisible(false);
+  MV.setMaterial(PM);
+  U.add(MV);
+  MV.setVisible(false);
   doneDamaging = new boolean[VE.vehiclesInMatch];
-  for (int n = VE.explosionQuantity; --n >= 0; ) {
+  for (int n = E.explosionQuantity; --n >= 0; ) {
    explosionParts.add(new ExplosionPart(this));
   }
  }
 
  public void deploy(double x, double y, double z, Vehicle vehicle) {//<-'vehicle' not always the explosion's parent--can be null!
-  X = x;
-  Y = y;
-  Z = z;
+  inX = x;
+  inY = y;
+  inZ = z;
   focusVehicle = vehicle;
   stage = Double.MIN_VALUE;
   for (int n = VE.vehiclesInMatch; --n >= 0; ) {
@@ -66,25 +65,24 @@ public class Explosion extends MeshView {
   if (stage > 0) {
    if ((stage += gamePlay ? VE.tick : 0) > 5) {
     stage = 0;
-    setVisible(false);
+    MV.setVisible(false);
    } else {
-    double setX, setY, setZ;
     if (focusVehicle != null) {
-     setX = X + focusVehicle.X;
-     setY = Y + focusVehicle.Y;
-     setZ = Z + focusVehicle.Z;
+     X = inX + focusVehicle.X;
+     Y = inY + focusVehicle.Y;
+     Z = inZ + focusVehicle.Z;
     } else {
-     setX = X;
-     setY = Y;
-     setZ = Z;
+     X = inX;
+     Y = inY;
+     Z = inZ;
     }
-    if (U.getDepth(setX, setY, setZ) > -radius) {
-     U.setTranslate(this, setX, setY, setZ);
-     U.randomRotate(this);
-     ((PhongMaterial) getMaterial()).setSelfIlluminationMap(U.getImage("firelight" + U.random(3)));
-     setVisible(true);
+    if (U.render(this, -absoluteRadius)) {
+     U.setTranslate(MV, this);
+     U.randomRotate(MV);
+     ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(U.getImage("firelight" + U.random(3)));
+     MV.setVisible(true);
     } else {
-     setVisible(false);
+     MV.setVisible(false);
     }
    }
   }

@@ -2,38 +2,38 @@ package ve.environment;
 
 import javafx.scene.shape.Cylinder;
 
-import static ve.VE.*;
-
+import ve.Camera;
 import ve.utilities.U;
 
-public class GroundPlate extends Cylinder {
+class GroundPlate extends Cylinder {
 
  public double X, Z;
 
- public GroundPlate(double radius, double height) {
-  super(radius, height, 6);
+ GroundPlate(double radius) {
+  super(radius, 0, 6);
  }
 
  public void run(double radius) {
   clampXZ();
-  double y = Math.max(0, -cameraY * .005);
-  if (y > cameraY && (!E.poolExists || U.distance(X, E.poolX, Z, E.poolZ) > radius)) {
-   U.render(this, X, y, Z, -getRadius());
+  double y = Math.max(0, -Camera.Y * .005);
+  if (y > Camera.Y && (!E.poolExists || U.distance(X, E.poolX, Z, E.poolZ) > radius) && U.render(X, y, Z, -getRadius())) {
+   U.setTranslate(this, X, y, Z);
+   setVisible(true);
   } else {
    setVisible(false);
   }
  }
 
- public void clampXZ() {
-  while (Math.abs(X - cameraX) > 25980.762113533159402911695122588) {
-   X += X > cameraX ? -51961.524227066318805823390245176 : 51961.524227066318805823390245176;
+ void clampXZ() {
+  while (Math.abs(X - Camera.X) > 25980.762113533159402911695122588) {
+   X += X > Camera.X ? -51961.524227066318805823390245176 : 51961.524227066318805823390245176;
   }
-  while (Math.abs(Z - cameraZ) > 30000) {
-   Z += Z > cameraZ ? -60000 : 60000;
+  while (Math.abs(Z - Camera.Z) > 30000) {
+   Z += Z > Camera.Z ? -60000 : 60000;
   }
  }
 
- public void checkDuplicate() {
+ void checkDuplicate() {
   for (int n = 0; n < E.groundPlates.size(); n++) {
    if (E.groundPlates.get(n) != this && U.distance(X, E.groundPlates.get(n).X, Z, E.groundPlates.get(n).Z) < 2000) {
     U.remove(E.groundPlates.get(n));

@@ -2,27 +2,29 @@ package ve.vehicles;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
-import ve.VE;
+import ve.Camera;
+import ve.Core;
+import ve.environment.E;
 import ve.utilities.U;
 
-class Skidmark extends Cylinder {//<-is stored
+class Skidmark extends Core {
 
- double X, Y, Z;
+ final Cylinder C;
  boolean deployed;
 
  Skidmark(Wheel wheel, PhongMaterial PM) {
-  super(wheel.skidmarkSize * 1.5, wheel.skidmarkSize * .001, 8);
-  setMaterial(PM);
-  U.add(this);
-  setVisible(false);
+  C = new Cylinder(wheel.skidmarkSize * 1.5, wheel.skidmarkSize * .001, 8);
+  C.setMaterial(PM);
+  U.add(C);
+  C.setVisible(false);
  }
 
  public void run() {
-  if (deployed && getRadius() * VE.renderLevel >= U.distance(X, VE.cameraX, Y, VE.cameraY, Z, VE.cameraZ) * VE.zoom && U.getDepth(X, Y, Z) > getRadius() * getScaleZ()) {
-   U.setTranslate(this, X, Y, Z);
-   setVisible(true);
+  if (deployed && C.getRadius() * E.renderLevel >= U.distance(this) * Camera.zoom && U.getDepth(this) > C.getRadius() * C.getScaleZ()) {
+   U.setTranslate(C, this);
+   C.setVisible(true);
   } else {
-   setVisible(false);
+   C.setVisible(false);
   }
  }
 }

@@ -2,27 +2,20 @@ package ve.vehicles;
 
 import java.util.*;
 
+import ve.Core;
 import ve.effects.*;
 
-public class Wheel {
+public class Wheel extends Core {
  int currentSkidmark;
- public double X;
- public double Y;
- public double Z;
- public double pointX;
- public double pointZ;
- public double speedX;
- public double speedY;
- public double speedZ;
- public double YZ;
- public double XY;
- public double hitOtherX;
- public double hitOtherZ;
- public double skidmarkSize;
- public double minimumY;
- public double sparkPoint;
+ double pointX, pointZ;
+ public double speedX, speedY, speedZ;
+ double vibrate;
+ double hitOtherX, hitOtherZ;
+ double skidmarkSize;
+ double minimumY;
+ double sparkPoint;
  public final double[] terrainRGB = new double[3];
  boolean angledSurface, againstWall;
- final List<Spark> sparks = new ArrayList<>();
+ final Collection<Spark> sparks = new ArrayList<>();
  final List<Skidmark> skidmarks = new ArrayList<>();
 }

@@ -3,51 +3,50 @@ package ve.environment;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
 
-import static ve.VE.*;
-
+import ve.Core;
+import ve.Sound;
 import ve.VE;
 import ve.utilities.U;
 import ve.effects.Dust;
 
 import java.util.*;
 
-public class Boulder extends Sphere {
+public class Boulder extends Core {
 
- public double X;
- public final double Y;
- public double Z;
- private double XZ;
+ public final Sphere S;
  public final double speed;
  private final List<Dust> dusts = new ArrayList<>();
  private int currentDust;
+ public final Sound sound;
 
- public Boulder(double radius, int divisions, double speed) {
-  super(radius, divisions);
+ Boulder(double radius, double speed) {
+  S = new Sphere(radius, 5);
   this.speed = speed;
   XZ = U.random(360.);
   PhongMaterial PM = new PhongMaterial();
-  Y = -getRadius();
+  Y = -S.getRadius();
   U.setDiffuseRGB(PM, 1, 1, 1);
   U.setSpecularRGB(PM, .5, .5, .5);
   PM.setDiffuseMap(U.getImage("rock"));
   PM.setSpecularMap(U.getImage("rock"));
   PM.setBumpMap(U.getImageNormal("rock"));
-  setMaterial(PM);
-  U.add(this);
-  for (int n = VE.dustQuantity; --n >= 0; ) {
+  S.setMaterial(PM);
+  U.add(S);
+  for (int n = E.dustQuantity; --n >= 0; ) {
    dusts.add(new Dust());
   }
+  sound = new Sound("boulder", Double.POSITIVE_INFINITY);
  }
 
  public void run(boolean update) {
   if (update) {
-   X += speed * U.sin(XZ) * tick;
-   Z += speed * U.cos(XZ) * tick;
+   X += speed * U.sin(XZ) * VE.tick;
+   Z += speed * U.cos(XZ) * VE.tick;
    dusts.get(currentDust).deploy(this);
-   currentDust = ++currentDust >= VE.dustQuantity ? 0 : currentDust;
+   currentDust = ++currentDust >= E.dustQuantity ? 0 : currentDust;
   }
   for (Boulder otherBoulder : E.boulders) {
-   if (U.random() < .5 && otherBoulder != this && U.distance(X, otherBoulder.X, Z, otherBoulder.Z) < getRadius() + otherBoulder.getRadius()) {
+   if (U.random() < .5 && otherBoulder != this && U.distance(this, otherBoulder) < S.getRadius() + otherBoulder.S.getRadius()) {
     XZ = U.random(360.);
    }
   }
@@ -57,19 +56,19 @@ public class Boulder extends Sphere {
   while (Math.abs(Z) > E.boulderMaxTravelDistance) {
    Z += (Z < 0 ? 2 : -2) * E.boulderMaxTravelDistance;
   }
-  if (U.getDepth(X, Y, Z) > -getRadius()) {
+  if (U.getDepth(this) > -S.getRadius()) {
    if (update) {
-    U.randomRotate(this);
+    U.randomRotate(S);
    }
-   U.setTranslate(this, X, Y, Z);
-   setVisible(true);
+   U.setTranslate(S, X, Y, Z);
+   S.setVisible(true);
   } else {
-   setVisible(false);
+   S.setVisible(false);
   }
-  if (!muteSound && update) {
-   U.soundLoop(sounds, "boulder" + E.boulders.indexOf(this), Math.sqrt(U.distance(cameraX, X, cameraY, Y, cameraZ, Z)) * .08);
+  if (!VE.muteSound && update) {
+   sound.loop(Math.sqrt(U.distance(this)) * .08);
   } else {
-   U.soundStop(sounds, "boulder" + E.boulders.indexOf(this));
+   sound.stop();
   }
   for (Dust dust : dusts) {
    dust.run();

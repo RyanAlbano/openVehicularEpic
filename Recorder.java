@@ -1,39 +1,27 @@
 package ve;
 
-import ve.VE.*;
-import ve.utilities.U;
 import ve.vehicles.Vehicle;
 
-class Recorder {
+enum Recorder {
+ ;
 
  static final int totalFrames = 500;
  static int recordFrame;
  static int gameFrame;
  private static int[] recordBonusHolder;
  static long recordingsCount, recorded;
- private static double[][] X;
- private static double[][] Y;
- private static double[][] Z;
- private static double[][] XZ;
- private static double[][] XY;
- private static double[][] YZ;
- private static double[][] speed;
- private static double[][][] speedX;
- private static double[][][] speedY;
- private static double[][][] speedZ;
- private static double[][] speedXZ;
- private static double[][] speedYZ;
+ private static double[][] X, Y, Z, XZ, XY, YZ, vehicleTurretXZ, vehicleTurretYZ, speed;
+ private static double[][][] speedX, speedY, speedZ;
+ private static double[][] speedXZ, speedYZ;
  private static double[][] damage;
- private static double[] bonusX;
- private static double[] bonusY;
- private static double[] bonusZ;
+ private static double[] bonusX, bonusY, bonusZ;
  private static boolean[][] drive;
  private static boolean[][] reverse;
  private static boolean[][] special0;
  private static boolean[][] special1;
  private static boolean[][] boost;
  private static double[][] spinnerSpeed;
- private static mode[][] mode;
+ private static Vehicle.Mode[][] mode;
 
  static void boot() {
   X = new double[VE.maxPlayers][totalFrames];
@@ -42,6 +30,8 @@ class Recorder {
   XZ = new double[VE.maxPlayers][totalFrames];
   XY = new double[VE.maxPlayers][totalFrames];
   YZ = new double[VE.maxPlayers][totalFrames];
+  vehicleTurretXZ = new double[VE.maxPlayers][totalFrames];
+  vehicleTurretYZ = new double[VE.maxPlayers][totalFrames];
   speedXZ = new double[VE.maxPlayers][totalFrames];
   speedYZ = new double[VE.maxPlayers][totalFrames];
   speedX = new double[VE.maxPlayers][4][totalFrames];
@@ -49,7 +39,7 @@ class Recorder {
   speedZ = new double[VE.maxPlayers][4][totalFrames];
   speed = new double[VE.maxPlayers][totalFrames];
   damage = new double[VE.maxPlayers][totalFrames];
-  mode = new mode[VE.maxPlayers][totalFrames];
+  mode = new Vehicle.Mode[VE.maxPlayers][totalFrames];
   drive = new boolean[VE.maxPlayers][totalFrames];
   reverse = new boolean[VE.maxPlayers][totalFrames];
   special0 = new boolean[VE.maxPlayers][totalFrames];
@@ -60,22 +50,17 @@ class Recorder {
   bonusX = new double[totalFrames];
   bonusY = new double[totalFrames];
   bonusZ = new double[totalFrames];
-  /*for (n = VE.maxPlayers; --n >= 0;) {
-   for (int n1 = Recorder.totalFrames; --n1 >= 0;) {
-    mode[n][n1] = "";
-   }
-  }*/
  }
 
  static void updateFrame() {
-  if (VE.event == event.play) {
+  if (VE.status == VE.Status.play) {
    recorded = Math.min(recorded + 1, totalFrames);
    gameFrame = ++gameFrame >= totalFrames ? 0 : gameFrame;
   }
  }
 
  static void record(Vehicle vehicle) {
-  if (VE.event == event.play) {
+  if (VE.status == VE.Status.play) {
    int index = vehicle.index;
    X[index][gameFrame] = vehicle.X;
    Y[index][gameFrame] = vehicle.Y;
@@ -83,6 +68,10 @@ class Recorder {
    XZ[index][gameFrame] = vehicle.XZ;
    YZ[index][gameFrame] = vehicle.YZ;
    XY[index][gameFrame] = vehicle.XY;
+   if (vehicle.hasTurret) {
+    vehicleTurretXZ[index][gameFrame] = vehicle.vehicleTurretXZ;
+    vehicleTurretYZ[index][gameFrame] = vehicle.vehicleTurretYZ;
+   }
    speedXZ[index][gameFrame] = vehicle.speedXZ;
    speedYZ[index][gameFrame] = vehicle.speedYZ;
    for (int n1 = 4; --n1 >= 0; ) {
@@ -95,8 +84,13 @@ class Recorder {
    mode[index][gameFrame] = vehicle.mode;
    drive[index][gameFrame] = vehicle.drive;
    reverse[index][gameFrame] = vehicle.reverse;
-   special0[index][gameFrame] = vehicle.useSpecial[0];
-   special1[index][gameFrame] = vehicle.useSpecial[1];
+   long specialsQuantity = vehicle.specials.size();
+   if (specialsQuantity > 0) {
+    special0[index][gameFrame] = vehicle.specials.get(0).fire;
+   }
+   if (specialsQuantity > 1) {
+    special1[index][gameFrame] = vehicle.specials.get(1).fire;
+   }
    boost[index][gameFrame] = vehicle.boost;
    spinnerSpeed[index][gameFrame] = vehicle.spinnerSpeed;
   }
@@ -110,12 +104,13 @@ class Recorder {
  }
 
  static void playBack() {
-  if (VE.event == event.replay) {
+  if (VE.status == VE.Status.replay) {
    if (++recordingsCount >= recorded || VE.keyEnter || VE.keySpace || VE.keyEscape) {
-    VE.event = event.paused;
-    for (recordFrame = gameFrame - 1; recordFrame < 0; recordFrame += totalFrames) ;
+    VE.status = VE.Status.paused;
+    recordFrame = gameFrame - 1;
+    while (recordFrame < 0) recordFrame += totalFrames;
     if (VE.keyEnter || VE.keySpace || VE.keyEscape) {
-     U.soundPlay(VE.sounds, "UI1", 0);
+     VE.UI.play(1, 0);
     }
     VE.keyUp = VE.keyDown = VE.keyEnter = VE.keySpace = VE.keyEscape = false;
    }
@@ -131,6 +126,10 @@ class Recorder {
     vehicle.XZ = XZ[index][recordFrame];
     vehicle.YZ = YZ[index][recordFrame];
     vehicle.XY = XY[index][recordFrame];
+    if (vehicle.hasTurret) {
+     vehicle.vehicleTurretXZ = vehicleTurretXZ[index][recordFrame];
+     vehicle.vehicleTurretYZ = vehicleTurretYZ[index][recordFrame];
+    }
     vehicle.speedXZ = speedXZ[index][recordFrame];
     vehicle.speedYZ = speedYZ[index][recordFrame];
     for (int n1 = 4; --n1 >= 0; ) {
@@ -143,8 +142,13 @@ class Recorder {
     vehicle.mode = mode[index][recordFrame];
     vehicle.drive = drive[index][recordFrame];
     vehicle.reverse = reverse[index][recordFrame];
-    vehicle.useSpecial[0] = special0[index][recordFrame];
-    vehicle.useSpecial[1] = special1[index][recordFrame];
+    long specialsQuantity = vehicle.specials.size();
+    if (specialsQuantity > 0) {
+     vehicle.specials.get(0).fire = special0[index][recordFrame];
+    }
+    if (specialsQuantity > 1) {
+     vehicle.specials.get(1).fire = special1[index][recordFrame];
+    }
     vehicle.boost = boost[index][recordFrame];
     vehicle.spinnerSpeed = spinnerSpeed[index][recordFrame];
    }

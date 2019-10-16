@@ -6,9 +6,9 @@ import ve.utilities.*;
 
 class Flame extends MeshView {
 
- private final VehiclePiece VP;
+ private final VehiclePart VP;
 
- Flame(VehiclePiece vp) {
+ Flame(VehiclePart vp) {
   VP = vp;
   TriangleMesh flameMesh = new TriangleMesh();
   double size = VP.absoluteRadius * .125;
@@ -31,7 +31,7 @@ class Flame extends MeshView {
   if (!vehicle.onFire) {
    setVisible(false);
   } else if (U.random() < .5 && VP.MV.isVisible()) {//<-Good enough
-   U.setTranslate(this, VP.X, VP.Y, VP.Z);
+   U.setTranslate(this, VP);
    ((PhongMaterial) getMaterial()).setSelfIlluminationMap(U.getImage("firelight" + U.random(3)));
    U.randomRotate(this);
    setVisible(true);

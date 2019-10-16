@@ -1,52 +1,43 @@
 package ve.vehicles;
 
 import javafx.scene.shape.*;
+import ve.Core;
 import ve.VE;
 import ve.environment.E;
 import ve.utilities.U;
 
-class Chip extends MeshView {
+class Chip extends Core {
 
- private final VehiclePiece VP;
- private double X;
- private double Y;
- private double Z;
+ private final MeshView MV;
+ private final VehiclePart VP;
  private double stage;
- private double speedX;
- private double speedY;
- private double speedZ;
+ private double speedX, speedY, speedZ;
  private double gravitySpeed;
- private double XZ;
- private double XY;
- private double YZ;
- private double speedXZ;
- private double speedXY;
- private double speedYZ;
- private final double size;
+ private double speedXZ, speedXY, speedYZ;
 
- Chip(VehiclePiece vp) {
+ Chip(VehiclePart vp) {
   VP = vp;
-  size = .1 * VP.absoluteRadius;
+  absoluteRadius = .1 * VP.absoluteRadius;
   TriangleMesh chipMesh = new TriangleMesh();
   chipMesh.getPoints().setAll(//<-Do it here as well so it works correctly
-   (float) U.randomPlusMinus(size), (float) U.randomPlusMinus(size), (float) U.randomPlusMinus(size),
-   (float) U.randomPlusMinus(size), (float) U.randomPlusMinus(size), (float) U.randomPlusMinus(size),
-   (float) U.randomPlusMinus(size), (float) U.randomPlusMinus(size), (float) U.randomPlusMinus(size));
+  (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
+  (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
+  (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius));
   chipMesh.getTexCoords().setAll(0, 0);
   chipMesh.getFaces().setAll(0, 0, 1, 0, 2, 0);
-  setMesh(chipMesh);
-  setCullFace(CullFace.NONE);
-  setMaterial(VP.PM);
-  U.add(this);
-  setVisible(false);
+  MV = new MeshView(chipMesh);
+  MV.setCullFace(CullFace.NONE);
+  MV.setMaterial(VP.PM);
+  U.add(MV);
+  MV.setVisible(false);
  }
 
  void deploy(Vehicle V, double throwPower) {
   if (stage <= 0 && U.random() < .5) {
-   ((TriangleMesh) getMesh()).getPoints().setAll(
-    (float) U.randomPlusMinus(size), (float) U.randomPlusMinus(size), (float) U.randomPlusMinus(size),
-    (float) U.randomPlusMinus(size), (float) U.randomPlusMinus(size), (float) U.randomPlusMinus(size),
-    (float) U.randomPlusMinus(size), (float) U.randomPlusMinus(size), (float) U.randomPlusMinus(size));
+   ((TriangleMesh) MV.getMesh()).getPoints().setAll(
+   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
+   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
+   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius));
    X = Y = Z = gravitySpeed = 0;
    XZ = V.XZ;
    XY = V.XY;
@@ -65,7 +56,7 @@ class Chip extends MeshView {
   if (stage > 0) {
    if (Y + VP.Y > V.localVehicleGround || (stage += gamePlay ? U.random(VE.tick) : 0) > 10) {
     stage = 0;
-    setVisible(false);
+    MV.setVisible(false);
    } else {
     XZ += speedXZ * VE.tick;
     XY += speedXY * VE.tick;
@@ -74,14 +65,14 @@ class Chip extends MeshView {
      X += speedX * VE.tick;
      Z += speedZ * VE.tick;
      gravitySpeed += E.gravity * VE.tick;
-     Y += speedY * VE.tick + (V.mode.name().startsWith("drive") ? gravitySpeed * VE.tick : 0);
+     Y += speedY * VE.tick + (V.mode.name().startsWith(Vehicle.Mode.drive.name()) ? gravitySpeed * VE.tick : 0);
     }
-    if (VP.MV.isVisible() && U.getDepth(X + VP.X, Y + VP.Y, Z + VP.Z) > 0) {
-     U.setTranslate(this, X + VP.X, Y + VP.Y, Z + VP.Z);
-     U.rotate(this, XY, YZ, XZ);
-     setVisible(true);
+    if (VP.MV.isVisible() && U.render(X + VP.X, Y + VP.Y, Z + VP.Z)) {
+     U.setTranslate(MV, X + VP.X, Y + VP.Y, Z + VP.Z);
+     U.rotate(MV,this);
+     MV.setVisible(true);
     } else {
-     setVisible(false);
+     MV.setVisible(false);
     }
    }
   }

@@ -5,16 +5,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.scene.paint.Color;
+import ve.utilities.U;
 
 class Converter {
 
  static boolean axisSwap;
 
- static void saveFile(File file, StringBuilder content) {
-  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File("ConvertedFiles/" + file.getName().replace(".obj", ""))))) {
+ static void saveFile(File file, CharSequence content) {
+  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File("ConvertedFiles" + File.separator + file.getName().replace(".obj", "")), U.standardChars))) {
    bufferedWriter.write(content.toString());
   } catch (IOException e) {
-   e.printStackTrace(System.err);
+   e.printStackTrace();
   }
  }
 
@@ -27,56 +28,56 @@ class Converter {
   List<Vector3<Double>> vertices = new ArrayList<>();
   List<double[]> faces = new ArrayList<>();
   boolean hasMaterial = true;
-  try (BufferedReader reader = new BufferedReader(new FileReader(file.getAbsolutePath().replace(".obj", ".mtl")))) {
+  try (BufferedReader reader = new BufferedReader(new FileReader(file.getAbsolutePath().replace(".obj", ".mtl"), U.standardChars))) {
    for (String line; (line = reader.readLine()) != null; ) {
-    String[] sp = line.split(" ");
-    if (sp[0].startsWith("newmtl")) {
-     materialName.add(sp[1]);
-    } else if (sp[0].startsWith("Kd")) {
-     materialColor.add(new Color(Double.parseDouble(sp[1]), Double.parseDouble(sp[2]), Double.parseDouble(sp[3]), 1.));
+    String[] split = line.split(" ");
+    if (split[0].startsWith("newmtl")) {
+     materialName.add(split[1]);
+    } else if (split[0].startsWith("Kd")) {
+     materialColor.add(new Color(Double.parseDouble(split[1]), Double.parseDouble(split[2]), Double.parseDouble(split[3]), 1.));
     }
    }
   } catch (IOException e) {
    hasMaterial = false;
   }
-  try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file))) {
+  try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file, U.standardChars))) {
    int materialIndex = 0;
-   for (String l; (l = bufferedReader.readLine()) != null; ) {
-    if (l.startsWith("v ")) {
+   for (String S; (S = bufferedReader.readLine()) != null; ) {
+    if (S.startsWith("v ")) {
      gettingVertices = true;
-     vertices.add(new Vector3(valueOBJ(l, 0), valueOBJ(l, 1), valueOBJ(l, 2)));
+     vertices.add(new Vector3(valueOBJ(S, 0), valueOBJ(S, 1), valueOBJ(S, 2)));
     }
-    materialIndex = l.startsWith("usemtl ") ? materialName.indexOf(l.split(" ")[1].trim()) : materialIndex;
-    if (l.startsWith("f ")) {
-     List<Double> al = new ArrayList<>();
+    materialIndex = S.startsWith("usemtl ") ? materialName.indexOf(S.split(" ")[1].trim()) : materialIndex;
+    if (S.startsWith("f ")) {
+     List<Double> listFaces = new ArrayList<>();
      gettingVertices = objFaceEnd = false;
      for (int i = 0; !objFaceEnd; i++) {
-      al.add(valueOBJ(l, i));
+      listFaces.add(valueOBJ(S, i));
      }
      if (hasMaterial) {
       modelColor.add(materialColor.get(materialIndex));
      }
-     faces.add(listToArray(al));
+     faces.add(U.listToArray(listFaces));
     }
    }
-  } catch (IOException ex) {
-   ex.printStackTrace(System.err);
+  } catch (IOException E) {
+   E.printStackTrace();
   }
   StringBuilder SB = new StringBuilder();
   for (int n = 0; n < faces.size(); ++n) {
-   StringBuilder s2 = new StringBuilder("RGB(" + (hasMaterial ? modelColor.get(n).getRed() : "1") + "," + (hasMaterial ? modelColor.get(n).getGreen() : "1") + "," + (hasMaterial ? modelColor.get(n).getBlue() : "1") + "\n");
+   StringBuilder s2 = new StringBuilder("RGB(" + (hasMaterial ? Double.valueOf(modelColor.get(n).getRed()) : "1") + "," + (hasMaterial ? Double.valueOf(modelColor.get(n).getGreen()) : "1") + "," + (hasMaterial ? Double.valueOf(modelColor.get(n).getBlue()) : "1") + U.lineSeparator);
    for (int n1 = 0; n1 < faces.get(n).length; ++n1) {
     int n2 = (int) faces.get(n)[n1];
-    double y = vertices.get(n2).y * (invertY ? -1 : 1), z = vertices.get(n2).z * (invertZ ? -1 : 1);
-    s2.append("(").append(vertices.get(n2).x * (invertX ? -1 : 1)).append(",").append(axisSwap ? z : y).append(",").append(axisSwap ? y : z).append("\n");
+    double y = vertices.get(n2).Y * (invertY ? -1 : 1), z = vertices.get(n2).Z * (invertZ ? -1 : 1);
+    s2.append("(").append(vertices.get(n2).X * (invertX ? -1 : 1)).append(",").append(axisSwap ? z : y).append(",").append(axisSwap ? y : z).append(U.lineSeparator);
     if (n1 >= 3) {
      throw new IllegalStateException();
     }
    }
    SB.append(s2);
   }
-  File newFile = new File("ConvertedFiles/" + file.getName().replace(".obj", ""));
-  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(newFile))) {
+  File newFile = new File("ConvertedFiles" + File.separator + file.getName().replace(".obj", ""));
+  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(newFile, U.standardChars))) {
    bufferedWriter.write(SB.toString());
   } catch (IOException e) {
    e.printStackTrace(System.err);
@@ -84,41 +85,33 @@ class Converter {
   return optimize(newFile);
  }
 
- private StringBuilder optimize(File file) {
+ private static StringBuilder optimize(File file) {
   StringBuilder SB = new StringBuilder();
   String lastColor = "";
-  try (BufferedReader BR = new BufferedReader(new FileReader(file))) {
+  try (BufferedReader BR = new BufferedReader(new FileReader(file, U.standardChars))) {
    for (String s; (s = BR.readLine()) != null; ) {
     if (s.startsWith("(")) {
-     SB.append(s).append("\n");
+     SB.append(s).append(U.lineSeparator);
     }
     if (s.startsWith("RGB(")) {
      if (!lastColor.equals(s)) {
-      SB.append("><").append(s).append("\n<>\ntriangles\n");
+      SB.append("><").append(s).append(U.lineSeparator).append("<>").append(U.lineSeparator).append("triangles").append(U.lineSeparator);
      }
      lastColor = s;
     }
    }
   } catch (IOException E) {
-   E.printStackTrace(System.err);
+   E.printStackTrace();
   }
   return SB.append("><");
  }
 
- private double[] listToArray(List<Double> in) {
-  double[] d = new double[in.size()];
-  for (int n = 0; n < d.length; n++) {
-   d[n] = in.get(n);
-  }
-  return d;
- }
-
- private double valueOBJ(String line, int index) {
+ private double valueOBJ(CharSequence line, int index) {
   int n3 = 2, n4 = 0, n5 = 0, n6 = 0;
   StringBuilder s2 = new StringBuilder();
   while (n3 < line.length() && n5 != 2) {
-   String string = "" + line.charAt(n3);
-   if (string.equals(" ")) {
+   String s = String.valueOf(line.charAt(n3));
+   if (s.equals(" ")) {
     if (n6 != 0) {
      ++n4;
      n6 = 0;
@@ -128,7 +121,7 @@ class Converter {
     }
    } else {
     if (n4 == index) {
-     s2.append(string);
+     s2.append(s);
      n5 = 1;
     }
     n6 = 1;
@@ -143,7 +136,7 @@ class Converter {
   if (gettingVertices) {
    n2 = Double.parseDouble(s2.toString());
   } else {
-   int indexOf = s2.toString().indexOf('/');
+   int indexOf = s2.toString().indexOf('/');//<-Replace '/' with "/"?
    if (indexOf != -1) {
     s2 = new StringBuilder(s2.substring(0, indexOf));
    }
@@ -154,14 +147,12 @@ class Converter {
 
  static class Vector3<E> {
 
-  final E x;
-  final E y;
-  final E z;
+  final E X, Y, Z;
 
   Vector3(E x, E y, E z) {
-   this.x = x;
-   this.y = y;
-   this.z = z;
+   X = x;
+   Y = y;
+   Z = z;
   }
  }
 }

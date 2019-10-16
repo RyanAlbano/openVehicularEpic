@@ -2,21 +2,18 @@ package ve.environment;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
+import ve.Core;
 import ve.utilities.U;
 
-public class VolcanoRock extends Sphere {
+public class VolcanoRock extends Core {
 
- public double X;
-    public double Y;
-    public double Z;
-    public double speedX;
-    public double speedY;
-    public double speedZ;
-    private final double[] rotation = new double[3];
- public boolean groundHit, isLava;
+ public final Sphere S;
+ public double speedX, speedY, speedZ;
+ private final double[] rotation = new double[3];
+ boolean groundHit, isLava;
 
- public VolcanoRock(double radius, int divisions) {
-  super(radius, divisions);
+ VolcanoRock(double radius, int divisions) {
+  S = new Sphere(radius, divisions);
  }
 
  public void deploy() {
@@ -32,15 +29,15 @@ public class VolcanoRock extends Sphere {
  }
 
  public void run() {
-  if (U.getDepth(X, Y, Z) > -getRadius()) {
-   U.rotate(this, rotation[0] * E.volcanoEruptionStage, rotation[1] * E.volcanoEruptionStage);
+  if (U.render(this, -S.getRadius())) {
+   U.rotate(S, rotation[0] * E.volcanoEruptionStage, rotation[1] * E.volcanoEruptionStage);
    if (isLava) {
-    ((PhongMaterial) getMaterial()).setSelfIlluminationMap(U.getImage("firelight" + U.random(3)));
+    ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(U.getImage("firelight" + U.random(3)));
    }
-   U.setTranslate(this, X, Y, Z);
-   setVisible(true);
+   U.setTranslate(S, this);
+   S.setVisible(true);
   } else {
-   setVisible(false);
+   S.setVisible(false);
   }
  }
 }

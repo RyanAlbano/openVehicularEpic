@@ -1,21 +1,21 @@
 package ve.vehicles;
 
 import javafx.scene.shape.Sphere;
+import ve.Core;
 import ve.VE;
 import ve.utilities.U;
 
-class FixSphere extends Sphere {
+class FixSphere extends Core {
 
+ private final Sphere S;
  double stage;
- private double speedX;
- private double speedY;
- private double speedZ;
+ private double speedX, speedY, speedZ;
 
  FixSphere(Vehicle V) {
-  setRadius(U.random(V.absoluteRadius * .1));
-  setMaterial(V.fixSpherePM);
-  U.add(this);
-  setVisible(false);
+  S = new Sphere(U.random(V.absoluteRadius * .1));
+  S.setMaterial(V.fixSpherePM);
+  U.add(S);
+  S.setVisible(false);
  }
 
  void deploy() {
@@ -29,9 +29,17 @@ class FixSphere extends Sphere {
   if (stage > 0) {
    if ((stage += U.random(VE.tick)) > 20) {
     stage = 0;
-    setVisible(false);
+    S.setVisible(false);
    } else {
-    U.render(this, V.X + (speedX * stage), V.Y + (speedY * stage), V.Z + (speedZ * stage));
+    X = V.X + (speedX * stage);
+    Y = V.Y + (speedY * stage);
+    Z = V.Z + (speedZ * stage);
+    if (U.render(this)) {
+     U.setTranslate(S, this);
+     S.setVisible(true);
+    } else {
+     S.setVisible(false);
+    }
    }
   }
  }

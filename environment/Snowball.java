@@ -1,19 +1,17 @@
 package ve.environment;
 
 import javafx.scene.shape.Sphere;
-import static ve.VE.*;
+
+import ve.Camera;
+import ve.Core;
+import ve.VE;
 import ve.utilities.U;
 
-public class Snowball {
+public class Snowball extends Core {
 
  public Sphere S;
  private double stage;
- private double X;
- private double Y;
- private double Z;
- private double speedX;
- private double speedY;
- private double speedZ;
+ private double speedX, speedY, speedZ;
  private final double radius = 1 + U.random(9.);
  private final double[] rotation = new double[2];
  private boolean quality = true;
@@ -42,32 +40,32 @@ public class Snowball {
  }
 
  public void run() {
-  speedY += U.randomPlusMinus(6.) + (6 * U.random(tick));
+  speedY += U.randomPlusMinus(6.) + (6 * U.random(VE.tick));
   speedX += U.randomPlusMinus(6.);
   speedZ += U.randomPlusMinus(6.);
   speedX *= .9;
   speedY *= .9;
   speedZ *= .9;
   boolean windy = E.wind > 0;
-  X += speedX * tick + (windy ? E.windX * tick : 0);
-  Y += speedY * tick;
-  Z += speedZ * tick + (windy ? E.windZ * tick : 0);
-  while (Math.abs(X - cameraX) > E.snowWrapDistance) {
-   X += (X > cameraX ? -E.snowWrapDistance : E.snowWrapDistance) * 2;
+  X += speedX * VE.tick + (windy ? E.windX * VE.tick : 0);
+  Y += speedY * VE.tick;
+  Z += speedZ * VE.tick + (windy ? E.windZ * VE.tick : 0);
+  while (Math.abs(X - Camera.X) > E.snowWrapDistance) {
+   X += (X > Camera.X ? -E.snowWrapDistance : E.snowWrapDistance) * 2;
    stage = 0;
   }
-  while (Math.abs(Y - cameraY) > E.snowWrapDistance) {
-   Y += (Y > cameraY ? -E.snowWrapDistance : E.snowWrapDistance) * 2;
+  while (Math.abs(Y - Camera.Y) > E.snowWrapDistance) {
+   Y += (Y > Camera.Y ? -E.snowWrapDistance : E.snowWrapDistance) * 2;
    stage = 0;
   }
-  while (Math.abs(Z - cameraZ) > E.snowWrapDistance) {
-   Z += (Z > cameraZ ? -E.snowWrapDistance : E.snowWrapDistance) * 2;
+  while (Math.abs(Z - Camera.Z) > E.snowWrapDistance) {
+   Z += (Z > Camera.Z ? -E.snowWrapDistance : E.snowWrapDistance) * 2;
    stage = 0;
   }
   set(false);
-  stage += tick;
-  if (U.getDepth(X, Y, Z) > 0) {
-   U.setTranslate(S, X, Y, Z);
+  stage += VE.tick;
+  if (U.getDepth(this) > 0) {
+   U.setTranslate(S, this);
    if (!quality) {
     U.rotate(S, rotation[0] * stage, rotation[1] * stage);
    }

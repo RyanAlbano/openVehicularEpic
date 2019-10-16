@@ -1,9 +1,9 @@
 package ve;
 
-class Launcher {
+enum Launcher {
+ ;
 
  public static void main(String[] s) {
-  VE VE = new VE();
   VE.run(s);
  }
 }

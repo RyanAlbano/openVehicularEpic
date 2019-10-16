@@ -13,31 +13,31 @@ class FileDialogUtility {
  }
 
  FileDialogUtility setWorkingDirectory() {
-  this.dialog.setCurrentDirectory(new File("ConvertedFiles"));
+  dialog.setCurrentDirectory(new File("ConvertedFiles"));
   return this;
  }
 
  FileDialogUtility setTitle() {
-  this.dialog.setDialogTitle("Select an .OBJ file");
+  dialog.setDialogTitle("Select an .OBJ file");
   return this;
  }
 
  FileDialogUtility setMultipleSelection() {
-  this.dialog.setMultiSelectionEnabled(true);
+  dialog.setMultiSelectionEnabled(true);
   return this;
  }
 
  FileDialogUtility setAllowAllFiles() {
-  this.dialog.setAcceptAllFileFilterUsed(true);
+  dialog.setAcceptAllFileFilterUsed(true);
   return this;
  }
 
  FileDialogUtility setActionListener(java.awt.event.ActionListener listener) {
-  this.dialog.addActionListener(listener);
+  dialog.addActionListener(listener);
   return this;
  }
 
  void showDialog(Component component) {
-  this.dialog.showOpenDialog(component);
+  dialog.showOpenDialog(component);
  }
 }

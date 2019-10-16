@@ -1,6 +1,8 @@
 package ve.vehicles;
 
-class Port {
+import ve.Core;
 
- double Y, X, Z, XZ, YZ;
+public class Port extends Core {
+
+ public Spit spit;
 }

@@ -1,35 +1,48 @@
 package ve.utilities;
 
+import java.awt.*;
 import java.io.*;
+import java.nio.charset.*;
+import java.text.DecimalFormat;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Pattern;
 
 import javafx.geometry.Point3D;
 import javafx.scene.*;
 import javafx.scene.canvas.*;
-import javafx.scene.image.*;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.image.Image;
 import javafx.scene.paint.*;
+import javafx.scene.paint.Color;
 import javafx.scene.text.*;
-import ve.Sound;
-import ve.VE;
+import javafx.scene.text.Font;
+import ve.*;
+import ve.Camera;
 import ve.environment.E;
 import ve.vehicles.Vehicle;
 
-public class U {//<-The UTILITY Class
+public enum U {//<-The UTILITY Class
+ ;
 
- public static double FPS;
- public static double averageFPS;
+ public static String lineSeparator = System.lineSeparator();
+ public static final Pattern regex = Pattern.compile("[(,)]");
+ public static double FPS, averageFPS;
  public static double FPSTime;
  public static final double sin45 = .70710678118654752440084436210485;
- public static final long shinySpecular = 100;
- public static final long refreshRate = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode().getRefreshRate();
- public static final java.awt.Dimension dimension = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
- private static final String imageFolder = "images";
- private static final String imageExtension = ".png";
- public static final String soundFolder = "sounds";
- public static final String soundExtension = ".au";
- public static final Canvas getRGBCanvas = new Canvas(1, 1);
- public static final GraphicsContext getRGB = getRGBCanvas.getGraphicsContext2D();
+ public static final long refreshRate = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode().getRefreshRate();
+ public static final Dimension dimension = Toolkit.getDefaultToolkit().getScreenSize();
+ private static final String imageFolder = "images", imageExtension = ".png";
+ public static final String soundFolder = "sounds", soundExtension = ".au";
+ public static final String JLayerStuff = "JLayerStuff";
+ public static final Charset standardChars = StandardCharsets.UTF_8;
+ private static final String imageLoadingException = "Image-loading exception: ";
+ public static final String soundLoadingException = "Sound-loading exception: ";
+ public static final String modelLoadingError = "Model-Loading Error: ";
+ private static final Canvas colorGetterCanvas = new Canvas(1, 1);
+ private static final GraphicsContext colorGetter = colorGetterCanvas.getGraphicsContext2D();
+ public static final DecimalFormat DF = new DecimalFormat("0.#E0");
  public static final Quaternion inert = new Quaternion();
 
  public static boolean sameVehicle(Vehicle V1, Vehicle V2) {
@@ -41,7 +54,7 @@ public class U {//<-The UTILITY Class
  }
 
  public static boolean sameTeam(long index1, long index2) {
-  return (index1 < VE.vehiclesInMatch >> 1 && index2 < VE.vehiclesInMatch >> 1) || (index1 >= VE.vehiclesInMatch >> 1 && index2 >= VE.vehiclesInMatch >> 1);
+  return index1 < VE.vehiclesInMatch >> 1 == index2 < VE.vehiclesInMatch >> 1;
  }
 
  public static void text(String s, double Y) {
@@ -64,11 +77,15 @@ public class U {//<-The UTILITY Class
  }
 
  public static void fillRGB(double R, double G, double B) {
-  VE.graphicsContext.setFill(Color.color(U.clamp(R), U.clamp(G), U.clamp(B)));
+  VE.graphicsContext.setFill(Color.color(clamp(R), clamp(G), clamp(B)));
  }
 
  public static void fillRGB(double R, double G, double B, double transparency) {
-  VE.graphicsContext.setFill(Color.color(U.clamp(R), U.clamp(G), U.clamp(B), U.clamp(transparency)));
+  fillRGB(VE.graphicsContext, R, G, B, transparency);
+ }
+
+ public static void fillRGB(GraphicsContext GC, double R, double G, double B, double transparency) {
+  GC.setFill(Color.color(clamp(R), clamp(G), clamp(B), clamp(transparency)));
  }
 
  public static void fillRGB(Color C) {
@@ -76,31 +93,25 @@ public class U {//<-The UTILITY Class
  }
 
  public static void strokeRGB(double R, double G, double B) {
-  VE.graphicsContext.setStroke(Color.color(U.clamp(R), U.clamp(G), U.clamp(B)));
+  VE.graphicsContext.setStroke(Color.color(clamp(R), clamp(G), clamp(B)));
  }
 
- public static void fillRectangle(double x, double y, double rectangleWidth, double rectangleHeight) {
+ public static void fillRectangle(double X, double Y, double rectangleWidth, double rectangleHeight) {
+  fillRectangle(VE.graphicsContext, X, Y, rectangleWidth, rectangleHeight);
+ }
+
+ public static void fillRectangle(GraphicsContext GC, double X, double Y, double rectangleWidth, double rectangleHeight) {
   double width = rectangleWidth * VE.width, height = rectangleHeight * VE.height;
-  VE.graphicsContext.fillRect((VE.width * x) - (width * .5), (VE.height * y) - (height * .5), width, height);
+  GC.fillRect((VE.width * X) - (width * .5), (VE.height * Y) - (height * .5), width, height);
  }
 
- public static void drawRectangle(double x, double y, double rectangleWidth, double rectangleHeight) {
+ public static void drawRectangle(double X, double Y, double rectangleWidth, double rectangleHeight) {
   double width = Math.abs(rectangleWidth * VE.width), height = Math.abs(rectangleHeight * VE.height);
-  VE.graphicsContext.strokeRect((VE.width * x) - (width * .5), (VE.height * y) - (height * .5), width, height);
+  VE.graphicsContext.strokeRect((VE.width * X) - (width * .5), (VE.height * Y) - (height * .5), width, height);
  }
 
  public static void font(double size) {
   VE.graphicsContext.setFont(new Font("Arial Black", size * VE.width));
- }
-
- public static String readInLAN(int n) {
-  String s = "";
-  try {
-   s = VE.inLAN.get(n).ready() ? VE.inLAN.get(n).readLine() : s;
-  } catch (IOException e) {
-   e.printStackTrace();
-  }
-  return s;
  }
 
  public static FileInputStream getMapFile(int n) {
@@ -121,14 +132,6 @@ public class U {//<-The UTILITY Class
   return FIS;
  }
 
- List<Double> arrayToList(double[] source) {
-  List<Double> d = new ArrayList<>();
-  for (double v : source) {
-   d.add(v);
-  }
-  return d;
- }
-
  public static void add(Node N) {
   if (N != null && !VE.group.getChildren().contains(N)) {
    VE.group.getChildren().add(N);
@@ -140,13 +143,6 @@ public class U {//<-The UTILITY Class
    if (n != null && !VE.group.getChildren().contains(n)) {
     VE.group.getChildren().add(n);
    }
-  }
- }
-
- public static void addLight(Node N) {
-  if (N != null && !VE.group.getChildren().contains(N) && VE.lightsAdded < 3) {
-   VE.group.getChildren().add(N);
-   VE.lightsAdded++;
   }
  }
 
@@ -164,33 +160,66 @@ public class U {//<-The UTILITY Class
   }
  }
 
- public static String getString(String s, int index) {
+ public static void addLight(Node N) {
+  if (N != null && !E.lights.getChildren().contains(N) && E.lightsAdded < 3) {
+   E.lights.getChildren().add(N);
+   E.lightsAdded++;
+  }
+ }
+
+ public static void removeLight(Node N) {
+  if (N != null) {
+   E.lights.getChildren().remove(N);
+  }
+ }
+
+ public static String getString(CharSequence s, int index) {
   try {
-   return s.split("[(,)]")[index + 1];
-  } catch (Exception e) {
+   return regex.split(s)[index + 1];
+  } catch (RuntimeException e) {
    return "";
   }
  }
 
- public static double getValue(String s, int index) {
-  return Double.parseDouble(s.split("[(,)]")[index + 1]);
+ public static double getValue(CharSequence s, int index) {
+  return Double.parseDouble(regex.split(s)[index + 1]);
  }
 
- public static double distance(double X1, double X2, double Z1, double Z2) {
-  return netValue(X1 - X2, Z1 - Z2);
+ public static double distance(double coordinate1, double otherCoordinate1, double coordinate2, double otherCoordinate2) {
+  return netValue(coordinate1 - otherCoordinate1, coordinate2 - otherCoordinate2);
+ }
+
+ public static double distance(Core C1, Core C2) {
+  return distance(C1.X, C2.X, C1.Y, C2.Y, C1.Z, C2.Z);
+ }
+
+ private static double distance(double x, double y, double z) {
+  return distance(x, Camera.X, y, Camera.Y, z, Camera.Z);
+ }
+
+ public static double distance(Core core) {
+  return distance(core.X, Camera.X, core.Y, Camera.Y, core.Z, Camera.Z);
  }
 
  public static double distance(double X1, double X2, double Y1, double Y2, double Z1, double Z2) {
   return netValue(X1 - X2, Y1 - Y2, Z1 - Z2);
  }
 
- public static boolean outOfBounds(double x, double y, double z, double tolerance) {
-  double depth = E.groundLevel + (E.poolExists && U.distance(x, E.poolX, z, E.poolZ) < E.pool[0].getRadius() ? E.poolDepth : 0);
-  return y > depth || x > VE.limitR + tolerance || x < VE.limitL - tolerance || z > VE.limitFront + tolerance || z < VE.limitBack - tolerance || y < VE.limitY - tolerance;
+ public static boolean outOfBounds(Core core, double tolerance) {
+  return outOfBounds(core.X, core.Y, core.Z, tolerance);
+ }
+
+ private static boolean outOfBounds(double x, double y, double z, double tolerance) {
+  double depth = E.groundLevel + (E.poolExists && distance(x, E.poolX, z, E.poolZ) < E.pool[0].getRadius() ? E.poolDepth : 0);
+  return y > depth || x > E.limitR + tolerance || x < E.limitL - tolerance || z > E.limitFront + tolerance || z < E.limitBack - tolerance || y < E.limitY - tolerance;
+ }
+
+ public static void setDiffuseRGB(PhongMaterial PM, double shade) {
+  setDiffuseRGB(PM, shade, shade, shade);
  }
 
  public static void setDiffuseRGB(PhongMaterial PM, double R, double G, double B) {
-  PM.setDiffuseColor(Color.color(U.clamp(R), U.clamp(G), U.clamp(B)));
+  PM.setDiffuseColor(Color.color(clamp(R), clamp(G), clamp(B)));
  }
 
  public static void setDiffuseRGB(PhongMaterial PM, Color C) {
@@ -198,136 +227,64 @@ public class U {//<-The UTILITY Class
  }
 
  public static void setDiffuseRGB(PhongMaterial PM, double R, double G, double B, double transparency) {
-  PM.setDiffuseColor(Color.color(U.clamp(R), U.clamp(G), U.clamp(B), U.clamp(transparency)));
+  PM.setDiffuseColor(Color.color(clamp(R), clamp(G), clamp(B), clamp(transparency)));
+ }
+
+ public static void setSpecularRGB(PhongMaterial PM, double shade) {
+  setSpecularRGB(PM, shade, shade, shade);
  }
 
  public static void setSpecularRGB(PhongMaterial PM, double R, double G, double B) {
-  PM.setSpecularColor(Color.color(U.clamp(R), U.clamp(G), U.clamp(B)));
+  PM.setSpecularColor(Color.color(clamp(R), clamp(G), clamp(B)));
  }
 
- public static void setSpecularRGB(PhongMaterial PM, double R, double G, double B, double transparency) {
-  PM.setSpecularColor(Color.color(U.clamp(R), U.clamp(G), U.clamp(B), U.clamp(transparency)));
+ public static void setSpecularRGB(PhongMaterial PM, double R, double G, double B, double transparency) {//<-Keep method in case we need it later
+  PM.setSpecularColor(Color.color(clamp(R), clamp(G), clamp(B), clamp(transparency)));
  }
 
  public static void setLightRGB(AmbientLight AL, double R, double G, double B) {
-  AL.setColor(Color.color(U.clamp(R), U.clamp(G), U.clamp(B)));
+  AL.setColor(Color.color(clamp(R), clamp(G), clamp(B)));
  }
 
  public static void setLightRGB(PointLight PL, double R, double G, double B) {
-  PL.setColor(Color.color(U.clamp(R), U.clamp(G), U.clamp(B)));
+  PL.setColor(Color.color(clamp(R), clamp(G), clamp(B)));
  }
 
- public static void loadImage(Map<String, Image> M, String s) {
-  if (!M.containsKey(s)) {
+ public static void setSelfIllumination(PhongMaterial PM, double R, double G, double B) {
+  colorGetter.setFill(Color.color(clamp(R), clamp(G), clamp(B)));
+  colorGetter.fillRect(0, 0, 1, 1);
+  PM.setSelfIlluminationMap(colorGetterCanvas.snapshot(null, null));
+ }
+
+ public static void loadImage(Map<? super String, ? super Image> M, String name) {
+  if (!M.containsKey(name)) {
    try {
-    M.put(s, new Image(new FileInputStream(imageFolder + File.separator + s + imageExtension)));
-   } catch (FileNotFoundException e) {
-    System.out.println("Image loading exception: " + e);
+    M.put(name, new Image(new FileInputStream(imageFolder + File.separator + name + imageExtension)));
+   } catch (FileNotFoundException E) {
+    System.out.println(imageLoadingException + E);
    }
   }
  }
 
- public static void loadImage(Map<String, Image> M, String s, double quantity) {
+ public static void loadImage(Map<? super String, ? super Image> M, String name, double quantity) {
   for (int n = 0; n < quantity; n++) {
    try {
-    U.loadImage(M, s + n);
-   } catch (Exception e) {
+    loadImage(M, name + n);
+   } catch (RuntimeException E) {
     if (quantity < Double.POSITIVE_INFINITY) {
-     System.out.println("Image loading exception: " + e);
+     System.out.println(imageLoadingException + E);
     }
     break;
    }
   }
  }
 
- public static Image getImage(String s) {
-  return VE.images.getOrDefault(s, null);
+ public static Image getImage(String name) {
+  return VE.images.getOrDefault(name, null);
  }
 
- public static Image getImageNormal(String s) {
-  return VE.normalMapping ? getImage(s + "N") : null;
- }
-
- public static void loadSound(Map<String, Sound> M, String s) {
-  if (!M.containsKey(s)) {
-   try {
-    M.put(s, new Sound(s));
-   } catch (Exception E) {
-    System.out.println("Sound loading exception: " + E);
-   }
-  }
- }
-
- public static void loadSound(Map<String, Sound> M, String keyName, String fileName) {
-  if (!M.containsKey(keyName)) {
-   try {
-    M.put(keyName, new Sound(fileName));
-   } catch (Exception E) {
-    System.out.println("Sound loading exception: " + E);
-   }
-  }
- }
-
- public static void loadSound(Map<String, Sound> M, String s, double quantity) {
-  for (int n = 0; n < quantity; n++) {
-   try {
-    if (!M.containsKey(s + n)) {
-     M.put(s + n, new Sound(s + n));
-    }
-   } catch (Exception E) {
-    if (quantity < Double.POSITIVE_INFINITY) {
-     System.out.println("Sound loading exception: " + E);
-    }
-    break;
-   }
-  }
- }
-
- public static void soundPlay(Map<String, Sound> M, String s, double gain) {
-  if (M.containsKey(s)) {
-   M.get(s).play(gain);
-  }
- }
-
- public static void soundPlayIfNotPlaying(Map<String, Sound> M, String s, double gain) {
-  if (M.containsKey(s)) {
-   M.get(s).playIfNotPlaying(gain);
-  }
- }
-
- public static void soundLoop(Map<String, Sound> M, String s, double gain) {
-  if (M.containsKey(s)) {
-   M.get(s).loop(gain);
-  }
- }
-
- public static void soundResume(Map<String, Sound> M, String s, double gain) {
-  if (M.containsKey(s)) {
-   M.get(s).resume(gain);
-  }
- }
-
- public static void soundStop(Map<String, Sound> M, String s) {
-  if (M.containsKey(s)) {
-   M.get(s).stop();
-  }
- }
-
- public static boolean soundRunning(Map<String, Sound> M, String s) {
-  return M.containsKey(s) && M.get(s).running();
- }
-
- public static void soundClose(Map<String, Sound> M, String s) {
-  if (M.containsKey(s)) {
-   M.get(s).close();
-   M.remove(s);
-  }
- }
-
- public static void soundClose(Map<String, Sound> M, String s, int quantity) {
-  for (int n = quantity; --n >= 0; ) {
-   soundClose(M, s + n);
-  }
+ public static Image getImageNormal(String name) {
+  return VE.normalMapping ? getImage(name + "N") : null;
  }
 
  public static boolean listEquals(String in, String... prefixes) {
@@ -358,117 +315,144 @@ public class U {//<-The UTILITY Class
  }
 
  public static double[] listToArray(List<Double> source) {
-  if (source.size() > 0) {
+  if (source.isEmpty()) {
+   return new double[source.size()];
+  } else {
    double[] d = new double[source.size()];
    for (int i = d.length; --i >= 0; ) {
     d[i] = source.get(i);
    }
    return d;
-  } else {
-   return new double[source.size()];
   }
  }
 
- public static long randomize(long value, int length) {
+ static List<Double> arrayToList(double[] source) {//<-Keep method in case we need it later
+  List<Double> d = new ArrayList<>();
+  for (double v : source) {
+   d.add(v);
+  }
+  return d;
+ }
+
+ public static int randomize(long value, int length) {
   if (length > 1) {
    long lastValue = value;
    while (value == lastValue) {
     value = random(length);
    }
   }
-  return value;
+  return (int) value;
  }
 
- public static int random(int randomInt) {
-  return randomInt > 0 ? ThreadLocalRandom.current().nextInt(randomInt) : randomInt;
+ public static int random(int intIn) {
+  return intIn > 0 ? ThreadLocalRandom.current().nextInt(intIn) : intIn;
  }
 
- public static long random(long randomLong) {
-  return randomLong > 0 ? ThreadLocalRandom.current().nextLong(randomLong) : randomLong;
+ public static long random(long longIn) {
+  return longIn > 0 ? ThreadLocalRandom.current().nextLong(longIn) : longIn;
  }
 
- public static double random(double randomDouble) {
-  return randomDouble * random();
+ public static double random(double doubleIn) {
+  return doubleIn * random();
  }
 
  public static double random() {
   return ThreadLocalRandom.current().nextDouble();
  }
 
- public static double randomPlusMinus(double randomDouble) {
-  return randomDouble * (random() - random());
+ public static double randomPlusMinus(double doubleIn) {
+  return doubleIn * (random() - random());
  }
 
  public static double sin(double in) {
-  for (; in > 180; in -= 360) ;
-  for (; in < -180; in += 360) ;
-  return Math.sin(in * .01745329251994329576923690768489);
+  while (in > 180) in -= 360;
+  while (in < -180) in += 360;
+  return StrictMath.sin(in * .01745329251994329576923690768489);
  }
 
  public static double cos(double in) {
-  for (; in > 180; in -= 360) ;
-  for (; in < -180; in += 360) ;
-  return Math.cos(in * .01745329251994329576923690768489);
+  while (in > 180) in -= 360;
+  while (in < -180) in += 360;
+  return StrictMath.cos(in * .01745329251994329576923690768489);
  }
 
  private static double arcCos(double in) {
-  return Math.acos(in);
+  return StrictMath.acos(in);
  }
 
  public static double arcTan(double in) {
-  return Math.atan(in) * 57.295779513082320876798154814092;
+  return StrictMath.atan(in) * 57.295779513082320876798154814092;
+ }
+
+ public static void rotate(Node N, Core core) {
+  rotate(N, core.XY, core.YZ, core.XZ);
  }
 
  public static void rotate(Node n, double XY, double YZ, double XZ) {
-  double cosXY = U.cos(XY), cosYZ = U.cos(YZ), cosXZ = U.cos(XZ);
-  XY = U.sin(XY);
-  YZ = U.sin(YZ);
-  XZ = U.sin(XZ);
-  double d = U.arcCos(((cosXY * cosXZ) + (cosXY * cosYZ - XY * YZ * XZ) + (cosYZ * cosXZ) - 1.) * .5);
-  if (d != 0) {//<-do NOT Remove!
-   double den = 1 / (2 * Math.sin(d));
-   n.setRotationAxis(new Point3D(((-cosXZ * YZ) - (cosXY * YZ + cosYZ * XY * XZ)) * den, ((XY * YZ - cosXY * cosYZ * XZ) - XZ) * den, ((-cosXZ * XY) - (cosYZ * XY + cosXY * YZ * XZ)) * den));
-   n.setRotate(Math.toDegrees(d));
-  } else {
+  double cosXY = cos(XY), cosYZ = cos(YZ), cosXZ = cos(XZ);
+  XY = sin(XY);
+  YZ = sin(YZ);
+  XZ = sin(XZ);
+  double d = arcCos(((cosXY * cosXZ) + (cosXY * cosYZ - XY * YZ * XZ) + (cosYZ * cosXZ) - 1.) * .5);
+  if (d == 0) {//<-do NOT Remove!
    n.setRotationAxis(new Point3D(0, 0, 0));
    n.setRotate(0);
+  } else {
+   double den = 1 / (2 * StrictMath.sin(d));
+   n.setRotationAxis(new Point3D(((-cosXZ * YZ) - (cosXY * YZ + cosYZ * XY * XZ)) * den, ((XY * YZ - cosXY * cosYZ * XZ) - XZ) * den, ((-cosXZ * XY) - (cosYZ * XY + cosXY * YZ * XZ)) * den));
+   n.setRotate(Math.toDegrees(d));
   }
  }
 
- public static void rotate(Node n, double YZ, double XZ) {
-  double cosXZ = U.cos(XZ), sinYZ = U.sin(YZ), sinXZ = U.sin(XZ), cosYZ = U.cos(YZ),
-  d = U.arcCos((cosXZ + cosYZ + (cosYZ * cosXZ) - 1.) * .5),
-  den = 1 / (2 * Math.sin(d));
-  n.setRotationAxis(new Point3D(((-cosXZ * sinYZ) - sinYZ) * den, (-(cosYZ * sinXZ) - sinXZ) * den, -(sinYZ * sinXZ) * den));
-  n.setRotate(Math.toDegrees(d));
+ public static void rotate(Node N, double YZ, double XZ) {
+  double cosXZ = cos(XZ), sinYZ = sin(YZ), sinXZ = sin(XZ), cosYZ = cos(YZ),
+  d = arcCos((cosXZ + cosYZ + (cosYZ * cosXZ) - 1.) * .5),
+  den = 1 / (2 * StrictMath.sin(d));
+  N.setRotationAxis(new Point3D(((-cosXZ * sinYZ) - sinYZ) * den, (-(cosYZ * sinXZ) - sinXZ) * den, -(sinYZ * sinXZ) * den));
+  N.setRotate(Math.toDegrees(d));
  }
 
  public static void randomRotate(Node N) {
-  N.setRotationAxis(new Point3D(U.random(), U.random(), U.random()));
-  N.setRotate(U.random(360.));
+  N.setRotationAxis(new Point3D(random(), random(), random()));
+  N.setRotate(random(360.));
  }
 
- public static double[] rotate(double a, double b, double o1, double o2, double axs) {
-  return new double[]{o1 + ((a - o1) * U.cos(axs) - (b - o2) * U.sin(axs)), o2 + ((a - o1) * U.sin(axs) + (b - o2) * U.cos(axs))};
+ public static double[] rotate(double a, double b, double pivot1, double pivot2, double axis) {
+  return new double[]{pivot1 + ((a - pivot1) * cos(axis) - (b - pivot2) * sin(axis)), pivot2 + ((a - pivot1) * sin(axis) + (b - pivot2) * cos(axis))};
  }
 
  public static void rotate(double[] a, double[] b, double axis) {
-  double a1 = a[0];
-  double b1 = b[0];
-  a[0] = a1 * U.cos(axis) - b1 * U.sin(axis);
-  b[0] = a1 * U.sin(axis) + b1 * U.cos(axis);
+  double a1 = a[0], b1 = b[0];
+  a[0] = a1 * cos(axis) - b1 * sin(axis);
+  b[0] = a1 * sin(axis) + b1 * cos(axis);
  }
+
+ public static void rotateWithPivot(double[] a, double[] b, double pivot1, double pivot2, double axis) {
+  double a1 = a[0], b1 = b[0];
+  a[0] = pivot1 + ((a1 - pivot1) * cos(axis) - (b1 - pivot2) * sin(axis));
+  b[0] = pivot2 + ((a1 - pivot1) * sin(axis) + (b1 - pivot2) * cos(axis));
+ }
+
+ /*public static double round(double value) {
+  return round(value, 0);
+ }
+ public static double round(double value, int places) {
+  return BigDecimal.valueOf(value).setScale(places, RoundingMode.HALF_EVEN).doubleValue();
+ }
+ public static long roundLong(double value) {
+  return BigDecimal.valueOf(value).setScale(0, RoundingMode.HALF_EVEN).longValue();
+ }*/
 
  public static double clamp(double d) {
   return clamp(0, d, 1);
  }
 
- public static double clamp(double minimum, double d, double maximum) {
-  return Math.max(minimum, Math.min(d, maximum));
+ public static double clamp(double minimum, double in, double maximum) {
+  return Math.max(minimum, Math.min(in, maximum));
  }
 
- public static long clamp(long minimum, long d, long maximum) {
-  return Math.max(minimum, Math.min(d, maximum));
+ public static long clamp(long minimum, long in, long maximum) {
+  return Math.max(minimum, Math.min(in, maximum));
  }
 
  public static double netValue(double v1, double v2) {
@@ -479,10 +463,14 @@ public class U {//<-The UTILITY Class
   return Math.sqrt(v1 * v1 + v2 * v2 + v3 * v3);
  }
 
+ public static void setTranslate(Node N, Core core) {
+  setTranslate(N, core.X, core.Y, core.Z);
+ }
+
  public static void setTranslate(Node N, double X, double Y, double Z) {
-  N.setTranslateX(X - VE.cameraX);
-  N.setTranslateY(Y - VE.cameraY);
-  N.setTranslateZ(Z - VE.cameraZ);
+  N.setTranslateX(X - Camera.X);
+  N.setTranslateY(Y - Camera.Y);
+  N.setTranslateZ(Z - Camera.Z);
  }
 
  public static void setScale(Node N, double size) {
@@ -491,26 +479,45 @@ public class U {//<-The UTILITY Class
   N.setScaleZ(size);
  }
 
+ public static double getDepth(Core core) {
+  return getDepth(core.X, core.Y, core.Z);
+ }
+
  public static double getDepth(double X, double Y, double Z) {
-  return (Y - VE.cameraY) * U.sin(VE.cameraYZ) + ((X - VE.cameraX) * U.sin(VE.cameraXZ) + (Z - VE.cameraZ) * U.cos(VE.cameraXZ)) * U.cos(VE.cameraYZ);
+  return (Y - Camera.Y) * Camera.sinYZ + ((X - Camera.X) * Camera.sinXZ + (Z - Camera.Z) * Camera.cosXZ) * Camera.cosYZ;
  }
 
- public static void render(Node N, double X, double Y, double Z) {
-  render(N, X, Y, Z, 0);
+ public static boolean render(Core core) {
+  return render(core, 0);
  }
 
- public static void render(Node N, double X, double Y, double Z, double depthTolerance) {
-  if (getDepth(X, Y, Z) > depthTolerance) {
-   setTranslate(N, X, Y, Z);
-   N.setVisible(true);
-  } else {
-   N.setVisible(false);
-  }
+ public static boolean render(Core core, double depthTolerance) {
+  return render(core.X, core.Y, core.Z, depthTolerance);
+ }
+
+ public static boolean render(double X, double Y, double Z) {
+  return render(X, Y, Z, 0);
+ }
+
+ public static boolean render(double X, double Y, double Z, double depthTolerance) {
+  return (getDepth(X, Y, Z) > depthTolerance);
+ }
+
+ public static boolean renderWithLOD(Core core) {
+  return renderWithLOD(core, 0);
+ }
+
+ private static boolean renderWithLOD(Core core, double depthTolerance) {
+  return renderWithLOD(core.X, core.Y, core.Z, core.absoluteRadius, depthTolerance);
+ }
+
+ private static boolean renderWithLOD(double X, double Y, double Z, double absoluteRadius, double depthTolerance) {
+  return (getDepth(X, Y, Z) > depthTolerance && absoluteRadius * E.renderLevel >= distance(X, Y, Z) * Camera.zoom);
  }
 
  public static void getFPS() {
   double time = System.currentTimeMillis();
-  FPS = Math.min(960.25 / (time - FPSTime) + 1.25, refreshRate);//<-Flat algorithm not as accurate
+  FPS = StrictMath.pow(Math.min(1000 / (time - FPSTime), refreshRate), 1.005);//<-Flat algorithm not as accurate
   averageFPS += (FPS - averageFPS) * .03125;
   FPSTime = time;
  }
