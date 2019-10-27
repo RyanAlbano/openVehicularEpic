@@ -41,7 +41,7 @@ public class Spit extends Core {
 
  public void run(Vehicle vehicle, Special special, Port port, boolean gamePlay) {
   if (stage > 0) {
-   boolean longerSpitDuration = special.type.name().contains(Vehicle.specialType.shell.name()) || special.type == Vehicle.specialType.shotgun || special.type == Vehicle.specialType.missile;
+   boolean longerSpitDuration = special.type.name().contains(Special.Type.shell.name()) || special.type == Special.Type.shotgun || special.type == Special.Type.missile;
    if ((stage += gamePlay ? VE.tick : 0) > (longerSpitDuration ? 3 : 2)) {
     stage = 0;
    } else {

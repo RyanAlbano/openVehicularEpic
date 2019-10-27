@@ -1,5 +1,6 @@
 package ve;
 
+import ve.trackElements.TE;
 import ve.vehicles.Vehicle;
 
 enum Recorder {
@@ -98,9 +99,9 @@ enum Recorder {
 
  static void recordBonusHolder() {
   recordBonusHolder[gameFrame] = VE.bonusHolder;
-  bonusX[gameFrame] = VE.bonusX;
-  bonusY[gameFrame] = VE.bonusY;
-  bonusZ[gameFrame] = VE.bonusZ;
+  bonusX[gameFrame] = TE.bonusX;
+  bonusY[gameFrame] = TE.bonusY;
+  bonusZ[gameFrame] = TE.bonusZ;
  }
 
  static void playBack() {
@@ -115,9 +116,9 @@ enum Recorder {
     VE.keyUp = VE.keyDown = VE.keyEnter = VE.keySpace = VE.keyEscape = false;
    }
    VE.bonusHolder = recordBonusHolder[recordFrame];
-   VE.bonusX = bonusX[recordFrame];
-   VE.bonusY = bonusY[recordFrame];
-   VE.bonusZ = bonusZ[recordFrame];
+   TE.bonusX = bonusX[recordFrame];
+   TE.bonusY = bonusY[recordFrame];
+   TE.bonusZ = bonusZ[recordFrame];
    for (Vehicle vehicle : VE.vehicles) {
     int index = vehicle.index;
     vehicle.X = X[index][recordFrame];

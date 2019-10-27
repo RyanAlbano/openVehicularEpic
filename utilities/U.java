@@ -26,11 +26,12 @@ import ve.vehicles.Vehicle;
 public enum U {//<-The UTILITY Class
  ;
 
- public static String lineSeparator = System.lineSeparator();
+ public static final String lineSeparator = System.lineSeparator();
  public static final Pattern regex = Pattern.compile("[(,)]");
  public static double FPS, averageFPS;
  public static double FPSTime;
  public static final double sin45 = .70710678118654752440084436210485;
+ public static final double minimumAccurateLayeredOpacity = .05;
  public static final long refreshRate = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode().getRefreshRate();
  public static final Dimension dimension = Toolkit.getDefaultToolkit().getScreenSize();
  private static final String imageFolder = "images", imageExtension = ".png";
@@ -115,21 +116,19 @@ public enum U {//<-The UTILITY Class
  }
 
  public static FileInputStream getMapFile(int n) {
-  FileInputStream FIS = null;
-  try {
-   try {
-    try {
-     FIS = new FileInputStream("maps" + File.separator + VE.maps.get(n));
-    } catch (FileNotFoundException e) {
-     FIS = new FileInputStream("maps" + File.separator + "User-Submitted" + File.separator + VE.maps.get(n));
-    }
-   } catch (Exception e) {//<-do NOT change
-    VE.map = 0;
-    FIS = new FileInputStream("maps" + File.separator + "basic");
-   }
-  } catch (FileNotFoundException ignored) {
+  File F = new File("maps" + File.separator + VE.maps.get(n));
+  if (!F.exists()) {
+   F = new File("maps" + File.separator + "User-Submitted" + File.separator + VE.maps.get(n));
   }
-  return FIS;
+  if (!F.exists()) {
+   VE.map = 0;
+   F = new File("maps" + File.separator + "basic");
+  }
+  try {
+   return new FileInputStream(F);
+  } catch (FileNotFoundException E) {
+   return null;
+  }
  }
 
  public static void add(Node N) {
@@ -211,7 +210,7 @@ public enum U {//<-The UTILITY Class
 
  private static boolean outOfBounds(double x, double y, double z, double tolerance) {
   double depth = E.groundLevel + (E.poolExists && distance(x, E.poolX, z, E.poolZ) < E.pool[0].getRadius() ? E.poolDepth : 0);
-  return y > depth || x > E.limitR + tolerance || x < E.limitL - tolerance || z > E.limitFront + tolerance || z < E.limitBack - tolerance || y < E.limitY - tolerance;
+  return y > depth || x > E.mapBounds.right + tolerance || x < E.mapBounds.left - tolerance || z > E.mapBounds.forward + tolerance || z < E.mapBounds.backward - tolerance || y < E.mapBounds.Y - tolerance;
  }
 
  public static void setDiffuseRGB(PhongMaterial PM, double shade) {
@@ -394,7 +393,7 @@ public enum U {//<-The UTILITY Class
   YZ = sin(YZ);
   XZ = sin(XZ);
   double d = arcCos(((cosXY * cosXZ) + (cosXY * cosYZ - XY * YZ * XZ) + (cosYZ * cosXZ) - 1.) * .5);
-  if (d == 0) {//<-do NOT Remove!
+  if (d == 0) {//<-do NOT remove!
    n.setRotationAxis(new Point3D(0, 0, 0));
    n.setRotate(0);
   } else {

@@ -15,7 +15,7 @@ public enum Network {
  static String userName = "";
  static final int maxPlayers = 10;
  static boolean waiting;
- static int bonusHolder = -1;
+ public static int bonusHolder = -1;
  static boolean hostLeftMatch;
  static boolean runLoadThread;
  static boolean[] ready = new boolean[maxPlayers];
@@ -26,7 +26,7 @@ public enum Network {
  static String targetHost = "";
  static int port = 7777;
  static String joinError = "";
- static final List<PrintWriter> out = new ArrayList<>();
+ public static final List<PrintWriter> out = new ArrayList<>();
  public static final List<BufferedReader> in = new ArrayList<>();
  static final String[] vehicleData = {"", "", "", "", "", "", "", "", "", ""};
  static final String[] lastVehicleData = {"", "", "", "", "", "", "", "", "", ""};
@@ -47,12 +47,11 @@ public enum Network {
      server = new ServerSocket(port);
      while (runLoadThread) {
       if (out.size() + 1 < VE.vehiclesInMatch && !server.isClosed()) {
-       Socket S = server.accept();
-       try (S) {
+       try (Socket S = server.accept(); S) {
         out.add(new PrintWriter(S.getOutputStream(), true, U.standardChars));
         in.add(new BufferedReader(new InputStreamReader(S.getInputStream(), U.standardChars)));
-       } catch (IOException e) {
-        e.printStackTrace();
+       } catch (IOException E) {
+        E.printStackTrace();
        }
       }
       while (true) {

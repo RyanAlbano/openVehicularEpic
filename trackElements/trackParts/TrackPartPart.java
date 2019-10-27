@@ -6,14 +6,14 @@ import ve.*;
 import ve.environment.E;
 import ve.utilities.*;
 
-class TrackPartPart extends InstancePart {
+public class TrackPartPart extends InstancePart {
 
  private final TrackPart TP;
  Rotate rotateXZ;
  private final boolean checkpoint, checkpointWord, lapWord;
  final boolean tree;
 
- TrackPartPart(TrackPart i, double[] i_X, double[] i_Y, double[] i_Z, int vertexQuantity, double[] i_RGB, String type, String textureType) {
+ public TrackPartPart(TrackPart i, double[] i_X, double[] i_Y, double[] i_Z, int vertexQuantity, double[] i_RGB, String type, String textureType) {
   TP = i;
   TP.vertexQuantity += vertexQuantity;
   int n;
@@ -48,7 +48,7 @@ class TrackPartPart extends InstancePart {
   }
   TM.getPoints().setAll(coordinates);
   coordinates = U.random() < .5 ? new float[]{0, 1, 1, 1, 1, 0, 0, 0} : new float[]{0, 0, 1, 0, 1, 1, 0, 1};
-  for (n = 0; n < vertexQuantity / 3.; n++) {//<- '3' MUST be double!
+  for (n = 0; n < vertexQuantity / (double) 3; n++) {
    TM.getTexCoords().addAll(coordinates);
   }
   if (type.contains(" triangles ")) {
@@ -132,10 +132,10 @@ class TrackPartPart extends InstancePart {
  }
 
  void processAsVehiclePart() {
-  if (E.renderAll || (size * E.renderLevel >= TP.distanceToCamera * Camera.zoom &&
-  !(flickPolarity == 1 && TP.flicker) && !(flickPolarity == 2 && !TP.flicker))) {
+  if ((E.renderType.name().contains(E.RenderType.fullDistance.name()) || size * E.renderLevel >= TP.distanceToCamera * Camera.zoom) &&
+  ((E.renderType == E.RenderType.fullDistanceALL || !(flickPolarity == 1 && TP.flicker) && !(flickPolarity == 2 && !TP.flicker)))) {
    boolean render = true;
-   if (!E.renderAll && !Double.isNaN(fastCull)) {
+   if (!Double.isNaN(fastCull) && E.renderType != E.RenderType.fullDistanceALL) {
     long shiftedAxis = Math.round(fastCull);
     if (TP.XZ > 45 && TP.XZ < 135) {
      shiftedAxis = --shiftedAxis < -1 ? 2 : shiftedAxis;
@@ -165,7 +165,7 @@ class TrackPartPart extends InstancePart {
      U.rotate(placementY, placementZ, TP.YZ);
     }
     U.rotate(placementX, placementZ, TP.XZ);
-    if (E.renderAll || U.getDepth(TP.X + placementX[0], TP.Y + placementY[0], TP.Z + placementZ[0]) > -renderRadius) {
+    if (E.renderType.name().contains(E.RenderType.fullDistance.name()) || U.getDepth(TP.X + placementX[0], TP.Y + placementY[0], TP.Z + placementZ[0]) > -renderRadius) {
      U.setTranslate(MV, TP.X + placementX[0], TP.Y + placementY[0], TP.Z + placementZ[0]);
      visible = true;
      if (blink) {
@@ -177,13 +177,12 @@ class TrackPartPart extends InstancePart {
  }
 
  void processAsTrackPart() {
-  if (E.renderAll ||
-  (size * E.renderLevel >= TP.distanceToCamera * Camera.zoom &&
-  (!checkpoint || TP.checkpointNumber == VE.currentCheckpoint) && !(checkpointWord && VE.lapCheckpoint) &&
-  !(lapWord && (!VE.lapCheckpoint || VE.globalFlick)) &&
-  !(flickPolarity == 1 && VE.globalFlick) && !(flickPolarity == 2 && !VE.globalFlick))) {
+  if ((E.renderType.name().contains(E.RenderType.fullDistance.name()) || size * E.renderLevel >= TP.distanceToCamera * Camera.zoom) &&
+  (E.renderType == E.RenderType.fullDistanceALL || ((!checkpoint || TP.checkpointNumber == VE.currentCheckpoint) && !(checkpointWord && VE.lapCheckpoint) &&
+  !(lapWord && !VE.lapCheckpoint) &&
+  !(flickPolarity == 1 && VE.globalFlick) && !(flickPolarity == 2 && !VE.globalFlick)))) {
    boolean render = true;
-   if (!E.renderAll && !Double.isNaN(fastCull)) {
+   if (!Double.isNaN(fastCull) && E.renderType != E.RenderType.fullDistanceALL) {
     if (fastCull == 0) {
      render = Camera.Z <= TP.Z;
     } else if (fastCull == 2) {
@@ -194,7 +193,7 @@ class TrackPartPart extends InstancePart {
      render = Camera.X <= TP.X;
     }
    }
-   if (E.renderAll || render && U.getDepth(TP) > -renderRadius) {
+   if (E.renderType.name().contains(E.RenderType.fullDistance.name()) || render && U.getDepth(TP) > -renderRadius) {
     if (blink) {
      PM.setSelfIlluminationMap(U.getImage("blink" + U.random(3)));
     }
@@ -203,6 +202,9 @@ class TrackPartPart extends InstancePart {
     }
     if (checkpoint) {
      rotateXZ.setAngle(-TP.XZ + (TP.checkpointSignRotation ? 180 : 0));
+     if (lapWord) {
+      PM.setSelfIlluminationMap(VE.globalFlick ? U.getImage("white") : null);
+     }
     }
     U.setTranslate(MV, TP);
     visible = true;

@@ -22,7 +22,7 @@ public class Shot extends Core {
  Shot(Special special) {
   TriangleMesh shotMesh = new TriangleMesh();
   shotMesh.getTexCoords().setAll(0, 0);
-  if (special.type == Vehicle.specialType.flamethrower || special.type.name().contains(Vehicle.specialType.blaster.name()) || special.type == Vehicle.specialType.forcefield || special.type == Vehicle.specialType.thewrath) {
+  if (special.type == Special.Type.flamethrower || special.type.name().contains(Special.Type.blaster.name()) || special.type == Special.Type.forcefield || special.type == Special.Type.thewrath) {
    shotMesh.getPoints().setAll(
    (float) U.randomPlusMinus(special.width), (float) U.randomPlusMinus(special.width), (float) U.randomPlusMinus(special.width),
    (float) U.randomPlusMinus(special.width), (float) U.randomPlusMinus(special.width), (float) U.randomPlusMinus(special.width),
@@ -33,7 +33,7 @@ public class Shot extends Core {
    shotMesh.getFaces().setAll(
    0, 0, 1, 0, 2, 0,
    3, 0, 4, 0, 5, 0);
-  } else if (special.type == Vehicle.specialType.mine) {
+  } else if (special.type == Special.Type.mine) {
    shotMesh.getPoints().setAll(0, (float) -special.length, 0,
    0, 0, (float) -special.width,
    (float) -special.width, 0, 0,
@@ -61,14 +61,14 @@ public class Shot extends Core {
   MV = new MeshView(shotMesh);
   MV.setCullFace(CullFace.NONE);
   PhongMaterial PM = new PhongMaterial();
-  if (special.type == Vehicle.specialType.raygun || special.type.name().contains(Vehicle.specialType.blaster.name()) || special.type == Vehicle.specialType.forcefield || special.type == Vehicle.specialType.thewrath) {
+  if (special.type == Special.Type.raygun || special.type.name().contains(Special.Type.blaster.name()) || special.type == Special.Type.forcefield || special.type == Special.Type.thewrath) {
    U.setSpecularRGB(PM, 0, 0, 0);
    PM.setSelfIlluminationMap(U.getImage("white"));
   } else {
    U.setDiffuseRGB(PM, .5, .5, .5);
    U.setSpecularRGB(PM, 1, 1, 1);
   }
-  PM.setSpecularPower(special.type == Vehicle.specialType.flamethrower ? 0 : 10);
+  PM.setSpecularPower(special.type == Special.Type.flamethrower ? 0 : E.SpecularPowers.standard);
   MV.setMaterial(PM);
   if (special.hasThrust) {
    TriangleMesh thrustMesh = new TriangleMesh();
@@ -91,7 +91,7 @@ public class Shot extends Core {
   }
   U.add(MV, thrust);
   MV.setVisible(false);
-  if (special.type == Vehicle.specialType.forcefield) {
+  if (special.type == Special.Type.forcefield) {
    doneDamaging = new boolean[VE.vehiclesInMatch];
   }
  }
@@ -116,7 +116,7 @@ public class Shot extends Core {
   behindZ = Z - (speed * (U.cos(XZ) * U.cos(YZ)) * VE.tick);
   XZ = setXZ + (port.XZ * U.cos(V.XY)) + (port.YZ * U.sin(V.XY)) * V.polarity + U.randomPlusMinus(special.randomAngle);
   YZ = setYZ + (port.YZ * U.cos(V.XY)) + (port.XZ * U.sin(V.XY)) + U.randomPlusMinus(special.randomAngle);
-  speed = special.type == Vehicle.specialType.mine ? 0 : special.speed + (V.speed * U.cos(Math.abs(V.XZ - XZ)));
+  speed = special.type == Special.Type.mine ? 0 : special.speed + (V.speed * U.cos(Math.abs(V.XZ - XZ)));
   gravityDistance = hit = 0;
   U.rotate(MV, -YZ, XZ);
   stage = Double.MIN_VALUE;
@@ -130,9 +130,9 @@ public class Shot extends Core {
  void run(Vehicle V, Special special, boolean gamePlay) {
   if (stage > 0) {
    if (gamePlay) {
-    hit = hit < 1 && special.type != Vehicle.specialType.mine && U.outOfBounds(this, 500) ? 1 : hit;
+    hit = hit < 1 && special.type != Special.Type.mine && U.outOfBounds(this, 500) ? 1 : hit;
     if (hit < 1) {
-     if (special.type == Vehicle.specialType.flamethrower && (stage += VE.tick) > 50) {
+     if (special.type == Special.Type.flamethrower && (stage += VE.tick) > 50) {
       stage = 0;
      }
      if (stage > 0) {
@@ -143,21 +143,21 @@ public class Shot extends Core {
      X -= speed * (U.sin(XZ) * U.cos(YZ)) * VE.tick;
      Z += speed * (U.cos(XZ) * U.cos(YZ)) * VE.tick;
      Y -= speed * U.sin(YZ) * VE.tick;
-     if (special.type != Vehicle.specialType.flamethrower) {
+     if (special.type != Special.Type.flamethrower) {
       stage++;
-      if (special.type == Vehicle.specialType.bomb) {
+      if (special.type == Special.Type.bomb) {
        gravityDistance += E.gravity * VE.tick;
        Y += gravityDistance;
-      } else if (special.type == Vehicle.specialType.forcefield && stage > 2) {
+      } else if (special.type == Special.Type.forcefield && stage > 2) {
        stage = 0;
       }
      }
     } else if (hit == 1) {
-     if (special.type == Vehicle.specialType.shell || special.type == Vehicle.specialType.missile || special.type == Vehicle.specialType.bomb) {
+     if (special.type == Special.Type.shell || special.type == Special.Type.missile || special.type == Special.Type.bomb) {
       V.explosions.get(V.currentExplosion).deploy(X, Y, Z, null);
       V.currentExplosion = ++V.currentExplosion >= E.explosionQuantity ? 0 : V.currentExplosion;
       V.VA.hitExplosive.play(U.random(V.VA.hitExplosive.clips.size()), Math.sqrt(U.distance(this)) * .08);
-     } else if (special.type == Vehicle.specialType.powershell || special.type == Vehicle.specialType.mine) {
+     } else if (special.type == Special.Type.powershell || special.type == Special.Type.mine) {
       for (int i = 6; --i >= 0; ) {
        V.explosions.get(V.currentExplosion).deploy(((X + behindX) * .5) + U.randomPlusMinus(2000.), ((Y + behindY) * .5) + U.randomPlusMinus(2000.), ((Z + behindZ) * .5) + U.randomPlusMinus(2000.), null);
        V.currentExplosion = ++V.currentExplosion >= E.explosionQuantity ? 0 : V.currentExplosion;
@@ -177,7 +177,7 @@ public class Shot extends Core {
 
  public void render(Special special) {
   if (stage > 0 && U.render(this)) {
-   if (special.type == Vehicle.specialType.flamethrower) {
+   if (special.type == Special.Type.flamethrower) {
     U.setScale(MV, 5 + stage * 2);
     double r = Math.max(0, 1 - (stage * .015625)),
     g = Math.max(0, 1 - (stage * .03125)),
@@ -186,7 +186,7 @@ public class Shot extends Core {
     U.setSpecularRGB((PhongMaterial) MV.getMaterial(), r, g, b);
    }
    U.setTranslate(MV, this);
-   if (special.type == Vehicle.specialType.flamethrower || special.type == Vehicle.specialType.forcefield || special.type == Vehicle.specialType.thewrath || special.type.name().contains(Vehicle.specialType.blaster.name())) {
+   if (special.type == Special.Type.flamethrower || special.type == Special.Type.forcefield || special.type == Special.Type.thewrath || special.type.name().contains(Special.Type.blaster.name())) {
     U.randomRotate(MV);
    } else if (special.homing) {
     U.rotate(MV, -YZ, XZ);

@@ -10,31 +10,32 @@ import org.fxyz3d.shapes.primitives.FrustumMesh;
 import org.fxyz3d.shapes.Torus;
 import ve.*;
 import ve.environment.E;
+import ve.trackElements.TE;
 import ve.utilities.*;
 
 public class TrackPart extends Instance {
 
- private final Collection<TrackPartPart> parts = new ArrayList<>();
+ public final Collection<TrackPartPart> parts = new ArrayList<>();
  private Sphere foliageSphere;
  private Torus fixTorus;
  boolean vehicleModel;
  public boolean isFixpoint;
  public boolean wraps;
- public boolean checkpointPerpendicularToX;
  boolean checkpointSignRotation;
  public long checkpointNumber = -1;
+ private boolean renderAlways;
  public final List<TrackPlane> trackPlanes = new ArrayList<>();
  public FrustumMesh mound;
 
- static class Rock extends Core {
+ static class RoadRock extends Core {
   final Sphere S;
 
-  Rock() {
+  RoadRock() {
    S = new Sphere(1, 5);
   }
  }
 
- private List<Rock> rocks;
+ private List<RoadRock> roadRocks;
 
  private final List<Cylinder> fixShocks = new ArrayList<>();
 
@@ -54,7 +55,11 @@ public class TrackPart extends Instance {
   modelNumber = model;
   vehicleModel = isVehicleModel;
   if (model >= 0 || vehicleModel) {
-   modelName = vehicleModel ? VE.vehicleModels.get(modelNumber) : VE.getTrackPartName(modelNumber);
+   modelName = vehicleModel ? VE.vehicleModels.get(modelNumber) : TE.getTrackPartName(modelNumber);
+   if (modelName.equals(VE.MapModels.checkpoint.name())) {//<-Checkpoint sign may glitch otherwise
+    while (angle >= 90) angle -= 180;
+    while (angle <= -90) angle += 180;//Will always end up at '90' rather then '-90'
+   }
    instanceSize = inSize;
    instanceScale[0] = inScale[0];
    instanceScale[1] = inScale[1];
@@ -214,12 +219,12 @@ public class TrackPart extends Instance {
       rimType.append(s.contains("noSpecular") ? " noSpecular " : s.contains("shiny") ? " shiny " : "");
       rimType.append(s.contains("sport") ? " sport " : "");
      }
-     //wheelType = s.startsWith("landingGearWheels") ? " landingGear " : wheelType;
-     wheelTextureType = s.startsWith("wheelTexture(") ? U.getString(s, 0) : wheelTextureType;
+     wheelType.append(s.startsWith("landingGearWheels") ? " landingGear " : "");
+     wheelTextureType = s.startsWith("wheelTexture(") ? U.getString(s, 0) : wheelTextureType;//<-Using 'append' would mess this up if found more than once in file
      wheelSmoothing = s.startsWith("smoothing(") ? U.getValue(s, 0) * modelSize : wheelSmoothing;
      if (s.startsWith("wheel(")) {
       String side = U.getValue(s, 0) > 0 ? " R " : U.getValue(s, 0) < 0 ? " L " : U.random() < .5 ? " R " : " L ";
-      loadWheel(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2), U.getValue(s, 3), U.getValue(s, 4), wheelType + side, String.valueOf(rimType), wheelTextureType, s.contains("steers"), s.contains("hide"));
+      loadWheel(null, this, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2), U.getValue(s, 3), U.getValue(s, 4), wheelType + side, String.valueOf(rimType), wheelTextureType, s.contains("steers"), s.contains("hide"));
       wheelCount++;
      } else if (s.startsWith("<t>") && (!s.contains("aerialOnly") || sourceY != 0)) {
       trackPlanes.add((new TrackPlane()));
@@ -362,9 +367,9 @@ public class TrackPart extends Instance {
     }
    }
    if (modelProperties.contains(" rocky ")) {
-    rocks = new ArrayList<>();
+    roadRocks = new ArrayList<>();
     for (int n = 50; --n >= 0; ) {
-     Rock rock = new Rock();
+     RoadRock rock = new RoadRock();
      rock.S.setScaleX(100 + U.random(200.));
      rock.S.setScaleY(U.random(25.));
      rock.S.setScaleZ(100 + U.random(200.));
@@ -378,7 +383,7 @@ public class TrackPart extends Instance {
      PM.setSpecularMap(U.getImage("rock"));
      PM.setBumpMap(U.getImageNormal("rock"));
      U.add(rock.S);
-     rocks.add(rock);
+     roadRocks.add(rock);
     }
    }
    if (isFixpoint) {
@@ -402,7 +407,7 @@ public class TrackPart extends Instance {
   }
  }
 
- public TrackPart(double x, double z, double y, double majorRadius, double minorRadius, double height, boolean wraps, boolean paved) {//<-Changing method order to X,Y,Z will affect mounds!
+ public TrackPart(double x, double z, double y, double majorRadius, double minorRadius, double height, boolean wraps, boolean paved, boolean renderAlways) {//<-Changing method order to X,Y,Z will misplace mounds!
   while (majorRadius > 0 && minorRadius > majorRadius) {
    minorRadius *= .5;
   }
@@ -411,6 +416,7 @@ public class TrackPart extends Instance {
   Z = z;
   Y = y;
   this.wraps = wraps;
+  this.renderAlways = renderAlways;
   renderRadius = Math.max(mound.getMajorRadius(), Math.max(mound.getMinorRadius(), mound.getHeight()));
   PhongMaterial PM = new PhongMaterial();
   if (paved) {
@@ -519,8 +525,9 @@ public class TrackPart extends Instance {
     }
    }
    if (mound != null) {
-    double moundY = Y + -mound.getHeight() * .5;
-    if (U.getDepth(X, moundY, Z) > -renderRadius && renderRadius * E.renderLevel >= distanceToCamera * Camera.zoom) {
+    double moundY = Y + -mound.getHeight() * .5, depth = U.getDepth(X, moundY, Z);
+    if (depth > -renderRadius && (renderAlways || renderRadius * E.renderLevel >= distanceToCamera * Camera.zoom)) {
+     mound.setCullFace(depth > renderRadius ? CullFace.BACK : CullFace.NONE);
      U.setTranslate(mound, X, moundY, Z);
      mound.setVisible(true);
     } else {
@@ -552,8 +559,8 @@ public class TrackPart extends Instance {
    }
    if (U.getDepth(this) > -renderRadius) {
     if (checkpointNumber >= 0 && checkpointNumber == VE.currentCheckpoint) {
-     checkpointSignRotation = (checkpointPerpendicularToX ? Camera.X < X : Camera.Z > Z) || checkpointSignRotation;
-     checkpointSignRotation = (checkpointPerpendicularToX || !(Camera.Z < Z)) && (!checkpointPerpendicularToX || !(Camera.X > X)) && checkpointSignRotation;
+     boolean sideways = TE.isSidewaysXZ(XZ);
+     checkpointSignRotation = sideways ? (XZ > 0 ? Camera.X < X : Camera.X > X) : Camera.Z > Z;//If checkpoint, XZ is never > Math.abs(90)
     }
     if (vehicleModel) {
      for (TrackPartPart part : parts) {
@@ -577,8 +584,8 @@ public class TrackPart extends Instance {
     part.MV.setVisible(part.visible);
     part.visible = false;
    }
-   if (rocks != null) {
-    for (Rock rock : rocks) {
+   if (roadRocks != null) {
+    for (RoadRock rock : roadRocks) {
      if ((U.render(rock))) {
       U.setTranslate(rock.S, rock);
       rock.S.setVisible(true);
@@ -594,439 +601,11 @@ public class TrackPart extends Instance {
   double radius = fixTorus.getRadius();
   for (Cylinder fixShock : fixShocks) {
    if (depth > -radius) {
-    U.rotate(fixShock, U.random(360.), Math.abs(XZ) > 45 ? 0 : 90);
+    U.rotate(fixShock, U.random(360.), TE.isSidewaysXZ(XZ) ? 0 : 90);//<-Reversed for some reason
     U.setTranslate(fixShock, this);
     fixShock.setVisible(true);
    } else {
     fixShock.setVisible(false);
-   }
-  }
- }
-
- private void loadWheel(double sourceX, double sourceY, double sourceZ, double i_wheelThickness, double i_wheelRadius, String type, String m_rimType, String textureType, boolean i_steers, boolean hide) {
-  sourceX *= modelSize * modelScale[0];
-  sourceY *= modelSize * modelScale[1];
-  sourceZ *= modelSize * modelScale[2];
-  i_wheelThickness *= modelSize * modelScale[0];
-  i_wheelRadius *= modelSize;
-  wheelSmoothing *= -1;
-  double[] x0 = new double[96], y0 = new double[96], z0 = new double[96];
-  String steers = i_steers ? " steerXZ steerFromXZ " : "";
-  clearanceY = Math.max(clearanceY, sourceY + i_wheelRadius);
-  int n;
-  if (i_wheelRadius != 0 && !hide) {
-   double wheelThickness = i_wheelThickness + wheelSmoothing, wheelRadius = i_wheelRadius - Math.abs(wheelSmoothing);
-   for (n = x0.length; --n >= 0; ) {
-    x0[n] = sourceX - (n < 24 ? i_wheelThickness : -i_wheelThickness);
-   }
-   z0[0] = sourceZ + U.sin(0) * wheelRadius;
-   z0[1] = sourceZ + U.sin(15) * wheelRadius;
-   z0[2] = sourceZ + U.sin(30) * wheelRadius;
-   z0[3] = sourceZ + U.sin(45) * wheelRadius;
-   z0[4] = sourceZ + U.sin(60) * wheelRadius;
-   z0[5] = sourceZ + U.sin(75) * wheelRadius;
-   z0[6] = sourceZ + U.sin(90) * wheelRadius;
-   z0[7] = sourceZ + U.sin(105) * wheelRadius;
-   z0[8] = sourceZ + U.sin(120) * wheelRadius;
-   z0[9] = sourceZ + U.sin(135) * wheelRadius;
-   z0[10] = sourceZ + U.sin(150) * wheelRadius;
-   z0[11] = sourceZ + U.sin(165) * wheelRadius;
-   z0[12] = sourceZ + U.sin(180) * wheelRadius;
-   z0[13] = sourceZ + U.sin(195) * wheelRadius;
-   z0[14] = sourceZ + U.sin(210) * wheelRadius;
-   z0[15] = sourceZ + U.sin(225) * wheelRadius;
-   z0[16] = sourceZ + U.sin(240) * wheelRadius;
-   z0[17] = sourceZ + U.sin(255) * wheelRadius;
-   z0[18] = sourceZ + U.sin(270) * wheelRadius;
-   z0[19] = sourceZ + U.sin(285) * wheelRadius;
-   z0[20] = sourceZ + U.sin(300) * wheelRadius;
-   z0[21] = sourceZ + U.sin(315) * wheelRadius;
-   z0[22] = sourceZ + U.sin(330) * wheelRadius;
-   z0[23] = sourceZ + U.sin(345) * wheelRadius;
-   y0[0] = sourceY + U.cos(0) * wheelRadius;
-   y0[1] = sourceY + U.cos(15) * wheelRadius;
-   y0[2] = sourceY + U.cos(30) * wheelRadius;
-   y0[3] = sourceY + U.cos(45) * wheelRadius;
-   y0[4] = sourceY + U.cos(60) * wheelRadius;
-   y0[5] = sourceY + U.cos(75) * wheelRadius;
-   y0[6] = sourceY + U.cos(90) * wheelRadius;
-   y0[7] = sourceY + U.cos(105) * wheelRadius;
-   y0[8] = sourceY + U.cos(120) * wheelRadius;
-   y0[9] = sourceY + U.cos(135) * wheelRadius;
-   y0[10] = sourceY + U.cos(150) * wheelRadius;
-   y0[11] = sourceY + U.cos(165) * wheelRadius;
-   y0[12] = sourceY + U.cos(180) * wheelRadius;
-   y0[13] = sourceY + U.cos(195) * wheelRadius;
-   y0[14] = sourceY + U.cos(210) * wheelRadius;
-   y0[15] = sourceY + U.cos(225) * wheelRadius;
-   y0[16] = sourceY + U.cos(240) * wheelRadius;
-   y0[17] = sourceY + U.cos(255) * wheelRadius;
-   y0[18] = sourceY + U.cos(270) * wheelRadius;
-   y0[19] = sourceY + U.cos(285) * wheelRadius;
-   y0[20] = sourceY + U.cos(300) * wheelRadius;
-   y0[21] = sourceY + U.cos(315) * wheelRadius;
-   y0[22] = sourceY + U.cos(330) * wheelRadius;
-   y0[23] = sourceY + U.cos(345) * wheelRadius;
-   for (n = 24; --n >= 0; ) {
-    z0[n + 24] = z0[n];
-    y0[n + 24] = y0[n];
-   }
-   for (n = 48; --n >= 0; ) {
-    maxMinusX[0] = Math.min(maxMinusX[0], x0[n]);
-    maxPlusX[0] = Math.max(maxPlusX[0], x0[n]);
-    maxMinusY[0] = Math.min(maxMinusY[0], y0[n]);
-    maxPlusY[0] = Math.max(maxPlusY[0], y0[n]);
-    maxMinusZ[0] = Math.min(maxMinusZ[0], z0[n]);
-    maxPlusZ[0] = Math.max(maxPlusZ[0], z0[n]);
-    maxMinusX[1] += x0[n] < 0 ? x0[n] : 0;
-    maxPlusX[1] += x0[n] > 0 ? x0[n] : 0;
-    maxMinusY[1] += x0[n] < 0 ? y0[n] : 0;
-    maxPlusY[1] += x0[n] > 0 ? y0[n] : 0;
-    maxMinusZ[1] += x0[n] < 0 ? z0[n] : 0;
-    maxPlusZ[1] += x0[n] > 0 ? z0[n] : 0;
-   }
-   parts.add(new TrackPartPart(this, x0, y0, z0, 48, wheelRGB, type + " wheel wheelFaces " + steers, textureType));//^Wheel Plates
-   if (rimRadius > 0) {
-    if (i_wheelThickness != 0) {
-     x0[0] += i_wheelThickness < 0 ? rimDepth : -rimDepth;
-    }
-    if (m_rimType.contains(" sport ")) {
-     double smallRimRadius = rimRadius * .125;
-     for (n = x0.length; --n > 0; ) {
-      x0[n] = sourceX - i_wheelThickness;
-     }
-     x0[16] = sourceX + i_wheelThickness;
-     if (i_wheelThickness > 0) {
-      x0[3] -= rimDepth;
-      x0[6] -= rimDepth;
-      x0[9] -= rimDepth;
-      x0[12] -= rimDepth;
-      x0[15] -= rimDepth;
-     } else if (i_wheelThickness < 0) {
-      x0[3] += rimDepth;
-      x0[6] += rimDepth;
-      x0[9] += rimDepth;
-      x0[12] += rimDepth;
-      x0[15] += rimDepth;
-     }
-     y0[0] = sourceY;
-     z0[0] = z0[9] = z0[16] = sourceZ;
-     y0[1] = y0[2] = sourceY - rimRadius * U.cos(5);
-     z0[1] = sourceZ - rimRadius * U.sin(5);
-     z0[2] = sourceZ + rimRadius * U.sin(5);
-     y0[3] = y0[15] = sourceY - smallRimRadius * U.cos(36);
-     z0[3] = sourceZ + smallRimRadius * U.sin(36);
-     y0[4] = y0[14] = sourceY - rimRadius * U.cos(67);
-     z0[4] = sourceZ + rimRadius * U.sin(67);
-     y0[5] = y0[13] = sourceY - rimRadius * U.cos(77);
-     z0[5] = sourceZ + rimRadius * U.sin(77);
-     y0[6] = y0[12] = sourceY + smallRimRadius * -U.cos(108);
-     z0[6] = sourceZ + smallRimRadius * U.sin(108);
-     y0[7] = y0[11] = sourceY + rimRadius * -U.cos(139);
-     z0[7] = sourceZ + rimRadius * U.sin(139);
-     y0[8] = y0[10] = sourceY + rimRadius * -U.cos(149);
-     z0[8] = sourceZ + rimRadius * U.sin(149);
-     y0[9] = sourceY + smallRimRadius;
-     z0[10] = sourceZ - rimRadius * U.sin(149);
-     z0[11] = sourceZ - rimRadius * U.sin(139);
-     z0[12] = sourceZ - smallRimRadius * U.sin(108);
-     z0[13] = sourceZ - rimRadius * U.sin(77);
-     z0[14] = sourceZ - rimRadius * U.sin(67);
-     z0[15] = sourceZ - smallRimRadius * U.sin(36);
-     y0[16] = sourceY + rimRadius * U.cos(5);
-     parts.add(new TrackPartPart(this, x0, y0, z0, 17, rimRGB, type + m_rimType + " wheel sportRimFaces " + steers, textureType));//^Sport rim
-     for (n = x0.length; --n >= 0; ) {
-      x0[n] = sourceX - (n < 48 ? i_wheelThickness : -i_wheelThickness);
-      x0[n] *= 1.001;
-     }
-     z0[0] = sourceZ + U.sin(0) * rimRadius;
-     z0[1] = sourceZ + U.sin(15) * rimRadius;
-     z0[2] = sourceZ + U.sin(30) * rimRadius;
-     z0[3] = sourceZ + U.sin(45) * rimRadius;
-     z0[4] = sourceZ + U.sin(60) * rimRadius;
-     z0[5] = sourceZ + U.sin(75) * rimRadius;
-     z0[6] = sourceZ + U.sin(90) * rimRadius;
-     z0[7] = sourceZ + U.sin(105) * rimRadius;
-     z0[8] = sourceZ + U.sin(120) * rimRadius;
-     z0[9] = sourceZ + U.sin(135) * rimRadius;
-     z0[10] = sourceZ + U.sin(150) * rimRadius;
-     z0[11] = sourceZ + U.sin(165) * rimRadius;
-     z0[12] = sourceZ + U.sin(180) * rimRadius;
-     z0[13] = sourceZ + U.sin(195) * rimRadius;
-     z0[14] = sourceZ + U.sin(210) * rimRadius;
-     z0[15] = sourceZ + U.sin(225) * rimRadius;
-     z0[16] = sourceZ + U.sin(240) * rimRadius;
-     z0[17] = sourceZ + U.sin(255) * rimRadius;
-     z0[18] = sourceZ + U.sin(270) * rimRadius;
-     z0[19] = sourceZ + U.sin(285) * rimRadius;
-     z0[20] = sourceZ + U.sin(300) * rimRadius;
-     z0[21] = sourceZ + U.sin(315) * rimRadius;
-     z0[22] = sourceZ + U.sin(330) * rimRadius;
-     z0[23] = sourceZ + U.sin(345) * rimRadius;
-     y0[0] = sourceY + U.cos(0) * rimRadius;
-     y0[1] = sourceY + U.cos(15) * rimRadius;
-     y0[2] = sourceY + U.cos(30) * rimRadius;
-     y0[3] = sourceY + U.cos(45) * rimRadius;
-     y0[4] = sourceY + U.cos(60) * rimRadius;
-     y0[5] = sourceY + U.cos(75) * rimRadius;
-     y0[6] = sourceY + U.cos(90) * rimRadius;
-     y0[7] = sourceY + U.cos(105) * rimRadius;
-     y0[8] = sourceY + U.cos(120) * rimRadius;
-     y0[9] = sourceY + U.cos(135) * rimRadius;
-     y0[10] = sourceY + U.cos(150) * rimRadius;
-     y0[11] = sourceY + U.cos(165) * rimRadius;
-     y0[12] = sourceY + U.cos(180) * rimRadius;
-     y0[13] = sourceY + U.cos(195) * rimRadius;
-     y0[14] = sourceY + U.cos(210) * rimRadius;
-     y0[15] = sourceY + U.cos(225) * rimRadius;
-     y0[16] = sourceY + U.cos(240) * rimRadius;
-     y0[17] = sourceY + U.cos(255) * rimRadius;
-     y0[18] = sourceY + U.cos(270) * rimRadius;
-     y0[19] = sourceY + U.cos(285) * rimRadius;
-     y0[20] = sourceY + U.cos(300) * rimRadius;
-     y0[21] = sourceY + U.cos(315) * rimRadius;
-     y0[22] = sourceY + U.cos(330) * rimRadius;
-     y0[23] = sourceY + U.cos(345) * rimRadius;
-     smallRimRadius = rimRadius * .875;
-     z0[0 + 24] = sourceZ + U.sin(0) * smallRimRadius;
-     z0[1 + 24] = sourceZ + U.sin(15) * smallRimRadius;
-     z0[2 + 24] = sourceZ + U.sin(30) * smallRimRadius;
-     z0[3 + 24] = sourceZ + U.sin(45) * smallRimRadius;
-     z0[4 + 24] = sourceZ + U.sin(60) * smallRimRadius;
-     z0[5 + 24] = sourceZ + U.sin(75) * smallRimRadius;
-     z0[6 + 24] = sourceZ + U.sin(90) * smallRimRadius;
-     z0[7 + 24] = sourceZ + U.sin(105) * smallRimRadius;
-     z0[8 + 24] = sourceZ + U.sin(120) * smallRimRadius;
-     z0[9 + 24] = sourceZ + U.sin(135) * smallRimRadius;
-     z0[10 + 24] = sourceZ + U.sin(150) * smallRimRadius;
-     z0[11 + 24] = sourceZ + U.sin(165) * smallRimRadius;
-     z0[12 + 24] = sourceZ + U.sin(180) * smallRimRadius;
-     z0[13 + 24] = sourceZ + U.sin(195) * smallRimRadius;
-     z0[14 + 24] = sourceZ + U.sin(210) * smallRimRadius;
-     z0[15 + 24] = sourceZ + U.sin(225) * smallRimRadius;
-     z0[16 + 24] = sourceZ + U.sin(240) * smallRimRadius;
-     z0[17 + 24] = sourceZ + U.sin(255) * smallRimRadius;
-     z0[18 + 24] = sourceZ + U.sin(270) * smallRimRadius;
-     z0[19 + 24] = sourceZ + U.sin(285) * smallRimRadius;
-     z0[20 + 24] = sourceZ + U.sin(300) * smallRimRadius;
-     z0[21 + 24] = sourceZ + U.sin(315) * smallRimRadius;
-     z0[22 + 24] = sourceZ + U.sin(330) * smallRimRadius;
-     z0[23 + 24] = sourceZ + U.sin(345) * smallRimRadius;
-     y0[0 + 24] = sourceY + U.cos(0) * smallRimRadius;
-     y0[1 + 24] = sourceY + U.cos(15) * smallRimRadius;
-     y0[2 + 24] = sourceY + U.cos(30) * smallRimRadius;
-     y0[3 + 24] = sourceY + U.cos(45) * smallRimRadius;
-     y0[4 + 24] = sourceY + U.cos(60) * smallRimRadius;
-     y0[5 + 24] = sourceY + U.cos(75) * smallRimRadius;
-     y0[6 + 24] = sourceY + U.cos(90) * smallRimRadius;
-     y0[7 + 24] = sourceY + U.cos(105) * smallRimRadius;
-     y0[8 + 24] = sourceY + U.cos(120) * smallRimRadius;
-     y0[9 + 24] = sourceY + U.cos(135) * smallRimRadius;
-     y0[10 + 24] = sourceY + U.cos(150) * smallRimRadius;
-     y0[11 + 24] = sourceY + U.cos(165) * smallRimRadius;
-     y0[12 + 24] = sourceY + U.cos(180) * smallRimRadius;
-     y0[13 + 24] = sourceY + U.cos(195) * smallRimRadius;
-     y0[14 + 24] = sourceY + U.cos(210) * smallRimRadius;
-     y0[15 + 24] = sourceY + U.cos(225) * smallRimRadius;
-     y0[16 + 24] = sourceY + U.cos(240) * smallRimRadius;
-     y0[17 + 24] = sourceY + U.cos(255) * smallRimRadius;
-     y0[18 + 24] = sourceY + U.cos(270) * smallRimRadius;
-     y0[19 + 24] = sourceY + U.cos(285) * smallRimRadius;
-     y0[20 + 24] = sourceY + U.cos(300) * smallRimRadius;
-     y0[21 + 24] = sourceY + U.cos(315) * smallRimRadius;
-     y0[22 + 24] = sourceY + U.cos(330) * smallRimRadius;
-     y0[23 + 24] = sourceY + U.cos(345) * smallRimRadius;
-     for (n = 48; --n >= 0; ) {
-      z0[n + 48] = z0[n];
-      y0[n + 48] = y0[n];
-     }
-     parts.add(new TrackPartPart(this, x0, y0, z0, 96, rimRGB, type + m_rimType + " wheel wheelRingFaces " + steers, textureType));//^Sport rim ring
-    } else {
-     double hexagonAngle1 = 0.86602540378443864676372317075294, hexagonAngle2 = .5;
-     y0[0] = y0[1] = y0[4] = y0[7] = sourceY;
-     z0[0] = z0[7] = sourceZ;
-     z0[1] = sourceZ + rimRadius;
-     z0[4] = sourceZ - rimRadius;
-     y0[2] = y0[3] = sourceY + hexagonAngle1 * rimRadius;
-     z0[2] = z0[6] = sourceZ + hexagonAngle2 * rimRadius;
-     z0[3] = z0[5] = sourceZ - hexagonAngle2 * rimRadius;
-     y0[5] = y0[6] = sourceY - hexagonAngle1 * rimRadius;
-     if (i_wheelThickness != 0) {
-      x0[7] = sourceX + i_wheelThickness;
-      x0[7] -= i_wheelThickness < 0 ? rimDepth : -rimDepth;
-     }
-     parts.add(new TrackPartPart(this, x0, y0, z0, 8, rimRGB, type + m_rimType + " wheel rimFaces " + steers, textureType));//^Normal rim
-    }
-   }
-   if (Math.abs(i_wheelThickness) > 0) {
-    for (n = 24; --n >= 0; ) {
-     x0[n] = sourceX - wheelThickness;
-     x0[n + 24] = sourceX + wheelThickness;
-    }
-    z0[0] = sourceZ + U.sin(0) * i_wheelRadius;
-    z0[1] = sourceZ + U.sin(15) * i_wheelRadius;
-    z0[2] = sourceZ + U.sin(30) * i_wheelRadius;
-    z0[3] = sourceZ + U.sin(45) * i_wheelRadius;
-    z0[4] = sourceZ + U.sin(60) * i_wheelRadius;
-    z0[5] = sourceZ + U.sin(75) * i_wheelRadius;
-    z0[6] = sourceZ + U.sin(90) * i_wheelRadius;
-    z0[7] = sourceZ + U.sin(105) * i_wheelRadius;
-    z0[8] = sourceZ + U.sin(120) * i_wheelRadius;
-    z0[9] = sourceZ + U.sin(135) * i_wheelRadius;
-    z0[10] = sourceZ + U.sin(150) * i_wheelRadius;
-    z0[11] = sourceZ + U.sin(165) * i_wheelRadius;
-    z0[12] = sourceZ + U.sin(180) * i_wheelRadius;
-    z0[13] = sourceZ + U.sin(195) * i_wheelRadius;
-    z0[14] = sourceZ + U.sin(210) * i_wheelRadius;
-    z0[15] = sourceZ + U.sin(225) * i_wheelRadius;
-    z0[16] = sourceZ + U.sin(240) * i_wheelRadius;
-    z0[17] = sourceZ + U.sin(255) * i_wheelRadius;
-    z0[18] = sourceZ + U.sin(270) * i_wheelRadius;
-    z0[19] = sourceZ + U.sin(285) * i_wheelRadius;
-    z0[20] = sourceZ + U.sin(300) * i_wheelRadius;
-    z0[21] = sourceZ + U.sin(315) * i_wheelRadius;
-    z0[22] = sourceZ + U.sin(330) * i_wheelRadius;
-    z0[23] = sourceZ + U.sin(345) * i_wheelRadius;
-    y0[0] = sourceY + U.cos(0) * i_wheelRadius;
-    y0[1] = sourceY + U.cos(15) * i_wheelRadius;
-    y0[2] = sourceY + U.cos(30) * i_wheelRadius;
-    y0[3] = sourceY + U.cos(45) * i_wheelRadius;
-    y0[4] = sourceY + U.cos(60) * i_wheelRadius;
-    y0[5] = sourceY + U.cos(75) * i_wheelRadius;
-    y0[6] = sourceY + U.cos(90) * i_wheelRadius;
-    y0[7] = sourceY + U.cos(105) * i_wheelRadius;
-    y0[8] = sourceY + U.cos(120) * i_wheelRadius;
-    y0[9] = sourceY + U.cos(135) * i_wheelRadius;
-    y0[10] = sourceY + U.cos(150) * i_wheelRadius;
-    y0[11] = sourceY + U.cos(165) * i_wheelRadius;
-    y0[12] = sourceY + U.cos(180) * i_wheelRadius;
-    y0[13] = sourceY + U.cos(195) * i_wheelRadius;
-    y0[14] = sourceY + U.cos(210) * i_wheelRadius;
-    y0[15] = sourceY + U.cos(225) * i_wheelRadius;
-    y0[16] = sourceY + U.cos(240) * i_wheelRadius;
-    y0[17] = sourceY + U.cos(255) * i_wheelRadius;
-    y0[18] = sourceY + U.cos(270) * i_wheelRadius;
-    y0[19] = sourceY + U.cos(285) * i_wheelRadius;
-    y0[20] = sourceY + U.cos(300) * i_wheelRadius;
-    y0[21] = sourceY + U.cos(315) * i_wheelRadius;
-    y0[22] = sourceY + U.cos(330) * i_wheelRadius;
-    y0[23] = sourceY + U.cos(345) * i_wheelRadius;
-    for (n = 24; --n >= 0; ) {
-     z0[n + 24] = z0[n];
-     y0[n + 24] = y0[n];
-    }
-    parts.add(new TrackPartPart(this, x0, y0, z0, 48, wheelRGB, type + " wheel cylindric " + steers, textureType));//^Treads
-   }
-   if (wheelSmoothing != 0) {
-    for (n = 24; --n >= 0; ) {
-     x0[n] = sourceX - wheelThickness;
-     x0[n + 24] = sourceX - i_wheelThickness;
-    }
-    for (n = 72; --n >= 48; ) {
-     x0[n] = sourceX + wheelThickness;
-     x0[n + 24] = sourceX + i_wheelThickness;
-    }
-    z0[0] = sourceZ + U.sin(0) * i_wheelRadius;
-    z0[1] = sourceZ + U.sin(15) * i_wheelRadius;
-    z0[2] = sourceZ + U.sin(30) * i_wheelRadius;
-    z0[3] = sourceZ + U.sin(45) * i_wheelRadius;
-    z0[4] = sourceZ + U.sin(60) * i_wheelRadius;
-    z0[5] = sourceZ + U.sin(75) * i_wheelRadius;
-    z0[6] = sourceZ + U.sin(90) * i_wheelRadius;
-    z0[7] = sourceZ + U.sin(105) * i_wheelRadius;
-    z0[8] = sourceZ + U.sin(120) * i_wheelRadius;
-    z0[9] = sourceZ + U.sin(135) * i_wheelRadius;
-    z0[10] = sourceZ + U.sin(150) * i_wheelRadius;
-    z0[11] = sourceZ + U.sin(165) * i_wheelRadius;
-    z0[12] = sourceZ + U.sin(180) * i_wheelRadius;
-    z0[13] = sourceZ + U.sin(195) * i_wheelRadius;
-    z0[14] = sourceZ + U.sin(210) * i_wheelRadius;
-    z0[15] = sourceZ + U.sin(225) * i_wheelRadius;
-    z0[16] = sourceZ + U.sin(240) * i_wheelRadius;
-    z0[17] = sourceZ + U.sin(255) * i_wheelRadius;
-    z0[18] = sourceZ + U.sin(270) * i_wheelRadius;
-    z0[19] = sourceZ + U.sin(285) * i_wheelRadius;
-    z0[20] = sourceZ + U.sin(300) * i_wheelRadius;
-    z0[21] = sourceZ + U.sin(315) * i_wheelRadius;
-    z0[22] = sourceZ + U.sin(330) * i_wheelRadius;
-    z0[23] = sourceZ + U.sin(345) * i_wheelRadius;
-    z0[0 + 24] = sourceZ + U.sin(0) * wheelRadius;
-    z0[1 + 24] = sourceZ + U.sin(15) * wheelRadius;
-    z0[2 + 24] = sourceZ + U.sin(30) * wheelRadius;
-    z0[3 + 24] = sourceZ + U.sin(45) * wheelRadius;
-    z0[4 + 24] = sourceZ + U.sin(60) * wheelRadius;
-    z0[5 + 24] = sourceZ + U.sin(75) * wheelRadius;
-    z0[6 + 24] = sourceZ + U.sin(90) * wheelRadius;
-    z0[7 + 24] = sourceZ + U.sin(105) * wheelRadius;
-    z0[8 + 24] = sourceZ + U.sin(120) * wheelRadius;
-    z0[9 + 24] = sourceZ + U.sin(135) * wheelRadius;
-    z0[10 + 24] = sourceZ + U.sin(150) * wheelRadius;
-    z0[11 + 24] = sourceZ + U.sin(165) * wheelRadius;
-    z0[12 + 24] = sourceZ + U.sin(180) * wheelRadius;
-    z0[13 + 24] = sourceZ + U.sin(195) * wheelRadius;
-    z0[14 + 24] = sourceZ + U.sin(210) * wheelRadius;
-    z0[15 + 24] = sourceZ + U.sin(225) * wheelRadius;
-    z0[16 + 24] = sourceZ + U.sin(240) * wheelRadius;
-    z0[17 + 24] = sourceZ + U.sin(255) * wheelRadius;
-    z0[18 + 24] = sourceZ + U.sin(270) * wheelRadius;
-    z0[19 + 24] = sourceZ + U.sin(285) * wheelRadius;
-    z0[20 + 24] = sourceZ + U.sin(300) * wheelRadius;
-    z0[21 + 24] = sourceZ + U.sin(315) * wheelRadius;
-    z0[22 + 24] = sourceZ + U.sin(330) * wheelRadius;
-    z0[23 + 24] = sourceZ + U.sin(345) * wheelRadius;
-    y0[0] = sourceY + U.cos(0) * i_wheelRadius;
-    y0[1] = sourceY + U.cos(15) * i_wheelRadius;
-    y0[2] = sourceY + U.cos(30) * i_wheelRadius;
-    y0[3] = sourceY + U.cos(45) * i_wheelRadius;
-    y0[4] = sourceY + U.cos(60) * i_wheelRadius;
-    y0[5] = sourceY + U.cos(75) * i_wheelRadius;
-    y0[6] = sourceY + U.cos(90) * i_wheelRadius;
-    y0[7] = sourceY + U.cos(105) * i_wheelRadius;
-    y0[8] = sourceY + U.cos(120) * i_wheelRadius;
-    y0[9] = sourceY + U.cos(135) * i_wheelRadius;
-    y0[10] = sourceY + U.cos(150) * i_wheelRadius;
-    y0[11] = sourceY + U.cos(165) * i_wheelRadius;
-    y0[12] = sourceY + U.cos(180) * i_wheelRadius;
-    y0[13] = sourceY + U.cos(195) * i_wheelRadius;
-    y0[14] = sourceY + U.cos(210) * i_wheelRadius;
-    y0[15] = sourceY + U.cos(225) * i_wheelRadius;
-    y0[16] = sourceY + U.cos(240) * i_wheelRadius;
-    y0[17] = sourceY + U.cos(255) * i_wheelRadius;
-    y0[18] = sourceY + U.cos(270) * i_wheelRadius;
-    y0[19] = sourceY + U.cos(285) * i_wheelRadius;
-    y0[20] = sourceY + U.cos(300) * i_wheelRadius;
-    y0[21] = sourceY + U.cos(315) * i_wheelRadius;
-    y0[22] = sourceY + U.cos(330) * i_wheelRadius;
-    y0[23] = sourceY + U.cos(345) * i_wheelRadius;
-    y0[0 + 24] = sourceY + U.cos(0) * wheelRadius;
-    y0[1 + 24] = sourceY + U.cos(15) * wheelRadius;
-    y0[2 + 24] = sourceY + U.cos(30) * wheelRadius;
-    y0[3 + 24] = sourceY + U.cos(45) * wheelRadius;
-    y0[4 + 24] = sourceY + U.cos(60) * wheelRadius;
-    y0[5 + 24] = sourceY + U.cos(75) * wheelRadius;
-    y0[6 + 24] = sourceY + U.cos(90) * wheelRadius;
-    y0[7 + 24] = sourceY + U.cos(105) * wheelRadius;
-    y0[8 + 24] = sourceY + U.cos(120) * wheelRadius;
-    y0[9 + 24] = sourceY + U.cos(135) * wheelRadius;
-    y0[10 + 24] = sourceY + U.cos(150) * wheelRadius;
-    y0[11 + 24] = sourceY + U.cos(165) * wheelRadius;
-    y0[12 + 24] = sourceY + U.cos(180) * wheelRadius;
-    y0[13 + 24] = sourceY + U.cos(195) * wheelRadius;
-    y0[14 + 24] = sourceY + U.cos(210) * wheelRadius;
-    y0[15 + 24] = sourceY + U.cos(225) * wheelRadius;
-    y0[16 + 24] = sourceY + U.cos(240) * wheelRadius;
-    y0[17 + 24] = sourceY + U.cos(255) * wheelRadius;
-    y0[18 + 24] = sourceY + U.cos(270) * wheelRadius;
-    y0[19 + 24] = sourceY + U.cos(285) * wheelRadius;
-    y0[20 + 24] = sourceY + U.cos(300) * wheelRadius;
-    y0[21 + 24] = sourceY + U.cos(315) * wheelRadius;
-    y0[22 + 24] = sourceY + U.cos(330) * wheelRadius;
-    y0[23 + 24] = sourceY + U.cos(345) * wheelRadius;
-    for (n = 48; --n >= 0; ) {
-     z0[n + 48] = z0[n];
-     y0[n + 48] = y0[n];
-    }
-    parts.add(new TrackPartPart(this, x0, y0, z0, 96, wheelRGB, type + " wheel wheelRingFaces " + steers, textureType));//^Tread edges
    }
   }
  }

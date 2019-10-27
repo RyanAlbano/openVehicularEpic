@@ -55,7 +55,6 @@ public class VE extends Application {
  private Scene scene;
  public static SubScene scene3D;
  public static final Group group = new Group();
- private static final Group group2 = new Group();
  private static Canvas canvas;
  public static GraphicsContext graphicsContext;
  private static final Sphere viewerCollisionBounds = new Sphere();
@@ -66,7 +65,6 @@ public class VE extends Application {
  public static int vehiclePerspective;
  public static int vehiclesInMatch = 1;
  static final int[] vehicleNumber = new int[maxPlayers];
- public static int arrowTarget;
  public static int map;
  public static int userPlayer;
  public static boolean keyUp, keyDown, keyLeft, keyRight, keySpace;
@@ -84,20 +82,17 @@ public class VE extends Application {
  private static boolean showInfo;
  public static boolean headsUpDisplay = true;
  public static boolean normalMapping;
+ static boolean cameraShake;
  static boolean degradedSoundEffects;
  public static boolean messageWait;
  private static boolean creditsDirection;
- public static boolean randomStartAngle;
- public static boolean guardCheckpoint;
- public static boolean fixPointsExist;
+ public static boolean randomStartAngle, guardCheckpoint;
  public static boolean lapCheckpoint;
  private static boolean tournamentOver;
  private static boolean inViewer;
  private static boolean vehicleViewer3DLighting, showCollisionBounds, showWireframe;
  private static double mouseX, mouseY;
- private static double selectionWait;
- private static double selectionTimer;
- public static double bonusX, bonusY, bonusZ;
+ private static double selectionWait, selectionTimer;
  public static double speedLimitAI;
  private static double matchTime;
  private static double stuntTimer;
@@ -110,9 +105,6 @@ public class VE extends Application {
  private static double vehicleLightBrightnessChange;
  public static double mouseSteerX, mouseSteerY;
  static double trackTimer;
- private double instanceSize = 1;
- private double[] instanceScale = {1, 1, 1};
- private double randomX, randomY, randomZ;
  private static double viewerY, viewerZ, viewerXZ, viewerYZ, viewerHeight, viewerDepth;
  private double UIMovementSpeedMultiple = 1;
  public static double units = 1;
@@ -128,7 +120,6 @@ public class VE extends Application {
  public static long matchLength;
  public static long driverSeat;
  public static long currentCheckpoint;
- static long mapSelectX, mapSelectY, mapSelectZ;
  public static final long[] scoreCheckpoint = new long[2];
  public static final long[] scoreLap = new long[2];
  public static final long[] scoreStunt = new long[2];
@@ -140,34 +131,40 @@ public class VE extends Application {
  public static String initialization = "Loading V.E.";
  public static String print = "";
  private static String stuntPrint = "";
- private static final double minimalOpacityUI = .5, maximalOpacityUI = .75;
+
+ enum opacityUI {
+  ;
+  private static final double minimal = .5, maximal = .75;
+ }
+
  private static boolean destructionLog;
  public static final String[][] destructionNames = new String[5][2];
  public static final Color[][] destructionNameColors = new Color[5][2];
  public static String vehicleMaker = "", mapName = "";
- private static final String[] unitSign = {"VEs", "VEs"};
+ private static final String[] unitName = {"VEs", "VEs"};
  private static String error = "";
  public static final String[] playerNames = new String[maxPlayers];
  private Player mediaPlayer;
  private String songName = "";
  public static final Map<String, Image> images = new HashMap<>();
  public static final List<Vehicle> vehicles = new ArrayList<>(maxPlayers);
- public static final List<TrackPart> trackParts = new ArrayList<>();
  public static List<String> vehicleModels;
  static Sound UI;
  public static Sound checkpoint;
- private static Sound stunt, bonus, finish;
+ private static Sound stunt;
+ public static Sound bonus;
+ private static Sound finish;
 
- private enum MapModels {
+ public enum MapModels {
   road, roadshort, roadturn, roadbendL, roadbendR, roadend, roadincline, offroad, offroadshort, offroadturn, offroadbump, offroadrocky, offroadend, offroadincline, mixroad,
   checkpoint, fixpoint,
   ramp, rampcurved, ramptrapezoid, ramptriangle, rampwall, quarterpipe, pyramid, plateau,
-  offplateau, mound, pavedmound,//<-'mound' is needed!
+  offramp, offplateau, mound, pavedmound,//<-'mound' is needed!
   floor, offfloor, wall, offwall, cube, offcube, spike, spikes, block, blocktower, border, beam, grid, tunnel, roadlift, speedgate, slowgate, antigravity,
   tree0, tree1, tree2, treepalm, cactus0, cactus1, cactus2, rainbow, crescent
  }
 
- public static final List<String> maps = new ArrayList<>(Arrays.asList("basic", "lapsglory", "checkpoint", "gunpowder", "underover", "antigravity", "versus1", "versus2", "versus3", "trackless", "desert", "3drace", "trip", "racenowhere", "moonlight", "bottleneck", "railing", "twisted", "deathpit", "falls", "pyramid", "fusion", "darkdivide", "arctic", "scenic", "wintermode", "mountainhop", "damage", "cavern", "southpole", "aerialcontrol", "matrix", "mist", "vansland", "dustdevil", "forest", "zipcross", "highlands", "tornado", "volcanic", "tsunami", "boulder", "sands", "meteor", "speedway", "endurance", "tunnel", "circle", "circleXL", "circles", "everything", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "laststand", "parkinglot", "city", "machine", "military", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "space3", "summit", "portal", "blackhole", "doomsday", "+UserMap & TUTORIAL+"));
+ public static final List<String> maps = new ArrayList<>(Arrays.asList("basic", "lapsGlory", "checkpoint", "gunpowder", "underOver", "antigravity", "versus1", "versus2", "versus3", "trackless", "desert", "3DRace", "trip", "raceNowhere", "moonlight", "bottleneck", "railing", "twisted", "deathPit", "falls", "pyramid", "fusion", "darkDivide", "arctic", "scenicRoute", "winterMode", "mountainHop", "damage", "cavern", "southPole", "aerialControl", "matrix", "mist", "vansLand", "dustDevil", "forest", "zipCross", "highlands", "coldFury", "tornado", "volcanic", "tsunami", "boulder", "sands", "meteor", "speedway", "endurance", "tunnel", "circle", "circleXL", "circles", "everything", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "lastStand", "parkingLot", "city", "machine", "military", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "space3", "summit", "portal", "blackHole", "doomsday", "+UserMap & TUTORIAL+"));
  public static Status status = Status.mainMenu;
  private static Status lastStatus;
 
@@ -179,7 +176,7 @@ public class VE extends Application {
  }
 
  static void run(String[] s) {
-  Application.launch(s);
+  launch(s);
  }
 
  private void loadVE(Stage stage) {
@@ -231,14 +228,15 @@ public class VE extends Application {
       s = s1.trim();
       if (s.startsWith("Units(metric")) {
        units = .5364466667;
-       unitSign[0] = "Kph";
-       unitSign[1] = "Meters";
+       unitName[0] = "Kph";
+       unitName[1] = "Meters";
       } else if (s.startsWith("Units(U.S.")) {
        units = 1 / 3.;
-       unitSign[0] = "Mph";
-       unitSign[1] = "Feet";
+       unitName[0] = "Mph";
+       unitName[1] = "Feet";
       }
       normalMapping = s.startsWith("NormalMapping(yes") || normalMapping;
+      cameraShake = s.startsWith("CameraShake(yes") || cameraShake;
       try {
        userFPS = s.startsWith("fpsLimit(") ? Math.round(U.getValue(s, 0)) : userFPS;
       } catch (RuntimeException ignored) {
@@ -267,8 +265,8 @@ public class VE extends Application {
        }
       }
      }
-    } catch (FileNotFoundException e) {
-     System.out.println("Error Loading GameSettings: " + e);
+    } catch (FileNotFoundException E) {
+     System.out.println("Error Loading GameSettings: " + E);
     }
     initialization = "Loading Sounds";
     checkpoint = new Sound("checkpoint");
@@ -282,14 +280,6 @@ public class VE extends Application {
     finish = new Sound("finish", 2);
     initialization = "Preparing Camera";
     Camera.boot();
-    PerspectiveCamera camera2 = new PerspectiveCamera(true);
-    camera2.setFieldOfView(75);
-    camera2.setTranslateX(0);
-    camera2.setTranslateY(0);
-    camera2.setTranslateZ(0);
-    initialization = "Preparing 3D Scene";
-    scene3D.setCamera(Camera.camera);
-    TE.arrowScene.setCamera(camera2);
     initialization = "Creating Guidance Arrow";
     TriangleMesh TM = new TriangleMesh();
     TM.getTexCoords().setAll(0, 0);
@@ -372,7 +362,7 @@ public class VE extends Application {
   width = primaryStage.getWidth();
   height = primaryStage.getHeight();
   scene3D = new SubScene(group, width, height, true, antiAliasing ? SceneAntialiasing.BALANCED : SceneAntialiasing.DISABLED);
-  TE.arrowScene = new SubScene(group2, width, height, false, antiAliasing ? SceneAntialiasing.BALANCED : SceneAntialiasing.DISABLED);
+  TE.arrowScene = new SubScene(TE.arrowGroup, width, height, false, antiAliasing ? SceneAntialiasing.BALANCED : SceneAntialiasing.DISABLED);
   canvas = new Canvas(width, height);
   E.canvas = new Canvas(width, height);
   graphicsContext = canvas.getGraphicsContext2D();
@@ -417,7 +407,6 @@ public class VE extends Application {
       mouseClick = status != Status.vehicleSelect && status != Status.mapJump && !status.name().contains("options") || mouseClick;
      }
      selectionTimer += tick;
-     E.runPoolVision();
      if (width != primaryStage.getWidth() || height != primaryStage.getHeight()) {
       width = primaryStage.getWidth();
       height = primaryStage.getHeight();
@@ -470,11 +459,7 @@ public class VE extends Application {
          explosion.run(gamePlay);
         }
         for (Special special : vehicle.specials) {
-         vehicle.runSpecial(special, gamePlay);
-        }
-        if (vehicle.screenFlash > 0) {
-         U.fillRGB(E.graphicsContext, 1, 1, 1, vehicle.screenFlash);
-         U.fillRectangle(E.graphicsContext, .5, .5, 1, 1);
+         special.run(vehicle, gamePlay);
         }
        }
        if (gamePlay) {
@@ -546,9 +531,6 @@ public class VE extends Application {
           Network.out.get(0).println("Ready");
          }
         }
-        //   for (Vehicle vehicle : vehicles) {
-        //   vehicle.turretDefaultY = vehicle.Y + vehicle.turretBaseY;
-        // }
         keySpace = false;
        }
        if (!Network.waiting) {
@@ -593,7 +575,7 @@ public class VE extends Application {
        for (VehiclePart part : vehicle.parts) {
         U.removeLight(part.pointLight);
        }
-      }//Potential MAJOR sources of lag
+      }
       if (defaultVehicleLightBrightness > 0) {
        for (Vehicle vehicle : vehicles) {
         U.removeLight(vehicle.burnLight);
@@ -623,15 +605,16 @@ public class VE extends Application {
         }
        }
       }
-      for (TrackPart trackPart : trackParts) {
+      for (TrackPart trackPart : TE.trackParts) {
        trackPart.runGraphics();
       }
-      runBonus();
+      TE.runBonus();
       runMatchUI(gamePlay);
       vehiclePerspective = Camera.toUserPerspective[0] && Camera.toUserPerspective[1] ? userPlayer : vehiclePerspective;
       gameFPS = Double.POSITIVE_INFINITY;
-      E.renderAll = false;
+      E.renderType = E.RenderType.standard;
      }
+     E.runPoolVision();
      if (status == Status.paused) {
       runPaused();
      } else if (status == Status.optionsMatch || status == Status.optionsMenu) {
@@ -689,12 +672,12 @@ public class VE extends Application {
      }
      U.getFPS();
      if (showInfo) {
-      U.fillRGB(0, 0, 0, minimalOpacityUI);
+      U.fillRGB(0, 0, 0, opacityUI.minimal);
       U.fillRectangle(.25, .9625, .15, .05);
       U.fillRectangle(.75, .9625, .15, .05);
       U.fillRGB(1, 1, 1);
       U.font(.015);
-      U.text("Objects: " + (group.getChildren().size() + group2.getChildren().size() + E.lights.getChildren().size()), .25, .965);
+      U.text("Objects: " + (group.getChildren().size() + TE.arrowGroup.getChildren().size() + E.lights.getChildren().size()), .25, .965);
       U.font(.02);
       U.text(Math.round(U.averageFPS) + " FPS", .75, .965);
      }
@@ -734,18 +717,18 @@ public class VE extends Application {
  }
 
  private void mapLoad() {
-  instanceSize = 1;
-  instanceScale = new double[]{1, 1, 1};
-  randomX = randomY = randomZ = 0;
+  TE.instanceSize = 1;
+  TE.instanceScale = new double[]{1, 1, 1};
+  TE.randomX = TE.randomY = TE.randomZ = 0;
   if (status == Status.mapLoadPass0) {
    scene.setCursor(Cursor.WAIT);
   } else if (status == Status.mapLoadPass1) {
    resetGraphics();
    U.remove(E.sun, E.ground);
    U.removeLight(E.sunlight);
-   addArrow();
+   TE.addArrow();
    vehicles.clear();
-   trackParts.clear();
+   TE.trackParts.clear();
    E.groundPlates.clear();
    E.clouds.clear();
    E.stars.clear();
@@ -762,13 +745,13 @@ public class VE extends Application {
    E.terrain = " ground ";
    E.skyInverse = Color.color(1, 1, 1);
    E.groundInverse = Color.color(1, 1, 1);
-   Camera.camera.setFarClip(Camera.maximumFarClip);
+   Camera.camera.setFarClip(Camera.clipRange.maximumFar);
    E.sunX = E.sunY = E.sunZ
    = E.wind = defaultVehicleLightBrightness
    = E.skyRGB[0] = E.skyRGB[1] = E.skyRGB[2]
    = E.groundRGB[0] = E.groundRGB[1] = E.groundRGB[2] = E.terrainRGB[0] = E.terrainRGB[1] = E.terrainRGB[2] = E.groundLevel
    = E.poolDepth = 0;
-   E.windStormExists = randomStartAngle = E.slowVehiclesWhenAtLimit = guardCheckpoint = fixPointsExist = E.poolExists = E.tornadoMovesFixpoints = false;
+   E.windStormExists = randomStartAngle = E.slowVehiclesWhenAtLimit = guardCheckpoint = TE.fixPointsExist = E.poolExists = E.tornadoMovesFixpoints = false;
    E.gravity = 7;
    E.soundMultiple = 1;
    U.setLightRGB(E.sunlight, 1, 1, 1);
@@ -777,14 +760,14 @@ public class VE extends Application {
    U.setDiffuseRGB((PhongMaterial) E.ground.getMaterial(), 0, 0, 0);
    ((PhongMaterial) E.ground.getMaterial()).setSpecularMap(null);
    E.lightningExists = E.volcanoExists = false;
-   E.limitL = E.limitBack = E.limitY = Double.NEGATIVE_INFINITY;
-   E.limitR = E.limitFront = E.viewableMapDistance = Double.POSITIVE_INFINITY;
+   E.mapBounds.left = E.mapBounds.backward = E.mapBounds.Y = Double.NEGATIVE_INFINITY;
+   E.mapBounds.right = E.mapBounds.forward = E.viewableMapDistance = Double.POSITIVE_INFINITY;
    speedLimitAI = Double.POSITIVE_INFINITY;
    E.poolType = E.Pool.water;
   }
   int n;
   String s = "";
-  try (BufferedReader BR = new BufferedReader(new InputStreamReader(U.getMapFile(map), U.standardChars))) {
+  try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(U.getMapFile(map)), U.standardChars))) {
    for (; (s = BR.readLine()) != null; ) {
     s = s.trim();
     if (status == Status.mapLoadPass2) {
@@ -797,7 +780,7 @@ public class VE extends Application {
      E.loadTerrain(s);
      if (s.startsWith("viewDistance(")) {
       E.viewableMapDistance = U.getValue(s, 0);
-      Camera.camera.setFarClip(U.clamp(Camera.normalNearClip + 1, U.getValue(s, 0), Camera.maximumFarClip));
+      Camera.camera.setFarClip(U.clamp(Camera.clipRange.normalNear + 1, U.getValue(s, 0), Camera.clipRange.maximumFar));
      } else if (s.startsWith("soundTravel(")) {
       E.soundMultiple = U.getValue(s, 0);
      }
@@ -805,11 +788,11 @@ public class VE extends Application {
      E.loadSun(s);
      defaultVehicleLightBrightness = s.startsWith("defaultBrightness(") ? U.getValue(s, 0) : defaultVehicleLightBrightness;
      randomStartAngle = s.startsWith("randomStartAngle") || randomStartAngle;
-     E.limitL = s.startsWith("xLimitLeft(") ? U.getValue(s, 0) : E.limitL;
-     E.limitR = s.startsWith("xLimitRight(") ? U.getValue(s, 0) : E.limitR;
-     E.limitFront = s.startsWith("zLimitFront(") ? U.getValue(s, 0) : E.limitFront;
-     E.limitBack = s.startsWith("zLimitBack(") ? U.getValue(s, 0) : E.limitBack;
-     E.limitY = s.startsWith("yLimit(") ? U.getValue(s, 0) : E.limitY;
+     E.mapBounds.left = s.startsWith("xLimitLeft(") ? U.getValue(s, 0) : E.mapBounds.left;
+     E.mapBounds.right = s.startsWith("xLimitRight(") ? U.getValue(s, 0) : E.mapBounds.right;
+     E.mapBounds.forward = s.startsWith("zLimitFront(") ? U.getValue(s, 0) : E.mapBounds.forward;
+     E.mapBounds.backward = s.startsWith("zLimitBack(") ? U.getValue(s, 0) : E.mapBounds.backward;
+     E.mapBounds.Y = s.startsWith("yLimit(") ? U.getValue(s, 0) : E.mapBounds.Y;
      E.slowVehiclesWhenAtLimit = s.startsWith("slowVehiclesWhenAtLimit") || E.slowVehiclesWhenAtLimit;
      speedLimitAI = s.startsWith("speedLimit(") ? U.getValue(s, 0) : speedLimitAI;
      E.groundLevel = s.startsWith("noGround") ? Double.POSITIVE_INFINITY : E.groundLevel;
@@ -821,8 +804,8 @@ public class VE extends Application {
       }
      } else if (s.startsWith("windstorm")) {
       E.windStormExists = true;
-      E.windX = E.wind * U.randomPlusMinus(20.);
-      E.windZ = E.wind * U.randomPlusMinus(20.);
+      E.windX = U.randomPlusMinus(E.wind);
+      E.windZ = U.randomPlusMinus(E.wind);
       E.windstorm = new Sound("storm" + U.getString(s, 0));
      }
      E.loadClouds(s);
@@ -836,23 +819,23 @@ public class VE extends Application {
       }
      } else if (s.startsWith("trees(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
-       trackParts.add(
+       TE.trackParts.add(
        U.random() < .5 ?
-       new TrackPart(getTrackPartIndex("tree0"), U.randomPlusMinus(800000), 0, U.randomPlusMinus(800000), 0, 1 + Math.sqrt(U.random(16.)), instanceScale)
+       new TrackPart(TE.getTrackPartIndex("tree0"), U.randomPlusMinus(800000), 0, U.randomPlusMinus(800000), 0, 1 + Math.sqrt(U.random(16.)), TE.instanceScale)
        :
-       new TrackPart(getTrackPartIndex(U.random() < .5 ? "tree1" : "tree2"), U.randomPlusMinus(800000), 0, U.randomPlusMinus(800000), 0));
+       new TrackPart(TE.getTrackPartIndex(U.random() < .5 ? "tree1" : "tree2"), U.randomPlusMinus(800000), 0, U.randomPlusMinus(800000), 0));
       }
      } else if (s.startsWith("palmTrees(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
-       trackParts.add(new TrackPart(getTrackPartIndex("treepalm"), U.randomPlusMinus(800000), 0, U.randomPlusMinus(800000), 0, 1 + U.random(.6), instanceScale));
+       TE.trackParts.add(new TrackPart(TE.getTrackPartIndex("treepalm"), U.randomPlusMinus(800000), 0, U.randomPlusMinus(800000), 0, 1 + U.random(.6), TE.instanceScale));
       }
      } else if (s.startsWith("cacti(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
-       trackParts.add(new TrackPart(getTrackPartIndex("cactus" + U.random(3)), U.randomPlusMinus(800000), 0, U.randomPlusMinus(800000), 0, .5 + U.random(.5), instanceScale));
+       TE.trackParts.add(new TrackPart(TE.getTrackPartIndex("cactus" + U.random(3)), U.randomPlusMinus(800000), 0, U.randomPlusMinus(800000), 0, .5 + U.random(.5), TE.instanceScale));
       }
      } else if (s.startsWith("rocks(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
-       trackParts.add(new TrackPart(U.randomPlusMinus(800000), U.randomPlusMinus(800000), 0, 100 + U.random(400.), U.random(100.), U.random(200.), true, false));
+       TE.trackParts.add(new TrackPart(U.randomPlusMinus(800000), U.randomPlusMinus(800000), 0, 100 + U.random(400.), U.random(100.), U.random(200.), true, false, false));
       }
      }
      E.loadFire(s);
@@ -864,28 +847,28 @@ public class VE extends Application {
       loadSoundtrack(U.getString(s, 0));
      }
     }
-    instanceSize = s.startsWith("size(") ? U.getValue(s, 0) : instanceSize;
+    TE.instanceSize = s.startsWith("size(") ? U.getValue(s, 0) : TE.instanceSize;
     if (s.startsWith("scale(")) {
      try {
-      instanceScale[0] = U.getValue(s, 0);
-      instanceScale[1] = U.getValue(s, 1);
-      instanceScale[2] = U.getValue(s, 2);
+      TE.instanceScale[0] = U.getValue(s, 0);
+      TE.instanceScale[1] = U.getValue(s, 1);
+      TE.instanceScale[2] = U.getValue(s, 2);
      } catch (RuntimeException e) {
-      instanceScale[0] = instanceScale[1] = instanceScale[2] = U.getValue(s, 0);
+      TE.instanceScale[0] = TE.instanceScale[1] = TE.instanceScale[2] = U.getValue(s, 0);
      }
     }
     if (status == Status.mapLoadPass3) {
-     randomX = s.startsWith("randomX(") ? U.getValue(s, 0) : randomX;
-     randomY = s.startsWith("randomY(") ? U.getValue(s, 0) : randomY;
-     randomZ = s.startsWith("randomZ(") ? U.getValue(s, 0) : randomZ;
+     TE.randomX = s.startsWith("randomX(") ? U.getValue(s, 0) : TE.randomX;
+     TE.randomY = s.startsWith("randomY(") ? U.getValue(s, 0) : TE.randomY;
+     TE.randomZ = s.startsWith("randomZ(") ? U.getValue(s, 0) : TE.randomZ;
      if (U.startsWith(s, "(", "curve(")) {
-      int trackNumber = getTrackPartIndex(U.getString(s, 0));//<-Returns '-1' on exception
+      int trackNumber = TE.getTrackPartIndex(U.getString(s, 0));//<-Returns '-1' on exception
       if (trackNumber < 0 && !U.getString(s, 0).isEmpty()) {
        System.out.println("Map Part List Exception (" + mapName + ")");
        System.out.println("At line: " + s);
       }
-      long[] random = {Math.round(U.randomPlusMinus(randomX)), Math.round(U.randomPlusMinus(randomY)), Math.round(U.randomPlusMinus(randomZ))};
-      if (trackNumber == getTrackPartIndex(MapModels.checkpoint.name())) {
+      long[] random = {Math.round(U.randomPlusMinus(TE.randomX)), Math.round(U.randomPlusMinus(TE.randomY)), Math.round(U.randomPlusMinus(TE.randomZ))};
+      if (trackNumber == TE.getTrackPartIndex(MapModels.checkpoint.name())) {
        long cornerDisplace = mapName.equals("Death Pit") ? 12000 : mapName.equals("Arctic Slip") ? 4500 : 0;
        random[0] += U.random() < .5 ? cornerDisplace : -cornerDisplace;
        random[2] += U.random() < .5 ? cornerDisplace : -cornerDisplace;
@@ -916,7 +899,7 @@ public class VE extends Application {
        iterationRate = U.getValue(s, 6), curveRadius = U.getValue(s, 7),
        curveHeight = U.getValue(s, 8) / Math.abs(curveStart - curveEnd);
        for (double iteration = curveStart; ; iteration += iteration < curveEnd ? iterationRate : -iterationRate) {
-        addTrackPart(s, trackNumber,
+        TE.addTrackPart(s, trackNumber,
         summedPositionX + curveRadius * U.sin(iteration),
         summedPositionY + curveHeight * Math.abs(iteration - curveStart),
         summedPositionZ + curveRadius * U.cos(iteration),
@@ -926,72 +909,72 @@ public class VE extends Application {
         }
        }
       } else {
-       addTrackPart(s, trackNumber, summedPositionX, summedPositionY, summedPositionZ, Double.NaN);
+       TE.addTrackPart(s, trackNumber, summedPositionX, summedPositionY, summedPositionZ, Double.NaN);
       }
      }
     }
    }
-  } catch (Exception e) {//<-Don't further specify
+  } catch (Exception E) {//<-Don't further specify
    status = Status.mapError;
    System.out.println("Map Error (" + mapName + ")");
-   System.out.println(e);
+   System.out.println(E);
    System.out.println("At line: " + s);
-   e.printStackTrace();
+   E.printStackTrace();
   }
   if (status == Status.mapLoadPass3) {
    if (mapName.equals("Ghost City")) {
     for (n = 5; n < 365; n += 10) {
-     instanceSize = 2500 + U.random(2500.);
-     instanceScale[0] = 1 + U.random(2.);
-     instanceScale[1] = 1 + U.random(2.);
-     instanceScale[2] = 1 + U.random(2.);
+     TE.instanceSize = 2500 + U.random(2500.);
+     TE.instanceScale[0] = 1 + U.random(2.);
+     TE.instanceScale[1] = 1 + U.random(2.);
+     TE.instanceScale[2] = 1 + U.random(2.);
      double calculatedX = 112500 * -StrictMath.sin(Math.toRadians(n)),
      calculatedZ = 112500 * StrictMath.cos(Math.toRadians(n));
-     trackParts.add(new TrackPart(getTrackPartIndex(MapModels.cube.name()), calculatedX, 0, calculatedZ, n - 90, instanceSize, instanceScale));
+     TE.trackParts.add(new TrackPart(TE.getTrackPartIndex(MapModels.cube.name()), calculatedX, 0, calculatedZ, n - 90, TE.instanceSize, TE.instanceScale));
     }
-   } else if (mapName.equals("Military Base")) {
-    trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -48000, 0, 3000, -90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -48000, 0, -3000, -90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -48000, 0, 4000, -90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -48000, 0, -4000, -90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -72000, 0, 3000, 90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -72000, 0, -3000, 90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -72000, 0, 4000, 90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -72000, 0, -4000, 90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, 20000, -90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, -20000, -90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, 25000, -90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, -25000, -90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, 30000, -90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, -30000, -90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, 35000, -90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, -35000, -90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Turbo Prop"), -55000, 0, 5000, 180, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Turbo Prop"), -55000, 0, -5000, 0, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Stealth Fighter"), -57500, 0, 5000, 180, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Stealth Fighter"), -57500, 0, -5000, 0, true));
-    trackParts.add(new TrackPart(getVehicleIndex("F-22 Raptor"), -60000, 0, 5000, 180, true));
-    trackParts.add(new TrackPart(getVehicleIndex("F-22 Raptor"), -60000, 0, -5000, 0, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Heavy Meddle"), -62500, 0, 5000, 180, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Heavy Meddle"), -62500, 0, -5000, 0, true));
-    trackParts.add(new TrackPart(getVehicleIndex("MiG 31"), -65000, 0, 5000, 180, true));
-    trackParts.add(new TrackPart(getVehicleIndex("MiG 31"), -65000, 0, -5000, 0, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), 29000, 0, 1000, 90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), 29000, 0, -1000, 90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -101000, 0, 1000, 90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -101000, 0, -1000, 90, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Gun Turret"), -45150, -500, 36100, -45, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Gun Turret"), -45150, -500, -36100, -135, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Gun Turret"), -21000, 0, 2000, 0, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Gun Turret"), -21000, 0, -2000, 180, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Rail Gun"), 30000, -250, 30000, 45, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Rail Gun"), 30000, -250, -30000, 135, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Rail Gun"), 90000, -250, 30000, -45, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Rail Gun"), 90000, -250, -30000, -135, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Missile Turret"), 21000, 0, 39000, 45, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Missile Turret"), 21000, 0, -39000, 135, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Missile Turret"), -21000, 0, 39000, -45, true));
-    trackParts.add(new TrackPart(getVehicleIndex("Missile Turret"), -21000, 0, -39000, -135, true));
+   } else if (mapName.equals("Military Base")) {//Put this in 'military'--not the source!
+    TE.trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -48000, 0, 3000, -90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -48000, 0, -3000, -90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -48000, 0, 4000, -90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -48000, 0, -4000, -90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -72000, 0, 3000, 90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -72000, 0, -3000, 90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -72000, 0, 4000, 90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("EPIC TANK"), -72000, 0, -4000, 90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, 20000, -90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, -20000, -90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, 25000, -90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, -25000, -90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, 30000, -90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, -30000, -90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, 35000, -90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -44000, 0, -35000, -90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Turbo Prop"), -55000, 0, 5000, 180, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Turbo Prop"), -55000, 0, -5000, 0, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Stealth Fighter"), -57500, 0, 5000, 180, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Stealth Fighter"), -57500, 0, -5000, 0, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("F-22 Raptor"), -60000, 0, 5000, 180, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("F-22 Raptor"), -60000, 0, -5000, 0, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Heavy Meddle"), -62500, 0, 5000, 180, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Heavy Meddle"), -62500, 0, -5000, 0, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("MiG 31"), -65000, 0, 5000, 180, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("MiG 31"), -65000, 0, -5000, 0, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), 29000, 0, 1000, 90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), 29000, 0, -1000, 90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -101000, 0, 1000, 90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Desert Humvee"), -101000, 0, -1000, 90, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Gun Turret"), -45150, -500, 36100, -45, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Gun Turret"), -45150, -500, -36100, -135, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Gun Turret"), -21000, 0, 2000, 0, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Gun Turret"), -21000, 0, -2000, 180, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Rail Gun"), 30000, -250, 30000, 45, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Rail Gun"), 30000, -250, -30000, 135, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Rail Gun"), 90000, -250, 30000, -45, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Rail Gun"), 90000, -250, -30000, -135, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Missile Turret"), 21000, 0, 39000, 45, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Missile Turret"), 21000, 0, -39000, 135, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Missile Turret"), -21000, 0, 39000, -45, true));
+    TE.trackParts.add(new TrackPart(getVehicleIndex("Missile Turret"), -21000, 0, -39000, -135, true));
    } else if (mapName.equals("World's Biggest Parking Lot")) {
     for (n = 0; n < vehicleModels.size(); n++) {
      double xRandom = U.randomPlusMinus(30000.), zRandom = U.randomPlusMinus(30000.), randomXZ = U.randomPlusMinus(180.);
@@ -1004,7 +987,7 @@ public class VE extends Application {
       zRandom = 4000 * U.cos(vehicleCircle);
       randomXZ = -vehicleCircle + 180;
      }*/
-     trackParts.add(new TrackPart(n, xRandom, 0, zRandom, randomXZ, true));
+     TE.trackParts.add(new TrackPart(n, xRandom, 0, zRandom, randomXZ, true));
      TE.points.add(new Point());
      TE.points.get(TE.points.size() - 1).X = xRandom;
      TE.points.get(TE.points.size() - 1).Z = zRandom;
@@ -1014,7 +997,7 @@ public class VE extends Application {
      TE.checkpoints.get(TE.checkpoints.size() - 1).Z = zRandom;
      TE.checkpoints.get(TE.checkpoints.size() - 1).type = Checkpoint.Type.passAny;
      TE.checkpoints.get(TE.checkpoints.size() - 1).location = TE.points.size() - 1;
-     trackParts.get(trackParts.size() - 1).checkpointNumber = TE.checkpoints.size() - 1;
+     TE.trackParts.get(TE.trackParts.size() - 1).checkpointNumber = TE.checkpoints.size() - 1;
     }
    }
    if (E.poolType == E.Pool.lava) {
@@ -1022,7 +1005,7 @@ public class VE extends Application {
      U.setSelfIllumination((PhongMaterial) tsunamiPart.C.getMaterial(), E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]);
     }
    }
-   bonusX = bonusY = bonusZ = 0;
+   TE.bonusX = TE.bonusY = TE.bonusZ = 0;
    U.add(TE.bonusBig);
    for (TE.BonusBall bonusBall : TE.bonusBalls) {
     U.add(bonusBall);
@@ -1052,164 +1035,7 @@ public class VE extends Application {
   if (status != Status.mapError) {
    status = status == Status.mapLoadPass0 ? Status.mapLoadPass1 : status == Status.mapLoadPass1 ? Status.mapLoadPass2 : status == Status.mapLoadPass2 ? Status.mapLoadPass3 : status == Status.mapLoadPass3 ? Status.mapLoadPass4 : (inViewer ? Status.mapViewer : Network.mode == Network.Mode.JOIN ? Status.play : Status.mapView);
   }
-  E.renderAll = true;
- }
-
- private void addTrackPart(String s, int listNumber, double summedPositionX, double summedPositionY, double summedPositionZ, double optionalRotation) {
-  double[] X = {summedPositionX};
-  double[] Y = {summedPositionY};
-  double[] Z = {summedPositionZ};
-  double rotation;
-  try {
-   rotation = Double.isNaN(optionalRotation) ? U.getValue(s, 4) : optionalRotation;
-  } catch (RuntimeException ignored) {
-   rotation = 0;
-  }
-  instanceScale[1] = mapName.equals("Ghost City") && listNumber == getTrackPartIndex(MapModels.cube.name()) && instanceSize == 10000 ? 1 + U.random(3.) : instanceScale[1];
-  if (mapName.equals("Meteor Fields") && listNumber == getTrackPartIndex(MapModels.ramp.name())) {
-   if (rotation == 0) {
-    X[0] = U.randomPlusMinus(2500.);
-    Z[0] = 5000 + U.random(20000.);
-    Z[0] *= U.random() < .5 ? -1 : 1;
-   } else {
-    Z[0] = U.randomPlusMinus(2500.);
-    X[0] = 5000 + U.random(20000.);
-    X[0] *= U.random() < .5 ? -1 : 1;
-   }
-   rotation += U.random() < .5 ? 180 : 0;
-  }
-  if ((listNumber == getTrackPartIndex(MapModels.checkpoint.name()) || listNumber == getTrackPartIndex(MapModels.fixpoint.name()))) {
-   if (mapName.equals("Pyramid Paradise")) {
-    forceTrackPartOutsideExistingParts(s, X, Y, Z, MapModels.pyramid.name());
-   } else if (U.listEquals(mapName, "the Forest", "Volatile Sands")) {
-    forceTrackPartOutsideExistingParts(s, X, Y, Z, (String[]) null);
-   } else if (mapName.equals("Military Base")) {
-    forceTrackPartOutsideExistingParts(s, X, Y, Z, MapModels.cube.name(), MapModels.ramptriangle.name());
-   }
-  }
-  if (listNumber == getTrackPartIndex(MapModels.checkpoint.name())) {
-   if (mapName.equals("Highlands")) {
-    if (U.random() < .5) {
-     if (U.random() < .5) {
-      X[0] += U.random() < .5 ? 100000 : -100000;
-      Y[0] -= 25000;
-     } else {
-      Z[0] += U.random() < .5 ? 100000 : -100000;
-      Y[0] -= 25000;
-     }
-    }
-   } else if (mapName.equals("Ghost City")) {
-    if (U.random() < .5) {
-     rotation = 0;
-     Z[0] = U.randomPlusMinus(150000.);
-     long randomPosition = U.random(4);
-     if (randomPosition == 0) {
-      X[0] = -150000;
-     } else if (randomPosition == 1 || randomPosition == 2) {
-      X[0] = randomPosition == 1 ? -2000 : 2000;
-      while (Math.abs(Z[0]) < 110000) {
-       Z[0] = U.randomPlusMinus(150000.);
-      }
-     } else {
-      X[0] = randomPosition == 3 ? 150000 : X[0];
-     }
-    } else {
-     rotation = 90;
-     X[0] = U.randomPlusMinus(150000.);
-     long randomPosition = U.random(3);
-     if (randomPosition == 0) {
-      Z[0] = -150000;
-     } else if (randomPosition == 1) {
-      Z[0] = 0;
-      while (Math.abs(X[0]) < 110000) {
-       X[0] = U.randomPlusMinus(150000.);
-      }
-     }
-     Z[0] = randomPosition == 2 ? 150000 : Z[0];
-    }
-   } else if (mapName.equals("the Machine is Out of Control")) {
-    boolean inside = true;
-    while (inside) {
-     inside = Math.abs(X[0]) < 30000 && Math.abs(Z[0]) < 30000;
-     for (TrackPart trackpart : trackParts) {
-      inside = (trackpart.modelNumber == getTrackPartIndex(MapModels.pyramid.name()) || trackpart.modelNumber == getTrackPartIndex(MapModels.cube.name()) || trackpart.modelNumber == getTrackPartIndex(MapModels.ramptriangle.name())) &&
-      Math.abs(X[0] - trackpart.X) <= trackpart.renderRadius && Math.abs(Z[0] - trackpart.Z) <= trackpart.renderRadius || inside;
-     }
-     if (inside) {
-      X[0] = U.getValue(s, 1) + U.randomPlusMinus(randomX);
-      Z[0] = U.getValue(s, 2) + U.randomPlusMinus(randomZ);
-      Y[0] = U.getValue(s, 3) + U.randomPlusMinus(randomY);
-     }
-    }
-   } else if (mapName.equals("DoomsDay")) {
-    while (U.distance(X[0], 0, Z[0], 0) <= E.volcanoBottomRadius) {
-     X[0] = U.getValue(s, 1) + U.randomPlusMinus(randomX);
-     Z[0] = U.getValue(s, 2) + U.randomPlusMinus(randomZ);
-     Y[0] = U.getValue(s, 3) + U.randomPlusMinus(randomY);
-    }
-   }
-  }
-  if (U.listEquals(U.getString(s, 0), MapModels.mound.name(), MapModels.pavedmound.name())) {
-   try {
-    trackParts.add(new TrackPart(X[0], Z[0], Y[0],
-    U.getValue(s, 4) * instanceSize, U.getValue(s, 5) * instanceSize, U.getValue(s, 6) * instanceSize, false, U.getString(s, 0).contains("paved")));
-   } catch (RuntimeException E) {
-    trackParts.add(new TrackPart(X[0], Z[0], Y[0],
-    U.getValue(s, 4) * U.random(instanceSize), U.getValue(s, 4) * U.random(instanceSize), U.getValue(s, 4) * U.random(instanceSize), false, U.getString(s, 0).contains("paved")));
-   }
-  } else {
-   trackParts.add(new TrackPart(listNumber, X[0], Y[0], Z[0], rotation, instanceSize, instanceScale));
-  }
-  if (listNumber == getTrackPartIndex(MapModels.rainbow.name())) {
-   trackParts.get(trackParts.size() - 1).modelProperties += " rainbow ";
-  } else if (listNumber == getTrackPartIndex(MapModels.crescent.name())) {
-   U.remove(E.sun);
-  } else if (listNumber == getTrackPartIndex(MapModels.checkpoint.name())) {
-   TE.points.add(new Point());
-   TE.points.get(TE.points.size() - 1).X = X[0];
-   TE.points.get(TE.points.size() - 1).Y = Y[0];
-   TE.points.get(TE.points.size() - 1).Z = Z[0];
-   TE.points.get(TE.points.size() - 1).type = Point.Type.checkpoint;
-   trackParts.get(trackParts.size() - 1).checkpointPerpendicularToX = Math.abs(rotation) > 45;
-   TE.checkpoints.add(new Checkpoint());
-   TE.checkpoints.get(TE.checkpoints.size() - 1).X = X[0];
-   TE.checkpoints.get(TE.checkpoints.size() - 1).Y = Y[0];
-   TE.checkpoints.get(TE.checkpoints.size() - 1).Z = Z[0];
-   TE.checkpoints.get(TE.checkpoints.size() - 1).type = Math.abs(rotation) <= 45 ? Checkpoint.Type.passZ : Checkpoint.Type.passX;
-   TE.checkpoints.get(TE.checkpoints.size() - 1).location = TE.points.size() - 1;
-   trackParts.get(trackParts.size() - 1).checkpointNumber = TE.checkpoints.size() - 1;
-  } else if (s.contains(").")) {
-   TE.points.add(new Point());
-   TE.points.get(TE.points.size() - 1).X = X[0];
-   TE.points.get(TE.points.size() - 1).Y = Y[0];
-   TE.points.get(TE.points.size() - 1).Z = Z[0];
-   if (s.contains(")...")) {
-    TE.points.get(TE.points.size() - 1).type = Point.Type.mustPassAbsolute;
-   } else if (s.contains(")..")) {
-    TE.points.get(TE.points.size() - 1).type = Point.Type.mustPassIfClosest;
-   }
-  }
-  fixPointsExist = listNumber == getTrackPartIndex(MapModels.fixpoint.name()) || fixPointsExist;
- }
-
- private void forceTrackPartOutsideExistingParts(CharSequence source, double[] X, double[] Y, double[] Z, String... targets) {
-  boolean inside = true;
-  double tolerance = 1.05;//<-Not a sufficient distance away otherwise
-  while (inside) {
-   inside = false;
-   for (TrackPart trackPart : trackParts) {
-    inside = targets == null ? !trackPart.wraps && trackPart.mound != null && U.distance(X[0], trackPart.X, Z[0], trackPart.Z) <= trackPart.mound.getMajorRadius() * tolerance || inside : U.contains(trackPart.modelName, targets) &&
-    Math.abs(Y[0] - trackPart.Y) <= trackPart.boundsY * 1.05 &&
-    Math.abs(X[0] - trackPart.X) <= trackPart.boundsX * 1.05 &&
-    Math.abs(Z[0] - trackPart.Z) <= trackPart.boundsZ * 1.05 ||//<-Aerial map parts check not foolproof
-    inside;
-   }
-   if (inside) {
-    X[0] = U.getValue(source, 1) + U.randomPlusMinus(randomX);
-    Z[0] = U.getValue(source, 2) + U.randomPlusMinus(randomZ);
-    Y[0] = U.getValue(source, 3) + U.randomPlusMinus(randomY);
-   }
-  }
+  E.renderType = E.RenderType.fullDistanceALL;
  }
 
  private void loadSoundtrack(String s) {
@@ -1236,41 +1062,11 @@ public class VE extends Application {
   }
  }
 
- private static void addArrow() {
-  if (!group2.getChildren().contains(TE.arrow)) {
-   group2.getChildren().add(TE.arrow);
-  }
-  TE.arrow.setVisible(false);
-  PointLight backPL = new PointLight();
-  backPL.setTranslateX(0);
-  backPL.setTranslateY(TE.arrow.getTranslateY());
-  backPL.setTranslateZ(-Long.MAX_VALUE);
-  backPL.setColor(Color.color(1, 1, 1));
-  PointLight frontPL = new PointLight();
-  frontPL.setTranslateX(0);
-  frontPL.setTranslateY(TE.arrow.getTranslateY());
-  frontPL.setTranslateZ(Long.MAX_VALUE);
-  frontPL.setColor(Color.color(1, 1, 1));
-  group2.getChildren().addAll(new AmbientLight(Color.color(.5, .5, .5)), backPL, frontPL);
- }
-
- private static int getTrackPartIndex(String s) {
-  try {
-   return MapModels.valueOf(s).ordinal();
-  } catch (IllegalArgumentException E) {
-   return -1;
-  }
- }
-
- public static String getTrackPartName(int in) {
-  return MapModels.values()[in].name();
- }
-
  static int getMapName(String s) {
   int n;
   String s1;
   for (n = 0; n < maps.size(); n++) {
-   try (BufferedReader BR = new BufferedReader(new InputStreamReader(U.getMapFile(n), U.standardChars))) {
+   try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(U.getMapFile(n)), U.standardChars))) {
     for (String s2; (s2 = BR.readLine()) != null; ) {
      s1 = s2.trim();
      mapName = s1.startsWith("name") ? U.getString(s1, 0) : mapName;
@@ -1286,24 +1082,18 @@ public class VE extends Application {
   return n;
  }
 
- public static int getVehicleIndex(String s) {
+ static int getVehicleIndex(String s) {
   String s1, s3 = "";
   int n;
   for (n = 0; n < vehicleModels.size(); n++) {
-   FileInputStream FIS = null;
-   try {
-    try {
-     try {
-      FIS = new FileInputStream("models" + File.separator + vehicleModels.get(n));
-     } catch (FileNotFoundException e) {
-      FIS = new FileInputStream("models" + File.separator + "User-Submitted" + File.separator + vehicleModels.get(n));
-     }
-    } catch (FileNotFoundException e) {
-     FIS = new FileInputStream("models" + File.separator + "basic");
-    }
-   } catch (FileNotFoundException ignored) {
+   File F = new File("models" + File.separator + vehicleModels.get(n));
+   if (!F.exists()) {
+    F = new File("models" + File.separator + "User-Submitted" + File.separator + vehicleModels.get(n));
    }
-   try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(FIS), U.standardChars))) {
+   if (!F.exists()) {
+    F = new File("models" + File.separator + "basic");
+   }
+   try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(F), U.standardChars))) {
     for (String s2; (s2 = BR.readLine()) != null; ) {
      s1 = s2.trim();
      if (s1.startsWith("name")) {
@@ -1311,7 +1101,7 @@ public class VE extends Application {
       break;
      }
     }
-   } catch (IOException e) {
+   } catch (IOException e) {//<-Don't bother
     e.printStackTrace();
    }
    if (s.equals(s3)) {
@@ -1323,20 +1113,14 @@ public class VE extends Application {
 
  public static String getVehicleName(int in) {//<-Keep method in case we need it later
   String s, s3 = "";
-  FileInputStream FIS = null;
-  try {
-   try {
-    try {
-     FIS = new FileInputStream("models" + File.separator + vehicleModels.get(in));
-    } catch (FileNotFoundException e) {
-     FIS = new FileInputStream("models" + File.separator + "User-Submitted" + File.separator + vehicleModels.get(in));
-    }
-   } catch (FileNotFoundException e) {
-    FIS = new FileInputStream("models" + File.separator + "basic");
-   }
-  } catch (FileNotFoundException ignored) {
+  File F = new File("models" + File.separator + vehicleModels.get(in));
+  if (!F.exists()) {
+   F = new File("models" + File.separator + "User-Submitted" + File.separator + vehicleModels.get(in));
   }
-  try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(FIS), U.standardChars))) {
+  if (!F.exists()) {
+   F = new File("models" + File.separator + "basic");
+  }
+  try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(F), U.standardChars))) {
    for (String s2; (s2 = BR.readLine()) != null; ) {
     s = s2.trim();
     if (s.startsWith("name")) {
@@ -1498,7 +1282,7 @@ public class VE extends Application {
    U.textR("Type: ", lineLL, Y0);
    U.textL(V.vehicleType == Vehicle.Type.aircraft ? "Aircraft (Flying)" : V.vehicleType == Vehicle.Type.turret ? "Turret (Fixed)" : "Vehicle (Grounded)", lineLR, Y0);
    U.textR("Top Speed:", lineLL, Y1);
-   U.textL(V.vehicleType == Vehicle.Type.turret ? "N/A" : V.topSpeeds[1] >= Long.MAX_VALUE ? "None" : V.speedBoost > 0 && V.topSpeeds[2] >= Long.MAX_VALUE ? "None (Speed Boost)" : V.speedBoost > 0 ? Math.round(V.topSpeeds[2] * units) + " " + unitSign[0] + " (Speed Boost)" : Math.round(V.topSpeeds[1] * units) + " " + unitSign[0], lineLR, Y1);
+   U.textL(V.vehicleType == Vehicle.Type.turret ? "N/A" : V.topSpeeds[1] >= Long.MAX_VALUE ? "None" : V.speedBoost > 0 && V.topSpeeds[2] >= Long.MAX_VALUE ? "None (Speed Boost)" : V.speedBoost > 0 ? Math.round(V.topSpeeds[2] * units) + " " + unitName[0] + " (Speed Boost)" : Math.round(V.topSpeeds[1] * units) + " " + unitName[0], lineLR, Y1);
    U.textR("Acceleration Phases:", lineLL, Y2);
    U.textL(V.vehicleType == Vehicle.Type.turret ? "N/A" : "+" + V.accelerationStages[0] + ",  +" + V.accelerationStages[1], lineLR, Y2);
    U.textR("Handling Response:", lineLL, Y3);
@@ -1513,7 +1297,7 @@ public class VE extends Application {
    } else {
     for (Special special : V.specials) {
      specials.append(special.type.name()).append(", ");
-     hasForceField = special.type == Vehicle.specialType.forcefield || hasForceField;
+     hasForceField = special.type == Special.Type.forcefield || hasForceField;
     }
    }
    U.textL(String.valueOf(specials), lineLR, Y5);
@@ -1662,9 +1446,7 @@ public class VE extends Application {
    showCollisionBounds = false;//<-Covers vehicle otherwise
    loadModel = true;
    U.setLightRGB(E.ambientLight, 1, 1, 1);
-   E.sunlight.setTranslateX(0);
-   E.sunlight.setTranslateZ(0);
-   E.sunlight.setTranslateY(-Long.MAX_VALUE);
+   U.setTranslate(E.sunlight, 0, -Long.MAX_VALUE, 0);
    if (vehicleViewer3DLighting) {
     U.setLightRGB(E.ambientLight, .5, .5, .5);
     U.addLight(E.sunlight);
@@ -1764,7 +1546,7 @@ public class VE extends Application {
    selected = Math.abs(.8 - mouseY) < clickRangeY ? 0 : Math.abs(.825 - mouseY) < clickRangeY ? 1 : Math.abs(.85 - mouseY) < clickRangeY ? 2 : Math.abs(.875 - mouseY) < clickRangeY ? 3 : Math.abs(.9 - mouseY) < clickRangeY ? 4 : selected;
   }
   gameFPS = Double.POSITIVE_INFINITY;
-  E.renderAll = true;
+  E.renderType = E.RenderType.fullDistance;
  }
 
  private void runMapViewer() {
@@ -1792,10 +1574,10 @@ public class VE extends Application {
    U.setTranslate(E.mapViewerLight, Camera.X, Camera.Y, Camera.Z);
   }
   E.run();
-  for (TrackPart trackPart : trackParts) {
+  for (TrackPart trackPart : TE.trackParts) {
    trackPart.runGraphics();
   }
-  U.fillRGB(0, 0, 0, minimalOpacityUI);
+  U.fillRGB(0, 0, 0, opacityUI.minimal);
   U.fillRectangle(.5, .9, 1, .2);
   U.font(.015);
   if (globalFlick) {
@@ -1823,17 +1605,17 @@ public class VE extends Application {
    keyEscape = false;
    clearSounds();
   }
-  runBonus();
+  TE.runBonus();
   if (!usingKeys) {
    selected = Math.abs(.825 - mouseY) < clickRangeY ? 0 : Math.abs(.85 - mouseY) < clickRangeY ? 1 : selected;
   }
   gameFPS = Double.POSITIVE_INFINITY;
-  E.renderAll = true;
+  E.renderType = E.RenderType.fullDistance;
  }
 
  private void runMapError() {
   scene.setCursor(Cursor.CROSSHAIR);
-  U.fillRGB(0, 0, 0, maximalOpacityUI);
+  U.fillRGB(0, 0, 0, opacityUI.maximal);
   U.fillRectangle(.5, .5, 1, 1);
   U.font(.03);
   U.fillRGB(1, 0, 0);
@@ -1875,7 +1657,7 @@ public class VE extends Application {
   for (Vehicle vehicle : vehicles) {
    vehicle.runGraphics(gamePlay);
   }
-  for (TrackPart trackPart : trackParts) {
+  for (TrackPart trackPart : TE.trackParts) {
    trackPart.runGraphics();
   }
   scene.setCursor(Cursor.CROSSHAIR);
@@ -1913,9 +1695,9 @@ public class VE extends Application {
   if (keyEscape) {
    escapeToLast(true);
   }
-  runBonus();
+  TE.runBonus();
   gameFPS = Double.POSITIVE_INFINITY;
-  E.renderAll = false;
+  E.renderType = E.RenderType.standard;
  }
 
  static void escapeToLast(boolean wasUser) {
@@ -1948,7 +1730,7 @@ public class VE extends Application {
    mapName = mapMaker = "";
    map = tournament > 0 ? U.random(maps.size()) : map;
    String s;
-   try (BufferedReader BR = new BufferedReader(new InputStreamReader(U.getMapFile(map), U.standardChars))) {
+   try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(U.getMapFile(map)), U.standardChars))) {
     for (String s1; (s1 = BR.readLine()) != null; ) {
      s = s1.trim();
      mapName = s.startsWith("name") ? U.getString(s, 0) : mapName;
@@ -1961,7 +1743,7 @@ public class VE extends Application {
    if (tournament > 0) {
     status = Status.mapLoadPass0;
    } else {
-    U.fillRGB(0, 0, 0, maximalOpacityUI);
+    U.fillRGB(0, 0, 0, opacityUI.maximal);
     U.fillRectangle(.5, .5, 1, 1);
     U.fillRGB(1, 1, 1);
     U.font(.05);
@@ -2000,7 +1782,7 @@ public class VE extends Application {
 
  private static void runHowToPlay() {
   section = Math.max(section, 1);
-  U.fillRGB(0, 0, 0, maximalOpacityUI);
+  U.fillRGB(0, 0, 0, opacityUI.maximal);
   U.fillRectangle(.5, .5, 1, 1);
   U.fillRGB(1, 1, 1);
   U.font(.03);
@@ -2543,7 +2325,7 @@ public class VE extends Application {
  }
 
  private void runLANMenu() {
-  U.fillRGB(0, 0, 0, maximalOpacityUI);
+  U.fillRGB(0, 0, 0, opacityUI.maximal);
   U.fillRectangle(.5, .5, 1, 1);
   int n;
   if (section < 1) {
@@ -2683,22 +2465,23 @@ public class VE extends Application {
   U.text("DriverSeat [" + (driverSeat > 0 ? "RIGHT->" : driverSeat < 0 ? "<-LEFT" : "CENTER") + "]", .3 + textOffset);
   U.text("Units [" + (units == .5364466667 ? "METRIC" : units == 1 / 3. ? "U.S." : "VEs") + "]", .35 + textOffset);
   U.text("Limit FPS to [" + (userFPS > U.refreshRate ? "JavaFX Default" : Long.valueOf(userFPS)) + "]", .4 + textOffset);
+  U.text("Camera-Shake Effects [" + (cameraShake ? "ON" : "OFF") + "]", .45 + textOffset);
   if (fromMenu) {
-   U.text("Normal-Mapping [" + (normalMapping ? "ON" : "OFF") + "]", .45 + textOffset);
-   U.text("Match Length [" + matchLength + "]", .5 + textOffset);
-   U.text("Game Mode [" + (tournament > 0 ? "TOURNAMENT" : "NORMAL") + "]", .55 + textOffset);
-   U.text("# of Players [" + vehiclesInMatch + "]", .6 + textOffset);
+   U.text("Normal-Mapping [" + (normalMapping ? "ON" : "OFF") + "]", .5 + textOffset);
+   U.text("Match Length [" + matchLength + "]", .55 + textOffset);
+   U.text("Game Mode [" + (tournament > 0 ? "TOURNAMENT" : "NORMAL") + "]", .6 + textOffset);
+   U.text("# of Players [" + vehiclesInMatch + "]", .65 + textOffset);
   }
   if (selectionTimer > selectionWait) {
    if (keyUp) {
     if (--selected < 0) {
-     selected = fromMenu ? 7 : 3;
+     selected = fromMenu ? 8 : 4;
     }
     usingKeys = true;
     UI.play(0, 0);
    }
    if (keyDown) {
-    selected = ++selected > 7 || (!fromMenu && selected > 3) ? 0 : selected;
+    selected = ++selected > 8 || (!fromMenu && selected > 4) ? 0 : selected;
     usingKeys = true;
     UI.play(0, 0);
    }
@@ -2726,15 +2509,15 @@ public class VE extends Application {
    if ((keyEnter || keySpace) && selectionTimer > selectionWait) {
     if (units == 1) {
      units = .5364466667;
-     unitSign[0] = "Kph";
-     unitSign[1] = "Meters";
+     unitName[0] = "Kph";
+     unitName[1] = "Meters";
     } else if (units == .5364466667) {
      units = 1 / 3.;
-     unitSign[0] = "Mph";
-     unitSign[1] = "Feet";
+     unitName[0] = "Mph";
+     unitName[1] = "Feet";
     } else if (units == 1 / 3.) {
      units = 1;
-     unitSign[0] = unitSign[1] = "VEs";
+     unitName[0] = unitName[1] = "VEs";
     }
    }
   } else if (selected == 3) {
@@ -2751,6 +2534,11 @@ public class VE extends Application {
    }
    U.text("Lower the FPS ceiling if your PC can't process V.E. well (i.e. overheating). Leave maxed otherwise.", .75);
   } else if (selected == 4) {
+   if ((keyEnter || keySpace) && selectionTimer > selectionWait) {
+    cameraShake = !cameraShake;
+   }
+   U.text("Shakes camera when vehicles explode (experimental feature)", .75);
+  } else if (selected == 5) {
    if (fromMenu) {
     U.text("Use normal-mapping on textured surfaces", .75);
     if ((keyEnter || keySpace) && selectionTimer > selectionWait) {
@@ -2759,7 +2547,7 @@ public class VE extends Application {
    } else {
     selected++;
    }
-  } else if (selected == 5) {
+  } else if (selected == 6) {
    if (fromMenu) {
     isAdjustFunction = true;
     if (selectionTimer > selectionWait) {
@@ -2776,7 +2564,7 @@ public class VE extends Application {
    } else {
     selected++;
    }
-  } else if (selected == 6) {
+  } else if (selected == 7) {
    if (fromMenu) {
     U.text("See the Documentation for more info on Game Modes", .75);
     if ((keyEnter || keySpace) && selectionTimer > selectionWait) {
@@ -2785,7 +2573,7 @@ public class VE extends Application {
    } else {
     selected++;
    }
-  } else if (selected == 7) {
+  } else if (selected == 8) {
    if (fromMenu) {
     isAdjustFunction = true;
     if (selectionTimer > selectionWait) {
@@ -2819,82 +2607,12 @@ public class VE extends Application {
   vehiclesInMatch = tournament > 0 ? Math.max(2, vehiclesInMatch) : vehiclesInMatch;
   if (!usingKeys) {
    double clickOffset = .025;
-   selected = Math.abs(.825 + clickOffset - mouseY) < clickRangeY ? 0 : Math.abs(.25 + clickOffset - mouseY) < clickRangeY ? 1 : Math.abs(.3 + clickOffset - mouseY) < clickRangeY ? 2 : Math.abs(.35 + clickOffset - mouseY) < clickRangeY ? 3 : selected;
+   selected = Math.abs(.825 + clickOffset - mouseY) < clickRangeY ? 0 : Math.abs(.25 + clickOffset - mouseY) < clickRangeY ? 1 : Math.abs(.3 + clickOffset - mouseY) < clickRangeY ? 2 : Math.abs(.35 + clickOffset - mouseY) < clickRangeY ? 3 : Math.abs(.4 + clickOffset - mouseY) < clickRangeY ? 4 : selected;
    if (status == Status.optionsMenu) {
-    selected = Math.abs(.4 + clickOffset - mouseY) < clickRangeY ? 4 : Math.abs(.45 + clickOffset - mouseY) < clickRangeY ? 5 : Math.abs(.5 + clickOffset - mouseY) < clickRangeY ? 6 : Math.abs(.55 + clickOffset - mouseY) < clickRangeY ? 7 : selected;
+    selected = Math.abs(.45 + clickOffset - mouseY) < clickRangeY ? 5 : Math.abs(.5 + clickOffset - mouseY) < clickRangeY ? 6 : Math.abs(.55 + clickOffset - mouseY) < clickRangeY ? 7 : Math.abs(.6 + clickOffset - mouseY) < clickRangeY ? 8 : selected;
    }
   }
   gameFPS = Double.POSITIVE_INFINITY;
- }
-
- private static void runBonus() {
-  if (bonusHolder < 0) {
-   if (U.getDepth(bonusX, bonusY, bonusZ) > -TE.bonusBig.getRadius()) {
-    U.setTranslate(TE.bonusBig, bonusX, bonusY, bonusZ);
-    U.setDiffuseRGB((PhongMaterial) TE.bonusBig.getMaterial(), U.random(), U.random(), U.random());
-    TE.bonusBig.setVisible(true);
-   } else {
-    TE.bonusBig.setVisible(false);
-   }
-   for (TE.BonusBall bonusBall : TE.bonusBalls) {
-    bonusBall.setVisible(false);
-   }
-  } else {
-   TE.bonusBig.setVisible(false);
-   bonusX = vehicles.get(bonusHolder).X;
-   bonusY = vehicles.get(bonusHolder).Y;
-   bonusZ = vehicles.get(bonusHolder).Z;
-   TE.runBonusBalls();
-  }
-  if (matchStarted) {
-   if (Network.mode == Network.Mode.OFF) {
-    for (Vehicle vehicle : vehicles) {
-     if (bonusHolder < 0 && vehicle.damage <= vehicle.durability && !vehicle.phantomEngaged && U.distance(vehicle.X, bonusX, vehicle.Y, bonusY, vehicle.Z, bonusZ) < vehicle.collisionRadius + TE.bonusBig.getRadius()) {
-      setBonusHolder(vehicle);
-     }
-    }
-    bonusHolder = bonusHolder > -1 && vehicles.get(bonusHolder).damage > vehicles.get(bonusHolder).durability ? -1 : bonusHolder;
-   } else {
-    if (Network.bonusHolder < 0 && vehicles.get(userPlayer).damage <= vehicles.get(userPlayer).durability && !vehicles.get(userPlayer).phantomEngaged && U.distance(vehicles.get(userPlayer).X, bonusX, vehicles.get(userPlayer).Y, bonusY, vehicles.get(userPlayer).Z, bonusZ) < vehicles.get(userPlayer).collisionRadius + TE.bonusBig.getRadius()) {
-     Network.bonusHolder = userPlayer;
-     if (Network.mode == Network.Mode.HOST) {
-      for (PrintWriter PW : Network.out) {
-       PW.println("BONUS0");
-      }
-     } else {
-      Network.out.get(0).println("BONUS");
-     }
-    }
-    int setHolder = Network.bonusHolder < 0 ? Network.bonusHolder : bonusHolder;
-    if (setHolder > -1 && vehicles.get(setHolder).damage > vehicles.get(setHolder).durability) {
-     Network.bonusHolder = bonusHolder = -1;
-     if (Network.mode == Network.Mode.HOST) {
-      for (PrintWriter PW : Network.out) {
-       PW.println("BonusOpen");
-      }
-     } else {
-      Network.out.get(0).println("BonusOpen");
-     }
-    }
-    if (bonusHolder != Network.bonusHolder) {
-     bonusHolder = Network.bonusHolder;
-     if (bonusHolder > -1) {
-      setBonusHolder(vehicles.get(bonusHolder));
-     }
-    }
-   }
-  }
- }
-
- public static void setBonusHolder(Vehicle vehicle) {
-  bonusHolder = vehicle.index;
-  for (TE.BonusBall bonusBall : TE.bonusBalls) {
-   bonusBall.setRadius(vehicles.get(bonusHolder).absoluteRadius * .02);
-   bonusBall.X = bonusBall.Y = bonusBall.Z = bonusBall.speedX = bonusBall.speedY = bonusBall.speedZ = 0;
-  }
-  if (headsUpDisplay) {
-   bonus.playIfNotPlaying(0);
-  }
  }
 
  public static void updateDestructionNames() {
@@ -2982,18 +2700,12 @@ public class VE extends Application {
     }
    }
    U.font(.01);
-   if (TE.lastArrowStatus != TE.arrowStatus) {
-    print = TE.arrowStatus == TE.Arrow.locked ? "Arrow now Locked on " + playerNames[arrowTarget] : "Arrow now pointing at " + (TE.arrowStatus == TE.Arrow.vehicles ? "Vehicles" : "Map");
-    messageWait = false;
-    printTimer = 50;
-    TE.lastArrowStatus = TE.arrowStatus;
-   }
    TE.runArrow();
-   //try {
-   //U.textR(String.valueOf(Math.round(stuntTimer)), .9, .5);
-   //} catch (Exception e) {
-   // }
-   U.fillRGB(0, 0, 0, minimalOpacityUI);
+   //U.textR(String.valueOf(V.drive), .9, .5);
+   //U.textR(String.valueOf(V.drive2), .9, .525);
+   //U.textR(String.valueOf(V.reverse), .9, .55);
+   //U.textR(String.valueOf(V.reverse2), .9, .575);
+   U.fillRGB(0, 0, 0, opacityUI.minimal);
    U.fillRectangle(.025, .8, .05, .425);
    U.fillRectangle(.975, .8, .05, .425);
    runDestructionLog();
@@ -3006,13 +2718,13 @@ public class VE extends Application {
     U.fillRectangle(.025, .6, .02, .001);
     U.fillRectangle(.025, .8, .02, .001);
     U.text(Math.abs(V.speed) >= 10000 ? U.DF.format(V.speed) : String.valueOf(Math.round(V.speed * units)), .025, .7);
-    U.text(unitSign[0], .025, .825);
+    U.text(unitName[0], .025, .825);
    }
    U.fillRGB(1, 1, 1);
    U.font(.01);
    double converted = units == .5364466667 ? .0175 : units == 1 / 3. ? .0574147 : 1;
    U.font(.0075);
-   U.text("(" + unitSign[1] + ")", .025, .875);
+   U.text("(" + unitName[1] + ")", .025, .875);
    U.textL("X: " + U.DF.format(V.X * converted), .00625, .9);
    U.textL("Y: " + U.DF.format(V.Y * converted), .00625, .925);
    U.textL("Z: " + U.DF.format(V.Z * converted), .00625, .95);
@@ -3093,7 +2805,7 @@ public class VE extends Application {
   }
   if (headsUpDisplay) {
    U.font(.00875);
-   U.fillRGB(0, 0, 0, minimalOpacityUI);
+   U.fillRGB(0, 0, 0, opacityUI.minimal);
    U.fillRectangle(.9375, .26, .125, .2);
    if (vehiclesInMatch > 1) {
     U.fillRectangle(.0625, .26, .125, .2);
@@ -3247,7 +2959,7 @@ public class VE extends Application {
   matchStarted = Camera.flowFlip = false;
   vehiclePerspective = userPlayer;
   matchTime = matchLength;
-  arrowTarget = Math.min(vehiclesInMatch - 1, arrowTarget);
+  TE.arrowTarget = Math.min(vehiclesInMatch - 1, TE.arrowTarget);
   scoreCheckpoint[0] = scoreCheckpoint[1] = scoreLap[0] = scoreLap[1] = scoreKill[0] = scoreKill[1] = 1;
   scoreDamage[0] = scoreDamage[1] = Camera.aroundVehicleXZ = printTimer = Camera.lookAround = scoreStunt[0] = scoreStunt[1] = 0;
   TE.bonusBig.setVisible(true);
@@ -3443,7 +3155,7 @@ public class VE extends Application {
  }
 
  private static void resetGraphics() {
-  boolean addSunlightBack = E.lights.getChildren().contains(E.sunlight),//<-Check light group, not main group
+  boolean addSunlightBack = E.lights.getChildren().contains(E.sunlight),//<-Check LIGHT group, not main group!
   addSunBack = group.getChildren().contains(E.sun),
   addGroundBack = group.getChildren().contains(E.ground);
   group.getChildren().clear();
@@ -3451,7 +3163,7 @@ public class VE extends Application {
   U.add(E.ambientLight, addSunBack ? E.sun : null, addGroundBack ? E.ground : null);
   U.addLight(addSunlightBack ? E.sunlight : null);
   U.add(E.lights);
-  group2.getChildren().clear();
+  TE.arrowGroup.getChildren().clear();
  }
 
  private static void clearSounds() {//Not all sounds close

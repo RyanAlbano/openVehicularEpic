@@ -25,7 +25,6 @@ class ThrustTrail extends Core {
   }
   B.setMaterial(PM);
   B.setVisible(false);
-  //U.add(this);<-Added in Vehicle.java
  }
 
  void deploy(VehiclePart VP, boolean isThrusted) {

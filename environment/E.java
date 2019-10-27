@@ -13,16 +13,18 @@ import ve.Camera;
 import ve.Instance;
 import ve.Sound;
 import ve.VE;
+import ve.trackElements.TE;
 import ve.trackElements.trackParts.TrackPart;
 import ve.trackElements.trackParts.TrackPlane;
 import ve.utilities.U;
+import ve.vehicles.Vehicle;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
-public enum E {//<-Static content for the game-environment stored here
+public enum E {//<-Static content for V.E.'s environment
  ;
 
  public static Canvas canvas;
@@ -35,8 +37,7 @@ public enum E {//<-Static content for the game-environment stored here
  public static final PointLight mapViewerLight = new PointLight();
  public static final Sphere sun = new Sphere(200000000);
  private static final Sphere stormCloud = new Sphere(200000);
- static final PhongMaterial cloudPM = new PhongMaterial();
- static final PhongMaterial starPM = new PhongMaterial();
+ static final PhongMaterial cloudPM = new PhongMaterial(), starPM = new PhongMaterial();
  private static final PhongMaterial poolPM = new PhongMaterial();
  public static final PhongMaterial phantomPM = new PhongMaterial();
  private static final MeshView lightningMesh = new MeshView();
@@ -51,22 +52,25 @@ public enum E {//<-Static content for the game-environment stored here
  public static final Collection<Star> stars = new ArrayList<>();
  public static final Collection<Raindrop> raindrops = new ArrayList<>();
  public static final Collection<Snowball> snowballs = new ArrayList<>();
- public static final int splashQuantity = 384;
  private static MeshView volcanoMesh;
  public static boolean poolExists, lightningExists, volcanoExists, windStormExists, tornadoMovesFixpoints;
  public static double renderLevel;
- public static boolean renderAll;
+ public static RenderType renderType = RenderType.standard;
  public static double viewableMapDistance = Double.POSITIVE_INFINITY;
  public static double gravity;
  public static double groundLevel;
  private static double groundX, groundZ;
- public static double limitL, limitR, limitFront, limitBack, limitY;
+
+ public enum mapBounds {
+  ;
+  public static double left, right, forward, backward, Y;
+ }
+
  public static boolean slowVehiclesWhenAtLimit;
  public static double wind, windX, windZ;
  private static double tornadoMaxTravelDistance;
  static double boulderMaxTravelDistance;
- public static double poolX, poolZ;
- public static double poolDepth;
+ public static double poolX, poolZ, poolDepth;
  public static double sunX, sunY, sunZ;
  private static double sunlightX, sunlightY, sunlightZ;
  private static double sunRGBVariance = .5;
@@ -96,10 +100,12 @@ public enum E {//<-Static content for the game-environment stored here
  private static TsunamiDirection tsunamiDirection;
  public static Color skyInverse = Color.color(0, 0, 0), groundInverse = Color.color(1, 1, 1);
  public static double soundMultiple;
- public static String terrain = "";
- public static final int dustQuantity = 96, shotQuantity = 96, explosionQuantity = 12, thrustTrailQuantity = 48, smokeQuantity = 50;
+ public static String terrain = "", vehicleTerrain = "";
+ public static final int dustQuantity = 96, shotQuantity = 96, explosionQuantity = 12, thrustTrailQuantity = 48, smokeQuantity = 50, splashQuantity = 384;
  public static Pool poolType;
  public static Sound rain, thunder, windstorm, tornado, tsunami, volcano;
+
+ public enum RenderType {standard, fullDistance, fullDistanceALL}//<-'ALL' contains 'fullDistance' so it can be checked with 'fullDistance' in the same call
 
  public enum SpecularPowers {
   ;
@@ -149,7 +155,7 @@ public enum E {//<-Static content for the game-environment stored here
   PhongMaterial lightningPM = new PhongMaterial();
   lightningPM.setSelfIlluminationMap(U.getImage("white"));
   lightningMesh.setMaterial(lightningPM);
-  for (int n = 2; --n >= 0; ) {
+  for (int n = lightningLight.length; --n >= 0; ) {
    lightningLight[n] = new PointLight();
    U.setLightRGB(lightningLight[n], 1, 1, 1);
   }
@@ -283,6 +289,7 @@ public enum E {//<-Static content for the game-environment stored here
  public static void loadTerrain(String s) {
   if (s.startsWith("terrain(")) {
    terrain = " " + U.getString(s, 0) + " ";
+   vehicleTerrain = terrain + (U.contains(terrain, " paved ", " rock ", " grid ", " metal ", " brightmetal") ? " hard " : " ground ");
    ((PhongMaterial) ground.getMaterial()).setSpecularMap(U.getImage(terrain.trim()));
    if (!U.getString(s, 0).isEmpty() && (terrainRGB[0] > 0 || terrainRGB[1] > 0 || terrainRGB[2] > 0)) {
     for (int n = terrain.contains(" rock ") ? Integer.MAX_VALUE : 4000; --n >= 0; ) {
@@ -320,7 +327,7 @@ public enum E {//<-Static content for the game-environment stored here
 
  private static void loadGroundPlates(String terrain) {
   if (groundLevel <= 0 && !terrain.contains(" snow ")) {
-   for (int n = 0; n < 419; n++) {
+   for (int n = 0; n < 419; n++) {//<-'419' is the minimum needed to have groundPlates cover the entire ground surface with NO gaps, before duplicates get removed
     groundPlates.add(new GroundPlate(VE.mapName.equals("Epic Trip") ? 1500 : 1732.0508075688772935274463415059));
    }
    double baseX = -30000, baseZ = -30000;
@@ -373,7 +380,7 @@ public enum E {//<-Static content for the game-environment stored here
    for (int n = 20; --n >= 0; ) {
     double[] rotatedX = {spread + spread * random.nextDouble()}, rotatedZ = {spread + spread * random.nextDouble()};
     U.rotate(rotatedX, rotatedZ, random.nextDouble() * 360);
-    VE.trackParts.add(new TrackPart(rotatedX[0], rotatedZ[0], 0, size + random.nextDouble() * size, random.nextDouble() * size, random.nextDouble() * size, false, false));
+    TE.trackParts.add(new TrackPart(rotatedX[0], rotatedZ[0], 0, size + random.nextDouble() * size, random.nextDouble() * size, random.nextDouble() * size, false, false, true));
    }
   }
  }
@@ -619,6 +626,9 @@ public enum E {//<-Static content for the game-environment stored here
     pool[1].setVisible(true);
     pool[0].setVisible(false);
    }
+   if (poolType == Pool.lava) {
+    U.setDiffuseRGB(poolPM, 1, .25 + U.random(.5), 0);
+   }
   }
   int n;
   if (!tornadoParts.isEmpty()) {
@@ -646,18 +656,15 @@ public enum E {//<-Static content for the game-environment stored here
    }
   }
   if (wind > 0) {
-   windX += (wind * U.random(VE.tick)) - (wind * U.random(VE.tick));
-   windZ += (wind * U.random(VE.tick)) - (wind * U.random(VE.tick));
+   windX += U.randomPlusMinus(wind * .1 * VE.tick);
+   windZ += U.randomPlusMinus(wind * .1 * VE.tick);
    windX -= windX * .0004 * VE.tick;
    windZ -= windZ * .0004 * VE.tick;
-   windX = U.clamp(-wind * 20, windX, wind * 20);
-   windZ = U.clamp(-wind * 20, windZ, wind * 20);
+   windX = U.clamp(-wind, windX, wind);
+   windZ = U.clamp(-wind, windZ, wind);
   }
   for (Snowball snowball : snowballs) {
    snowball.run();
-  }
-  if (poolType == Pool.lava) {
-   U.setDiffuseRGB(poolPM, 1, .25 + U.random(.5), 0);
   }
   if (!tsunamiParts.isEmpty()) {
    if (update && Math.abs(tsunamiDirection == TsunamiDirection.left || tsunamiDirection == TsunamiDirection.right ? tsunamiX : tsunamiZ) > tsunamiWholeSize) {
@@ -722,10 +729,16 @@ public enum E {//<-Static content for the game-environment stored here
     }
    }
   }
-  //runPoolVision();
+  for (Meteor meteor : meteors) {
+   meteor.run(gamePlay || mapViewer);
+  }
   if (windStormExists) {
+   if (U.FPS < 15) {
+    windX *= .875;
+    windZ *= .875;
+   }
    double stormPower = Math.sqrt(StrictMath.pow(windX, 2) * StrictMath.pow(windZ, 2));//<-Multiplied--not added!
-   U.fillRGB(graphicsContext, groundRGB[0], groundRGB[1], groundRGB[2], .05);
+   U.fillRGB(graphicsContext, groundRGB[0], groundRGB[1], groundRGB[2], U.minimumAccurateLayeredOpacity);
    double dustWidth = VE.width * .25, dustHeight = VE.height * .25;
    for (n = (int) (stormPower * .025); --n >= 0; ) {
     graphicsContext.fillOval(-dustWidth + U.random(VE.width + dustWidth), -dustHeight + U.random(VE.height + dustHeight), dustWidth, dustHeight);
@@ -736,8 +749,11 @@ public enum E {//<-Static content for the game-environment stored here
     windstorm.stop();
    }
   }
-  for (Meteor meteor : meteors) {
-   meteor.run(gamePlay || mapViewer);
+  for (Vehicle vehicle : VE.vehicles) {//Right after drawing windstorm--this is best
+   if (vehicle.screenFlash > 0) {
+    U.fillRGB(graphicsContext, 1, 1, 1, vehicle.screenFlash);
+    U.fillRectangle(graphicsContext, .5, .5, 1, 1);
+   }
   }
  }
 
@@ -794,7 +810,7 @@ public enum E {//<-Static content for the game-environment stored here
    double volcanoDistance = U.distance(I.X, volcanoX, I.Z, volcanoZ);
    I.Y = volcanoDistance < volcanoBottomRadius && volcanoDistance > volcanoTopRadius && I.Y > -volcanoBottomRadius + volcanoDistance ? Math.min(I.Y, -volcanoBottomRadius + volcanoDistance) : I.Y;
   }
-  for (TrackPart trackPart : VE.trackParts) {
+  for (TrackPart trackPart : TE.trackParts) {
    if (trackPart.mound != null) {
     setMoundSit(I, trackPart, vehicle);
    } else if ((!trackPart.wraps || vehicle) && !trackPart.trackPlanes.isEmpty()) {
@@ -841,7 +857,7 @@ public enum E {//<-Static content for the game-environment stored here
  }
 
  public static void runPoolVision() {
-  if (poolExists && Camera.Y > 0 && Camera.Y <= poolDepth && U.distance(Camera.X, poolX, Camera.Z, poolZ) < pool[0].getRadius()) {//<-Should be in E.run, but works more consistently here
+  if (poolExists && Camera.Y > 0 && Camera.Y <= poolDepth && U.distance(Camera.X, poolX, Camera.Z, poolZ) < pool[0].getRadius()) {
    if (poolType == E.Pool.lava) {
     U.fillRGB(graphicsContext, 1, .5 + U.random(.25), 0, .75);
    } else if (poolType == E.Pool.acid) {

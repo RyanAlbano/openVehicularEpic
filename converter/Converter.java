@@ -19,8 +19,7 @@ class Converter {
   }
  }
 
- private boolean objFaceEnd;
- private boolean gettingVertices;
+ private boolean objFaceEnd, gettingVertices;
 
  StringBuilder convert(File file, boolean invertX, boolean invertY, boolean invertZ) {
   List<Color> materialColor = new ArrayList<>(), modelColor = new ArrayList<>();
@@ -136,7 +135,7 @@ class Converter {
   if (gettingVertices) {
    n2 = Double.parseDouble(s2.toString());
   } else {
-   int indexOf = s2.toString().indexOf('/');//<-Replace '/' with "/"?
+   int indexOf = s2.toString().indexOf('/');//<-Character is best
    if (indexOf != -1) {
     s2 = new StringBuilder(s2.substring(0, indexOf));
    }
@@ -149,10 +148,10 @@ class Converter {
 
   final E X, Y, Z;
 
-  Vector3(E x, E y, E z) {
-   X = x;
-   Y = y;
-   Z = z;
+  Vector3(E X, E Y, E Z) {
+   this.X = X;
+   this.Y = Y;
+   this.Z = Z;
   }
  }
 }

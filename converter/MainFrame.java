@@ -120,11 +120,11 @@ public class MainFrame extends JFrame {
   }
  }
 
- private static void setXYZActionPerformed() {//GEN-FIRST:event_btnStXYZActionPerformed
+ private static void setXYZActionPerformed() {
   Converter.axisSwap = false;
  }
 
- private static void setXZYActionPerformed() {//GEN-FIRST:event_btnStXZYActionPerformed
+ private static void setXZYActionPerformed() {
   Converter.axisSwap = true;
  }
 

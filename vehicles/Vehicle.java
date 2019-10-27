@@ -24,12 +24,14 @@ public class Vehicle extends Instance {
  public final List<VehiclePart> parts = new ArrayList<>();
  private Sphere nukeBlastSphere;
  private double nukeBlastSphereSize;
+ private double cameraShake;
+ public double cameraShakeXZ, cameraShakeYZ;
  final PhongMaterial fixSpherePM = new PhongMaterial();
  public PointLight burnLight;
  public final int index;
  public int checkpointsPassed;
  public int point;
- private int engineClipQuantity;
+ int engineClipQuantity;
  public final double height;
  double steerAngleMultiply = 1;
  public final double[] accelerationStages = new double[2];
@@ -41,7 +43,7 @@ public class Vehicle extends Instance {
  double grip;
  private double drag;
  private double bounce;
- boolean absorbShock;
+ double shockAbsorb = Double.NaN;
  public double airAcceleration;
  private double airTopSpeed;
  double airPush;
@@ -62,6 +64,7 @@ public class Vehicle extends Instance {
  public double lightBrightness;
  private double explosionDiameter, explosionDamage, explosionPush;
  public double speed, speedXZ, speedYZ, stallSpeed;
+ double minimumFlightSpeedWithoutStall;
  double netSpeed;
  public double cameraXZ;
  private double lastXZ;
@@ -75,16 +78,14 @@ public class Vehicle extends Instance {
  private double massiveHitTimer;
  public double spinnerXZ;
  public double spinnerSpeed = Double.NaN;
- private double chuffTimer, forceTimer, crashTimer, landTimer;
- private double splashing = Double.NaN;
- private double exhaust = Double.NaN;
+ private double chuffTimer, forceTimer, crashTimer;
+ double splashing = Double.NaN;
+ double exhaust = Double.NaN;
  public double screenFlash;
  private double nukeBlastX, nukeBlastY, nukeBlastZ;
  private double wheelGapFrontToBack, wheelGapLeftToRight;
  final double[] wheelSpin = new double[2];
- boolean wheelsLoadedFromModelData;
  double localVehicleGround;
- private double vehicleToCameraSoundDistance;
  final boolean realVehicle;
  boolean landStuntsBothSides;
  private boolean turnDrag;
@@ -117,27 +118,25 @@ public class Vehicle extends Instance {
  public boolean inPool;
  private boolean reviveImmortality;
  public boolean thrusting;
- private boolean skidding;
- private boolean scraping;
+ boolean skidding;
+ boolean scraping;
  private boolean wheelDiscord;
  public final boolean[] rollCheck = new boolean[2], flipCheck = new boolean[2], spinCheck = new boolean[2];
  private boolean[] gotNukeBlasted;
  boolean wrathEngaged;
- private boolean[] wrathStuck;
+ boolean[] wrathStuck;
  boolean inWrath;
  private long spinMultiplyPositive = 1, spinMultiplyNegative = 1;
  public long vehicleHit = -1;
- private long explosionsWhenDestroyed;
+ long explosionsWhenDestroyed;
  public long destructionType;
  long polarity;
  ve.vehicles.AI.Behavior behavior;
  private long engineStage, lastEngineStage;
- private double engineTuneRatio = 2, enginePitchBase = 1;
- private EngineTuning engineTuning = EngineTuning.equalTemperament;
- private int randomCrashSound, randomSkidSound, randomScrapeSound, randomExhaustSound;
+ double engineTuneRatio = 2, enginePitchBase = 1;
  public String vehicleName = "";
- private Landing landType = Landing.tires;
- private Contact contact = Contact.none;
+ Landing landType = Landing.tires;
+ Contact contact = Contact.none;
  public ExplosionType explosionType = ExplosionType.none;
  public String terrainProperties = "";
  public Mode mode = Mode.drive;
@@ -151,6 +150,7 @@ public class Vehicle extends Instance {
  private final List<FixSphere> fixSpheres = new ArrayList<>();
  public final List<Special> specials = new ArrayList<>();
  private static final long maxSpecials = 3;
+ private static final double fromAngleToVelocityConstant = .2;
  boolean hasShooting;
  public final List<Explosion> explosions = new ArrayList<>();
  int currentExplosion;
@@ -174,16 +174,10 @@ public class Vehicle extends Instance {
   jet, brightjet, powerjet, torchjet, jetfighter, turbine, smallrocket, rocket, bigrocket, turborocket
  }
 
- enum EngineTuning {equalTemperament, harmonicSeries}
+ EngineTuning engineTuning = EngineTuning.equalTemperament;
 
- public enum specialType {
-  none,
-  gun, machinegun, minigun, heavymachinegun, shotgun, raygun, railgun,
-  shell, powershell, missile, bomb, flamethrower, mine,
-  blaster, heavyblaster, forcefield,
-  phantom, teleport,
-  particledisintegrator, spinner, thewrath
- }
+ //Engine tunings are here since they must load before VehicleAudio is an object
+ enum EngineTuning {equalTemperament, harmonicSeries}
 
  public enum ExplosionType {none, normal, nuclear, maxnuclear}
 
@@ -195,7 +189,7 @@ public class Vehicle extends Instance {
   modelNumber = model;
   index = listIndex;
   realVehicle = isReal;
-  VA = realVehicle ? new VehicleAudio() : null;
+  VA = realVehicle ? new VehicleAudio(this) : null;
   modelName = VE.vehicleModels.get(modelNumber);
   int n;
   theRandomColor[0] = index == VE.userPlayer ? VE.userRandomRGB[0] : U.random();
@@ -204,7 +198,7 @@ public class Vehicle extends Instance {
   behavior = ve.vehicles.AI.Behavior.adapt;
   int wheelCount = 0;
   for (n = 4; --n >= 0; ) {
-   wheels.add(new Wheel());
+   wheels.add(new Wheel(this));
   }
   long lightsAdded = 0;
   boolean onModelPart = false, addWheel = false;
@@ -229,7 +223,7 @@ public class Vehicle extends Instance {
      type.setLength(0);
      textureType = "";
      pivotX = pivotY = pivotZ = 0;
-    } else if (s.startsWith("><")) {
+    } else if (s.startsWith("><") && onModelPart) {//<-Redundant?
      double minimumX = Double.NEGATIVE_INFINITY, maximumX = Double.POSITIVE_INFINITY;
      for (double listX : xx) {
       minimumX = Math.max(minimumX, listX);
@@ -237,8 +231,7 @@ public class Vehicle extends Instance {
      }
      double averageX = (minimumX + maximumX) * .5;
      type.append(averageX > 0 ? " R " : averageX < 0 ? " L " : U.random() < .5 ? " R " : " L ");
-     boolean addingWheel = addWheel && wheelCount < 4;
-     if (addingWheel) {
+     if (addWheel && wheelCount < 4) {
       double minimumZ = Double.NEGATIVE_INFINITY, maximumZ = Double.POSITIVE_INFINITY;
       for (double listZ : zz) {
        minimumZ = Math.max(minimumZ, listZ);
@@ -253,12 +246,12 @@ public class Vehicle extends Instance {
       wheels.get(wheelNumber).pointZ = wheelAverageZ;
       wheels.get(wheelNumber).sparkPoint = Math.abs(minimumZ - maximumZ);
       wheels.get(wheelNumber).skidmarkSize = Math.abs(minimumX - maximumX) * .5;
+      wheelCount++;
      }
      if (!xx.isEmpty()) {
-      parts.add(new VehiclePart(this, U.listToArray(xx), U.listToArray(yy), U.listToArray(zz), xx.size(), RGB, String.valueOf(type), textureType, pivotX, pivotY, pivotZ, wheelCount));
+      parts.add(new VehiclePart(this, U.listToArray(xx), U.listToArray(yy), U.listToArray(zz), xx.size(), RGB, String.valueOf(type), textureType, pivotX, pivotY, pivotZ));
       xx.clear();
      }
-     wheelCount += addingWheel ? 1 : 0;
      onModelPart = false;
     }
     getLoadColor(s, RGB);
@@ -288,7 +281,6 @@ public class Vehicle extends Instance {
       type.append(s.startsWith("thrustTrailPoint") ? " thrustTrailPoint " : "");
       type.append(s.startsWith("noTexture") ? " noTexture " : "");
       type.append(s.startsWith("flick1") ? " flick1 " : s.startsWith("flick2") ? " flick2 " : "");
-      type.append("");
       type.append(s.startsWith("landingGear") ? " landingGear " : "");
       type.append(s.startsWith("turretBarrel") ? " turretBarrel " : s.startsWith("turret") ? " turret " : "");
       type.append(s.startsWith("spinner") ? " spinner " : "");
@@ -298,9 +290,7 @@ public class Vehicle extends Instance {
        type.append(" controller ").append(s.contains("XZ") ? " steerXZ " : s.contains("XY") ? " steerXY " : "");
       } else if (s.startsWith("wheel")) {
        type.append(" wheel ");
-       if (s.startsWith("wheelPoint")) {
-        addWheel = wheelsLoadedFromModelData = true;
-       }
+       addWheel = s.startsWith("wheelPoint") || addWheel;
       } else if (s.startsWith("steer")) {
        type.append(s.startsWith("steerXY") ? " steerXY " : s.startsWith("steerYZ") ? " steerYZ " : U.startsWith(s, "steerXZ", "steers") ? " steerXZ " : "");
        type.append(s.startsWith("steerFromYZ") ? " steerFromYZ " : s.startsWith("steerFromXZ") ? " steerFromXZ " : "");
@@ -325,8 +315,7 @@ public class Vehicle extends Instance {
     if (s.startsWith("type(")) {
      vehicleType = s.contains("turret") ? Type.turret : s.contains("aircraft") ? Type.aircraft : vehicleType;
      floats = s.contains("floats") || floats;
-    }
-    if (s.startsWith("acceleration(")) {
+    } else if (s.startsWith("acceleration(")) {
      accelerationStages[0] = U.getValue(s, 0);
      accelerationStages[1] = U.getValue(s, 1);
     } else if (s.startsWith("speeds(")) {
@@ -346,14 +335,12 @@ public class Vehicle extends Instance {
     grip = s.startsWith("grip(") ? U.getValue(s, 0) < 0 ? Double.POSITIVE_INFINITY : U.getValue(s, 0) : grip;
     drag = s.startsWith("drag(") ? U.getValue(s, 0) : drag;
     if (s.startsWith("bounce(")) {
+     bounce = U.getValue(s, 0);
      try {
-      bounce = U.getValue(s, 0);
-     } catch (RuntimeException E) {
-      bounce = 0;
-      absorbShock = s.contains("absorbShock") || absorbShock;
+      shockAbsorb = U.clamp(U.getValue(s, 1));
+     } catch (RuntimeException ignored) {
      }
-    }
-    if (s.startsWith("airRotate(")) {
+    } else if (s.startsWith("airRotate(")) {
      airAcceleration = U.getValue(s, 0) < 0 ? Double.POSITIVE_INFINITY : U.getValue(s, 0);
      airTopSpeed = U.getValue(s, 1);
     }
@@ -385,8 +372,7 @@ public class Vehicle extends Instance {
     speedBoost = s.startsWith("speedBoost(") ? U.getValue(s, 0) : speedBoost;
     if (s.startsWith("landType(") && !U.getString(s, 0).isEmpty()) {
      landType = Landing.valueOf(U.getString(s, 0));
-    }
-    if (s.startsWith("contact(") && !U.getString(s, 0).isEmpty()) {
+    } else if (s.startsWith("contact(") && !U.getString(s, 0).isEmpty()) {
      contact = Contact.valueOf(U.getString(s, 0));
     }
     exhaust = s.startsWith("exhaustFire(yes") ? 0 : exhaust;
@@ -471,22 +457,21 @@ public class Vehicle extends Instance {
      rimType.append(s.contains("noSpecular") ? " noSpecular " : s.contains("shiny") ? " shiny " : "");
      rimType.append(s.contains("sport") ? " sport " : "");
     }
-    wheelType = s.startsWith("landingGearWheels") ? new StringBuilder().append(" landingGear ") : wheelType;
-    wheelTextureType = s.startsWith("wheelTexture(") ? U.getString(s, 0) : wheelTextureType;
+    wheelType.append(s.startsWith("landingGearWheels") ? " landingGear " : "");
+    wheelTextureType = s.startsWith("wheelTexture(") ? U.getString(s, 0) : wheelTextureType;//<-Using 'append' would mess this up if found more than once in file
     wheelSmoothing = s.startsWith("smoothing(") ? U.getValue(s, 0) * modelSize : wheelSmoothing;
     if (s.startsWith("wheel(")) {
      if (!show) {
       break;
      }
-     boolean primaryWheel = wheelCount < 4;
-     if (primaryWheel) {
+     if (wheelCount < 4) {
       wheels.get(wheelCount).pointX = U.getValue(s, 0) * modelSize * instanceSize * modelScale[0] * instanceScale[0];
       wheels.get(wheelCount).pointZ = U.getValue(s, 2) * modelSize * instanceSize * modelScale[2] * instanceScale[2];
       wheels.get(wheelCount).skidmarkSize = Math.abs(U.getValue(s, 3)) * modelSize * instanceSize * modelScale[0] * instanceScale[0];
       wheels.get(wheelCount).sparkPoint = U.getValue(s, 4) * 2 * modelSize * instanceSize;
      }
      String side = U.getValue(s, 0) > 0 ? " R " : U.getValue(s, 0) < 0 ? " L " : U.random() < .5 ? " R " : " L ";
-     loadWheel(primaryWheel ? wheelCount : -1, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2), U.getValue(s, 3), U.getValue(s, 4), wheelType + side, String.valueOf(rimType), wheelTextureType, s.contains("steers"), s.contains("hide"));
+     loadWheel(this, null, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2), U.getValue(s, 3), U.getValue(s, 4), wheelType + side, String.valueOf(rimType), wheelTextureType, s.contains("steers"), s.contains("hide"));
      wheelCount++;
     }
     steerAngleMultiply = s.startsWith("steerAngleMultiply(") ? U.getValue(s, 0) : steerAngleMultiply;
@@ -513,9 +498,10 @@ public class Vehicle extends Instance {
    behavior = ve.vehicles.AI.Behavior.fight;
   } else if (vehicleType == Type.aircraft) {
    stuntLandWaitTime = 1;
+   minimumFlightSpeedWithoutStall = floats ? 0 : E.gravity * (engine == Engine.smallprop ? .25 : .5) * 100;
   }
   for (Special special : specials) {
-   if (special.type == specialType.spinner) {
+   if (special.type == Special.Type.spinner) {
     spinnerSpeed = 0;
     break;
    }
@@ -543,7 +529,7 @@ public class Vehicle extends Instance {
      }
     }
    }
-   if (contact == Contact.rubber) {
+   if (contact == Contact.rubber || E.terrain.contains(" snow ")) {
     RGB[0] = wheelRGB[0] * .5;
     RGB[1] = wheelRGB[1] * .5;
     RGB[2] = wheelRGB[2] * .5;
@@ -552,12 +538,10 @@ public class Vehicle extends Instance {
      RGB[1] *= .333;
      RGB[2] *= .333;
     }
-    PhongMaterial PM = new PhongMaterial();
-    U.setDiffuseRGB(PM, RGB[0], RGB[1], RGB[2], .5);
-    U.setSpecularRGB(PM, 0, 0, 0);
     for (Wheel wheel : wheels) {
+     wheel.skidmarks = new ArrayList<>();
      for (n = 48; --n >= 0; ) {
-      wheel.skidmarks.add(new Skidmark(wheel, PM));
+      wheel.skidmarks.add(new Skidmark(wheel, RGB));
      }
     }
    }
@@ -602,10 +586,10 @@ public class Vehicle extends Instance {
 
  private void addSpecial(String s) {
   if (specials.size() < maxSpecials) {
-   specials.add(new Special());
+   specials.add(new Special(this));
    Special S = specials.get(specials.size() - 1);
-   S.type = specialType.valueOf(U.getString(s, 0));
-   if (S.type != specialType.particledisintegrator && S.type != specialType.spinner) {
+   S.type = Special.Type.valueOf(U.getString(s, 0));
+   if (S.type != Special.Type.particledisintegrator && S.type != Special.Type.spinner) {
     String specialAudio = "";
     try {
      specialAudio = U.getString(s, 1);
@@ -625,7 +609,7 @@ public class Vehicle extends Instance {
     for (int n1 = 0; n1 < E.shotQuantity; n1++) {
      try {
       S.ports.add(new Port());
-      S.ports.get(n1).Y = U.getValue(s, S.type == specialType.shotgun ? 0 : n1) * modelSize * instanceSize;
+      S.ports.get(n1).Y = U.getValue(s, S.type == Special.Type.shotgun ? 0 : n1) * modelSize * instanceSize;
      } catch (RuntimeException e) {
       S.ports.remove(S.ports.size() - 1);
       break;
@@ -691,7 +675,7 @@ public class Vehicle extends Instance {
   for (VehiclePart part : parts) {
    part.setPosition(gamePlay);
   }
-  if (E.renderAll || distanceToCamera < E.viewableMapDistance + collisionRadius) {
+  if (E.renderType.name().contains(E.RenderType.fullDistance.name()) || distanceToCamera < E.viewableMapDistance + collisionRadius) {
    onFire = VE.mapName.equals("the Sun") || onFire;
    rotation.set();
    rotation.multiply(0, 0, -U.sin(XY * .5), U.cos(XY * .5));//<-Mind the multiply order!
@@ -744,8 +728,10 @@ public class Vehicle extends Instance {
   }
   reviveImmortality = fixSpheresRemoved < fixSpheres.size() && reviveImmortality;
   for (Wheel wheel : wheels) {
-   for (Skidmark skidmark : wheel.skidmarks) {
-    skidmark.run();
+   if (wheel.skidmarks != null) {
+    for (Skidmark skidmark : wheel.skidmarks) {
+     skidmark.run();
+    }
    }
   }
   if (damage > durability && VE.status == VE.Status.play && explosionType != ExplosionType.maxnuclear) {
@@ -761,7 +747,7 @@ public class Vehicle extends Instance {
     reviveImmortality = true;
    }
   }
-  if (VE.defaultVehicleLightBrightness > 0 && !parts.isEmpty() && parts.get(0).explodeStage > 0 && (E.viewableMapDistance == Double.POSITIVE_INFINITY || U.distance(this) < E.viewableMapDistance)) {
+  if (VE.defaultVehicleLightBrightness > 0 && !parts.isEmpty() && parts.get(0).explodeStage > 0 && distanceToCamera < E.viewableMapDistance) {
    U.setLightRGB(burnLight, .5, .25 + U.random(.2), U.random(.125));
    U.setTranslate(burnLight, this);
    U.addLight(burnLight);
@@ -774,471 +760,6 @@ public class Vehicle extends Instance {
    if (speedDifference * .5 > 10 + U.random(5.) || (!flipped && Math.abs(speed) > 50 + U.random(50.))) {
     dusts.get(currentDust).deploy(this, wheel, dustSpeed, speedDifference);
     currentDust = ++currentDust >= E.dustQuantity ? 0 : currentDust;
-   }
-  }
- }
-
- private void skidmark(Wheel w) {
-  if (contact == Contact.rubber && !flipped && !destroyed && !phantomEngaged && (Math.abs(Math.abs(speed) - U.netValue(w.speedX, w.speedZ)) > 10 + U.random(5.) || Math.abs(speed) > 50 + U.random(50.))) {
-   Skidmark skidmark = w.skidmarks.get(w.currentSkidmark);
-   skidmark.X = w.X;
-   skidmark.Z = w.Z;
-   skidmark.Y = Math.min(w.Y, w.minimumY);
-   skidmark.C.setScaleZ(1 + netSpeed * .01);
-   U.rotate(skidmark.C, w.XY, w.YZ, XZ);
-   skidmark.deployed = true;
-   w.currentSkidmark = ++w.currentSkidmark >= w.skidmarks.size() ? 0 : w.currentSkidmark;
-  }
- }
-
- private void sparks(Wheel wheel, boolean grounded) {
-  double sparkX, sparkY, sparkZ;
-  if (grounded) {
-   sparkX = wheel.X;
-   sparkY = wheel.Y;
-   sparkZ = wheel.Z;
-  } else {
-   double[] rotateX = {wheel.pointX}, rotateY = {clearanceY - wheel.sparkPoint}, rotateZ = {wheel.pointZ};
-   U.rotate(rotateX, rotateY, XY);
-   U.rotate(rotateY, rotateZ, YZ);
-   U.rotate(rotateX, rotateZ, XZ);
-   sparkX = rotateX[0] + X;
-   sparkY = rotateY[0] + Y;
-   sparkZ = rotateZ[0] + Z;
-  }
-  double sparkSpeed = U.netValue(wheel.speedX, wheel.speedY, wheel.speedZ);
-  for (Spark spark : wheel.sparks) {
-   if (U.random() < .25) {
-    spark.deploy(sparkX, sparkY, sparkZ, sparkSpeed);
-   }
-  }
-  scraping = true;
- }
-
- private void loadWheel(int count, double sourceX, double sourceY, double sourceZ, double i_wheelThickness, double i_wheelRadius, String type, String m_rimType, String textureType, boolean i_steers, boolean hide) {
-  sourceX *= modelSize * modelScale[0];
-  sourceY *= modelSize * modelScale[1];
-  sourceZ *= modelSize * modelScale[2];
-  i_wheelThickness *= modelSize * modelScale[0];
-  i_wheelRadius *= modelSize;
-  wheelSmoothing *= -1;
-  double[] x0 = new double[96], y0 = new double[96], z0 = new double[96];
-  String steers = i_steers ? " steerXZ steerFromXZ " : "";
-  clearanceY = Math.max(clearanceY, sourceY + i_wheelRadius);
-  int n;
-  if (i_wheelRadius != 0 && !hide) {
-   double wheelThickness = i_wheelThickness + wheelSmoothing, wheelRadius = i_wheelRadius - Math.abs(wheelSmoothing);
-   for (n = x0.length; --n >= 0; ) {
-    x0[n] = sourceX - (n < 24 ? i_wheelThickness : -i_wheelThickness);
-   }
-   z0[0] = sourceZ + U.sin(0) * wheelRadius;
-   z0[1] = sourceZ + U.sin(15) * wheelRadius;
-   z0[2] = sourceZ + U.sin(30) * wheelRadius;
-   z0[3] = sourceZ + U.sin(45) * wheelRadius;
-   z0[4] = sourceZ + U.sin(60) * wheelRadius;
-   z0[5] = sourceZ + U.sin(75) * wheelRadius;
-   z0[6] = sourceZ + U.sin(90) * wheelRadius;
-   z0[7] = sourceZ + U.sin(105) * wheelRadius;
-   z0[8] = sourceZ + U.sin(120) * wheelRadius;
-   z0[9] = sourceZ + U.sin(135) * wheelRadius;
-   z0[10] = sourceZ + U.sin(150) * wheelRadius;
-   z0[11] = sourceZ + U.sin(165) * wheelRadius;
-   z0[12] = sourceZ + U.sin(180) * wheelRadius;
-   z0[13] = sourceZ + U.sin(195) * wheelRadius;
-   z0[14] = sourceZ + U.sin(210) * wheelRadius;
-   z0[15] = sourceZ + U.sin(225) * wheelRadius;
-   z0[16] = sourceZ + U.sin(240) * wheelRadius;
-   z0[17] = sourceZ + U.sin(255) * wheelRadius;
-   z0[18] = sourceZ + U.sin(270) * wheelRadius;
-   z0[19] = sourceZ + U.sin(285) * wheelRadius;
-   z0[20] = sourceZ + U.sin(300) * wheelRadius;
-   z0[21] = sourceZ + U.sin(315) * wheelRadius;
-   z0[22] = sourceZ + U.sin(330) * wheelRadius;
-   z0[23] = sourceZ + U.sin(345) * wheelRadius;
-   y0[0] = sourceY + U.cos(0) * wheelRadius;
-   y0[1] = sourceY + U.cos(15) * wheelRadius;
-   y0[2] = sourceY + U.cos(30) * wheelRadius;
-   y0[3] = sourceY + U.cos(45) * wheelRadius;
-   y0[4] = sourceY + U.cos(60) * wheelRadius;
-   y0[5] = sourceY + U.cos(75) * wheelRadius;
-   y0[6] = sourceY + U.cos(90) * wheelRadius;
-   y0[7] = sourceY + U.cos(105) * wheelRadius;
-   y0[8] = sourceY + U.cos(120) * wheelRadius;
-   y0[9] = sourceY + U.cos(135) * wheelRadius;
-   y0[10] = sourceY + U.cos(150) * wheelRadius;
-   y0[11] = sourceY + U.cos(165) * wheelRadius;
-   y0[12] = sourceY + U.cos(180) * wheelRadius;
-   y0[13] = sourceY + U.cos(195) * wheelRadius;
-   y0[14] = sourceY + U.cos(210) * wheelRadius;
-   y0[15] = sourceY + U.cos(225) * wheelRadius;
-   y0[16] = sourceY + U.cos(240) * wheelRadius;
-   y0[17] = sourceY + U.cos(255) * wheelRadius;
-   y0[18] = sourceY + U.cos(270) * wheelRadius;
-   y0[19] = sourceY + U.cos(285) * wheelRadius;
-   y0[20] = sourceY + U.cos(300) * wheelRadius;
-   y0[21] = sourceY + U.cos(315) * wheelRadius;
-   y0[22] = sourceY + U.cos(330) * wheelRadius;
-   y0[23] = sourceY + U.cos(345) * wheelRadius;
-   for (n = 24; --n >= 0; ) {
-    z0[n + 24] = z0[n];
-    y0[n + 24] = y0[n];
-   }
-   for (n = 48; --n >= 0; ) {
-    maxMinusX[0] = Math.min(maxMinusX[0], x0[n]);
-    maxPlusX[0] = Math.max(maxPlusX[0], x0[n]);
-    maxMinusY[0] = Math.min(maxMinusY[0], y0[n]);
-    maxPlusY[0] = Math.max(maxPlusY[0], y0[n]);
-    maxMinusZ[0] = Math.min(maxMinusZ[0], z0[n]);
-    maxPlusZ[0] = Math.max(maxPlusZ[0], z0[n]);
-    maxMinusX[1] += x0[n] < 0 ? x0[n] : 0;
-    maxPlusX[1] += x0[n] > 0 ? x0[n] : 0;
-    maxMinusY[1] += x0[n] < 0 ? y0[n] : 0;
-    maxPlusY[1] += x0[n] > 0 ? y0[n] : 0;
-    maxMinusZ[1] += x0[n] < 0 ? z0[n] : 0;
-    maxPlusZ[1] += x0[n] > 0 ? z0[n] : 0;
-   }
-   parts.add(new VehiclePart(this, x0, y0, z0, 48, wheelRGB, type + " wheel wheelFaces " + steers, textureType, count));//^Wheel Plates
-   if (rimRadius > 0) {
-    if (i_wheelThickness != 0) {
-     x0[0] += i_wheelThickness < 0 ? rimDepth : -rimDepth;
-    }
-    if (m_rimType.contains(" sport ")) {
-     double smallRimRadius = rimRadius * .125;
-     for (n = x0.length; --n > 0; ) {
-      x0[n] = sourceX - i_wheelThickness;
-     }
-     x0[16] = sourceX + i_wheelThickness;
-     if (i_wheelThickness > 0) {
-      x0[3] -= rimDepth;
-      x0[6] -= rimDepth;
-      x0[9] -= rimDepth;
-      x0[12] -= rimDepth;
-      x0[15] -= rimDepth;
-     } else if (i_wheelThickness < 0) {
-      x0[3] += rimDepth;
-      x0[6] += rimDepth;
-      x0[9] += rimDepth;
-      x0[12] += rimDepth;
-      x0[15] += rimDepth;
-     }
-     y0[0] = sourceY;
-     z0[0] = z0[9] = z0[16] = sourceZ;
-     y0[1] = y0[2] = sourceY - rimRadius * U.cos(5);
-     z0[1] = sourceZ - rimRadius * U.sin(5);
-     z0[2] = sourceZ + rimRadius * U.sin(5);
-     y0[3] = y0[15] = sourceY - smallRimRadius * U.cos(36);
-     z0[3] = sourceZ + smallRimRadius * U.sin(36);
-     y0[4] = y0[14] = sourceY - rimRadius * U.cos(67);
-     z0[4] = sourceZ + rimRadius * U.sin(67);
-     y0[5] = y0[13] = sourceY - rimRadius * U.cos(77);
-     z0[5] = sourceZ + rimRadius * U.sin(77);
-     y0[6] = y0[12] = sourceY + smallRimRadius * -U.cos(108);
-     z0[6] = sourceZ + smallRimRadius * U.sin(108);
-     y0[7] = y0[11] = sourceY + rimRadius * -U.cos(139);
-     z0[7] = sourceZ + rimRadius * U.sin(139);
-     y0[8] = y0[10] = sourceY + rimRadius * -U.cos(149);
-     z0[8] = sourceZ + rimRadius * U.sin(149);
-     y0[9] = sourceY + smallRimRadius;
-     z0[10] = sourceZ - rimRadius * U.sin(149);
-     z0[11] = sourceZ - rimRadius * U.sin(139);
-     z0[12] = sourceZ - smallRimRadius * U.sin(108);
-     z0[13] = sourceZ - rimRadius * U.sin(77);
-     z0[14] = sourceZ - rimRadius * U.sin(67);
-     z0[15] = sourceZ - smallRimRadius * U.sin(36);
-     y0[16] = sourceY + rimRadius * U.cos(5);
-     parts.add(new VehiclePart(this, x0, y0, z0, 17, rimRGB, type + m_rimType + " wheel sportRimFaces " + steers, textureType, count));//^Sport rim
-     for (n = x0.length; --n >= 0; ) {
-      x0[n] = sourceX - (n < 48 ? i_wheelThickness : -i_wheelThickness);
-      x0[n] *= 1.001;
-     }
-     z0[0] = sourceZ + U.sin(0) * rimRadius;
-     z0[1] = sourceZ + U.sin(15) * rimRadius;
-     z0[2] = sourceZ + U.sin(30) * rimRadius;
-     z0[3] = sourceZ + U.sin(45) * rimRadius;
-     z0[4] = sourceZ + U.sin(60) * rimRadius;
-     z0[5] = sourceZ + U.sin(75) * rimRadius;
-     z0[6] = sourceZ + U.sin(90) * rimRadius;
-     z0[7] = sourceZ + U.sin(105) * rimRadius;
-     z0[8] = sourceZ + U.sin(120) * rimRadius;
-     z0[9] = sourceZ + U.sin(135) * rimRadius;
-     z0[10] = sourceZ + U.sin(150) * rimRadius;
-     z0[11] = sourceZ + U.sin(165) * rimRadius;
-     z0[12] = sourceZ + U.sin(180) * rimRadius;
-     z0[13] = sourceZ + U.sin(195) * rimRadius;
-     z0[14] = sourceZ + U.sin(210) * rimRadius;
-     z0[15] = sourceZ + U.sin(225) * rimRadius;
-     z0[16] = sourceZ + U.sin(240) * rimRadius;
-     z0[17] = sourceZ + U.sin(255) * rimRadius;
-     z0[18] = sourceZ + U.sin(270) * rimRadius;
-     z0[19] = sourceZ + U.sin(285) * rimRadius;
-     z0[20] = sourceZ + U.sin(300) * rimRadius;
-     z0[21] = sourceZ + U.sin(315) * rimRadius;
-     z0[22] = sourceZ + U.sin(330) * rimRadius;
-     z0[23] = sourceZ + U.sin(345) * rimRadius;
-     y0[0] = sourceY + U.cos(0) * rimRadius;
-     y0[1] = sourceY + U.cos(15) * rimRadius;
-     y0[2] = sourceY + U.cos(30) * rimRadius;
-     y0[3] = sourceY + U.cos(45) * rimRadius;
-     y0[4] = sourceY + U.cos(60) * rimRadius;
-     y0[5] = sourceY + U.cos(75) * rimRadius;
-     y0[6] = sourceY + U.cos(90) * rimRadius;
-     y0[7] = sourceY + U.cos(105) * rimRadius;
-     y0[8] = sourceY + U.cos(120) * rimRadius;
-     y0[9] = sourceY + U.cos(135) * rimRadius;
-     y0[10] = sourceY + U.cos(150) * rimRadius;
-     y0[11] = sourceY + U.cos(165) * rimRadius;
-     y0[12] = sourceY + U.cos(180) * rimRadius;
-     y0[13] = sourceY + U.cos(195) * rimRadius;
-     y0[14] = sourceY + U.cos(210) * rimRadius;
-     y0[15] = sourceY + U.cos(225) * rimRadius;
-     y0[16] = sourceY + U.cos(240) * rimRadius;
-     y0[17] = sourceY + U.cos(255) * rimRadius;
-     y0[18] = sourceY + U.cos(270) * rimRadius;
-     y0[19] = sourceY + U.cos(285) * rimRadius;
-     y0[20] = sourceY + U.cos(300) * rimRadius;
-     y0[21] = sourceY + U.cos(315) * rimRadius;
-     y0[22] = sourceY + U.cos(330) * rimRadius;
-     y0[23] = sourceY + U.cos(345) * rimRadius;
-     smallRimRadius = rimRadius * .875;
-     z0[0 + 24] = sourceZ + U.sin(0) * smallRimRadius;
-     z0[1 + 24] = sourceZ + U.sin(15) * smallRimRadius;
-     z0[2 + 24] = sourceZ + U.sin(30) * smallRimRadius;
-     z0[3 + 24] = sourceZ + U.sin(45) * smallRimRadius;
-     z0[4 + 24] = sourceZ + U.sin(60) * smallRimRadius;
-     z0[5 + 24] = sourceZ + U.sin(75) * smallRimRadius;
-     z0[6 + 24] = sourceZ + U.sin(90) * smallRimRadius;
-     z0[7 + 24] = sourceZ + U.sin(105) * smallRimRadius;
-     z0[8 + 24] = sourceZ + U.sin(120) * smallRimRadius;
-     z0[9 + 24] = sourceZ + U.sin(135) * smallRimRadius;
-     z0[10 + 24] = sourceZ + U.sin(150) * smallRimRadius;
-     z0[11 + 24] = sourceZ + U.sin(165) * smallRimRadius;
-     z0[12 + 24] = sourceZ + U.sin(180) * smallRimRadius;
-     z0[13 + 24] = sourceZ + U.sin(195) * smallRimRadius;
-     z0[14 + 24] = sourceZ + U.sin(210) * smallRimRadius;
-     z0[15 + 24] = sourceZ + U.sin(225) * smallRimRadius;
-     z0[16 + 24] = sourceZ + U.sin(240) * smallRimRadius;
-     z0[17 + 24] = sourceZ + U.sin(255) * smallRimRadius;
-     z0[18 + 24] = sourceZ + U.sin(270) * smallRimRadius;
-     z0[19 + 24] = sourceZ + U.sin(285) * smallRimRadius;
-     z0[20 + 24] = sourceZ + U.sin(300) * smallRimRadius;
-     z0[21 + 24] = sourceZ + U.sin(315) * smallRimRadius;
-     z0[22 + 24] = sourceZ + U.sin(330) * smallRimRadius;
-     z0[23 + 24] = sourceZ + U.sin(345) * smallRimRadius;
-     y0[0 + 24] = sourceY + U.cos(0) * smallRimRadius;
-     y0[1 + 24] = sourceY + U.cos(15) * smallRimRadius;
-     y0[2 + 24] = sourceY + U.cos(30) * smallRimRadius;
-     y0[3 + 24] = sourceY + U.cos(45) * smallRimRadius;
-     y0[4 + 24] = sourceY + U.cos(60) * smallRimRadius;
-     y0[5 + 24] = sourceY + U.cos(75) * smallRimRadius;
-     y0[6 + 24] = sourceY + U.cos(90) * smallRimRadius;
-     y0[7 + 24] = sourceY + U.cos(105) * smallRimRadius;
-     y0[8 + 24] = sourceY + U.cos(120) * smallRimRadius;
-     y0[9 + 24] = sourceY + U.cos(135) * smallRimRadius;
-     y0[10 + 24] = sourceY + U.cos(150) * smallRimRadius;
-     y0[11 + 24] = sourceY + U.cos(165) * smallRimRadius;
-     y0[12 + 24] = sourceY + U.cos(180) * smallRimRadius;
-     y0[13 + 24] = sourceY + U.cos(195) * smallRimRadius;
-     y0[14 + 24] = sourceY + U.cos(210) * smallRimRadius;
-     y0[15 + 24] = sourceY + U.cos(225) * smallRimRadius;
-     y0[16 + 24] = sourceY + U.cos(240) * smallRimRadius;
-     y0[17 + 24] = sourceY + U.cos(255) * smallRimRadius;
-     y0[18 + 24] = sourceY + U.cos(270) * smallRimRadius;
-     y0[19 + 24] = sourceY + U.cos(285) * smallRimRadius;
-     y0[20 + 24] = sourceY + U.cos(300) * smallRimRadius;
-     y0[21 + 24] = sourceY + U.cos(315) * smallRimRadius;
-     y0[22 + 24] = sourceY + U.cos(330) * smallRimRadius;
-     y0[23 + 24] = sourceY + U.cos(345) * smallRimRadius;
-     for (n = 48; --n >= 0; ) {
-      z0[n + 48] = z0[n];
-      y0[n + 48] = y0[n];
-     }
-     parts.add(new VehiclePart(this, x0, y0, z0, 96, rimRGB, type + m_rimType + " wheel wheelRingFaces " + steers, textureType, count));//^Sport rim ring
-    } else {
-     double hexagonAngle1 = 0.86602540378443864676372317075294, hexagonAngle2 = .5;
-     y0[0] = y0[1] = y0[4] = y0[7] = sourceY;
-     z0[0] = z0[7] = sourceZ;
-     z0[1] = sourceZ + rimRadius;
-     z0[4] = sourceZ - rimRadius;
-     y0[2] = y0[3] = sourceY + hexagonAngle1 * rimRadius;
-     z0[2] = z0[6] = sourceZ + hexagonAngle2 * rimRadius;
-     z0[3] = z0[5] = sourceZ - hexagonAngle2 * rimRadius;
-     y0[5] = y0[6] = sourceY - hexagonAngle1 * rimRadius;
-     if (i_wheelThickness != 0) {
-      x0[7] = sourceX + i_wheelThickness;
-      x0[7] -= i_wheelThickness < 0 ? rimDepth : -rimDepth;
-     }
-     parts.add(new VehiclePart(this, x0, y0, z0, 8, rimRGB, type + m_rimType + " wheel rimFaces " + steers, textureType, count));//^Normal rim
-    }
-   }
-   if (Math.abs(i_wheelThickness) > 0) {
-    for (n = 24; --n >= 0; ) {
-     x0[n] = sourceX - wheelThickness;
-     x0[n + 24] = sourceX + wheelThickness;
-    }
-    z0[0] = sourceZ + U.sin(0) * i_wheelRadius;
-    z0[1] = sourceZ + U.sin(15) * i_wheelRadius;
-    z0[2] = sourceZ + U.sin(30) * i_wheelRadius;
-    z0[3] = sourceZ + U.sin(45) * i_wheelRadius;
-    z0[4] = sourceZ + U.sin(60) * i_wheelRadius;
-    z0[5] = sourceZ + U.sin(75) * i_wheelRadius;
-    z0[6] = sourceZ + U.sin(90) * i_wheelRadius;
-    z0[7] = sourceZ + U.sin(105) * i_wheelRadius;
-    z0[8] = sourceZ + U.sin(120) * i_wheelRadius;
-    z0[9] = sourceZ + U.sin(135) * i_wheelRadius;
-    z0[10] = sourceZ + U.sin(150) * i_wheelRadius;
-    z0[11] = sourceZ + U.sin(165) * i_wheelRadius;
-    z0[12] = sourceZ + U.sin(180) * i_wheelRadius;
-    z0[13] = sourceZ + U.sin(195) * i_wheelRadius;
-    z0[14] = sourceZ + U.sin(210) * i_wheelRadius;
-    z0[15] = sourceZ + U.sin(225) * i_wheelRadius;
-    z0[16] = sourceZ + U.sin(240) * i_wheelRadius;
-    z0[17] = sourceZ + U.sin(255) * i_wheelRadius;
-    z0[18] = sourceZ + U.sin(270) * i_wheelRadius;
-    z0[19] = sourceZ + U.sin(285) * i_wheelRadius;
-    z0[20] = sourceZ + U.sin(300) * i_wheelRadius;
-    z0[21] = sourceZ + U.sin(315) * i_wheelRadius;
-    z0[22] = sourceZ + U.sin(330) * i_wheelRadius;
-    z0[23] = sourceZ + U.sin(345) * i_wheelRadius;
-    y0[0] = sourceY + U.cos(0) * i_wheelRadius;
-    y0[1] = sourceY + U.cos(15) * i_wheelRadius;
-    y0[2] = sourceY + U.cos(30) * i_wheelRadius;
-    y0[3] = sourceY + U.cos(45) * i_wheelRadius;
-    y0[4] = sourceY + U.cos(60) * i_wheelRadius;
-    y0[5] = sourceY + U.cos(75) * i_wheelRadius;
-    y0[6] = sourceY + U.cos(90) * i_wheelRadius;
-    y0[7] = sourceY + U.cos(105) * i_wheelRadius;
-    y0[8] = sourceY + U.cos(120) * i_wheelRadius;
-    y0[9] = sourceY + U.cos(135) * i_wheelRadius;
-    y0[10] = sourceY + U.cos(150) * i_wheelRadius;
-    y0[11] = sourceY + U.cos(165) * i_wheelRadius;
-    y0[12] = sourceY + U.cos(180) * i_wheelRadius;
-    y0[13] = sourceY + U.cos(195) * i_wheelRadius;
-    y0[14] = sourceY + U.cos(210) * i_wheelRadius;
-    y0[15] = sourceY + U.cos(225) * i_wheelRadius;
-    y0[16] = sourceY + U.cos(240) * i_wheelRadius;
-    y0[17] = sourceY + U.cos(255) * i_wheelRadius;
-    y0[18] = sourceY + U.cos(270) * i_wheelRadius;
-    y0[19] = sourceY + U.cos(285) * i_wheelRadius;
-    y0[20] = sourceY + U.cos(300) * i_wheelRadius;
-    y0[21] = sourceY + U.cos(315) * i_wheelRadius;
-    y0[22] = sourceY + U.cos(330) * i_wheelRadius;
-    y0[23] = sourceY + U.cos(345) * i_wheelRadius;
-    for (n = 24; --n >= 0; ) {
-     z0[n + 24] = z0[n];
-     y0[n + 24] = y0[n];
-    }
-    parts.add(new VehiclePart(this, x0, y0, z0, 48, wheelRGB, type + " wheel cylindric " + steers, textureType, count));//^Treads
-   }
-   if (wheelSmoothing != 0) {
-    for (n = 24; --n >= 0; ) {
-     x0[n] = sourceX - wheelThickness;
-     x0[n + 24] = sourceX - i_wheelThickness;
-    }
-    for (n = 72; --n >= 48; ) {
-     x0[n] = sourceX + wheelThickness;
-     x0[n + 24] = sourceX + i_wheelThickness;
-    }
-    z0[0] = sourceZ + U.sin(0) * i_wheelRadius;
-    z0[1] = sourceZ + U.sin(15) * i_wheelRadius;
-    z0[2] = sourceZ + U.sin(30) * i_wheelRadius;
-    z0[3] = sourceZ + U.sin(45) * i_wheelRadius;
-    z0[4] = sourceZ + U.sin(60) * i_wheelRadius;
-    z0[5] = sourceZ + U.sin(75) * i_wheelRadius;
-    z0[6] = sourceZ + U.sin(90) * i_wheelRadius;
-    z0[7] = sourceZ + U.sin(105) * i_wheelRadius;
-    z0[8] = sourceZ + U.sin(120) * i_wheelRadius;
-    z0[9] = sourceZ + U.sin(135) * i_wheelRadius;
-    z0[10] = sourceZ + U.sin(150) * i_wheelRadius;
-    z0[11] = sourceZ + U.sin(165) * i_wheelRadius;
-    z0[12] = sourceZ + U.sin(180) * i_wheelRadius;
-    z0[13] = sourceZ + U.sin(195) * i_wheelRadius;
-    z0[14] = sourceZ + U.sin(210) * i_wheelRadius;
-    z0[15] = sourceZ + U.sin(225) * i_wheelRadius;
-    z0[16] = sourceZ + U.sin(240) * i_wheelRadius;
-    z0[17] = sourceZ + U.sin(255) * i_wheelRadius;
-    z0[18] = sourceZ + U.sin(270) * i_wheelRadius;
-    z0[19] = sourceZ + U.sin(285) * i_wheelRadius;
-    z0[20] = sourceZ + U.sin(300) * i_wheelRadius;
-    z0[21] = sourceZ + U.sin(315) * i_wheelRadius;
-    z0[22] = sourceZ + U.sin(330) * i_wheelRadius;
-    z0[23] = sourceZ + U.sin(345) * i_wheelRadius;
-    z0[0 + 24] = sourceZ + U.sin(0) * wheelRadius;
-    z0[1 + 24] = sourceZ + U.sin(15) * wheelRadius;
-    z0[2 + 24] = sourceZ + U.sin(30) * wheelRadius;
-    z0[3 + 24] = sourceZ + U.sin(45) * wheelRadius;
-    z0[4 + 24] = sourceZ + U.sin(60) * wheelRadius;
-    z0[5 + 24] = sourceZ + U.sin(75) * wheelRadius;
-    z0[6 + 24] = sourceZ + U.sin(90) * wheelRadius;
-    z0[7 + 24] = sourceZ + U.sin(105) * wheelRadius;
-    z0[8 + 24] = sourceZ + U.sin(120) * wheelRadius;
-    z0[9 + 24] = sourceZ + U.sin(135) * wheelRadius;
-    z0[10 + 24] = sourceZ + U.sin(150) * wheelRadius;
-    z0[11 + 24] = sourceZ + U.sin(165) * wheelRadius;
-    z0[12 + 24] = sourceZ + U.sin(180) * wheelRadius;
-    z0[13 + 24] = sourceZ + U.sin(195) * wheelRadius;
-    z0[14 + 24] = sourceZ + U.sin(210) * wheelRadius;
-    z0[15 + 24] = sourceZ + U.sin(225) * wheelRadius;
-    z0[16 + 24] = sourceZ + U.sin(240) * wheelRadius;
-    z0[17 + 24] = sourceZ + U.sin(255) * wheelRadius;
-    z0[18 + 24] = sourceZ + U.sin(270) * wheelRadius;
-    z0[19 + 24] = sourceZ + U.sin(285) * wheelRadius;
-    z0[20 + 24] = sourceZ + U.sin(300) * wheelRadius;
-    z0[21 + 24] = sourceZ + U.sin(315) * wheelRadius;
-    z0[22 + 24] = sourceZ + U.sin(330) * wheelRadius;
-    z0[23 + 24] = sourceZ + U.sin(345) * wheelRadius;
-    y0[0] = sourceY + U.cos(0) * i_wheelRadius;
-    y0[1] = sourceY + U.cos(15) * i_wheelRadius;
-    y0[2] = sourceY + U.cos(30) * i_wheelRadius;
-    y0[3] = sourceY + U.cos(45) * i_wheelRadius;
-    y0[4] = sourceY + U.cos(60) * i_wheelRadius;
-    y0[5] = sourceY + U.cos(75) * i_wheelRadius;
-    y0[6] = sourceY + U.cos(90) * i_wheelRadius;
-    y0[7] = sourceY + U.cos(105) * i_wheelRadius;
-    y0[8] = sourceY + U.cos(120) * i_wheelRadius;
-    y0[9] = sourceY + U.cos(135) * i_wheelRadius;
-    y0[10] = sourceY + U.cos(150) * i_wheelRadius;
-    y0[11] = sourceY + U.cos(165) * i_wheelRadius;
-    y0[12] = sourceY + U.cos(180) * i_wheelRadius;
-    y0[13] = sourceY + U.cos(195) * i_wheelRadius;
-    y0[14] = sourceY + U.cos(210) * i_wheelRadius;
-    y0[15] = sourceY + U.cos(225) * i_wheelRadius;
-    y0[16] = sourceY + U.cos(240) * i_wheelRadius;
-    y0[17] = sourceY + U.cos(255) * i_wheelRadius;
-    y0[18] = sourceY + U.cos(270) * i_wheelRadius;
-    y0[19] = sourceY + U.cos(285) * i_wheelRadius;
-    y0[20] = sourceY + U.cos(300) * i_wheelRadius;
-    y0[21] = sourceY + U.cos(315) * i_wheelRadius;
-    y0[22] = sourceY + U.cos(330) * i_wheelRadius;
-    y0[23] = sourceY + U.cos(345) * i_wheelRadius;
-    y0[0 + 24] = sourceY + U.cos(0) * wheelRadius;
-    y0[1 + 24] = sourceY + U.cos(15) * wheelRadius;
-    y0[2 + 24] = sourceY + U.cos(30) * wheelRadius;
-    y0[3 + 24] = sourceY + U.cos(45) * wheelRadius;
-    y0[4 + 24] = sourceY + U.cos(60) * wheelRadius;
-    y0[5 + 24] = sourceY + U.cos(75) * wheelRadius;
-    y0[6 + 24] = sourceY + U.cos(90) * wheelRadius;
-    y0[7 + 24] = sourceY + U.cos(105) * wheelRadius;
-    y0[8 + 24] = sourceY + U.cos(120) * wheelRadius;
-    y0[9 + 24] = sourceY + U.cos(135) * wheelRadius;
-    y0[10 + 24] = sourceY + U.cos(150) * wheelRadius;
-    y0[11 + 24] = sourceY + U.cos(165) * wheelRadius;
-    y0[12 + 24] = sourceY + U.cos(180) * wheelRadius;
-    y0[13 + 24] = sourceY + U.cos(195) * wheelRadius;
-    y0[14 + 24] = sourceY + U.cos(210) * wheelRadius;
-    y0[15 + 24] = sourceY + U.cos(225) * wheelRadius;
-    y0[16 + 24] = sourceY + U.cos(240) * wheelRadius;
-    y0[17 + 24] = sourceY + U.cos(255) * wheelRadius;
-    y0[18 + 24] = sourceY + U.cos(270) * wheelRadius;
-    y0[19 + 24] = sourceY + U.cos(285) * wheelRadius;
-    y0[20 + 24] = sourceY + U.cos(300) * wheelRadius;
-    y0[21 + 24] = sourceY + U.cos(315) * wheelRadius;
-    y0[22 + 24] = sourceY + U.cos(330) * wheelRadius;
-    y0[23 + 24] = sourceY + U.cos(345) * wheelRadius;
-    for (n = 48; --n >= 0; ) {
-     z0[n + 48] = z0[n];
-     y0[n + 48] = y0[n];
-    }
-    parts.add(new VehiclePart(this, x0, y0, z0, 96, wheelRGB, type + " wheel wheelRingFaces " + steers, textureType, count));//^Tread edges
    }
   }
  }
@@ -1260,7 +781,7 @@ public class Vehicle extends Instance {
    }
    for (Special special : specials) {
     if (special.aimType != Special.AimType.auto) {
-     boolean shootWithCanceledSteer = special.aimType != Special.AimType.normal && special.type != specialType.mine && vehicleTurretL && vehicleTurretR;
+     boolean shootWithCanceledSteer = special.aimType != Special.AimType.normal && special.type != Special.Type.mine && vehicleTurretL && vehicleTurretR;
      special.fire = VE.keySpecial[specials.indexOf(special)] || shootWithCanceledSteer;
     }
    }
@@ -1277,14 +798,14 @@ public class Vehicle extends Instance {
    }
    if (damage <= durability && crashTimer < 1) {
     if (power > 30) {
-     randomCrashSound = U.randomize(randomCrashSound, VA.crashHard.clips.size());
-     VA.crashHard.play(randomCrashSound, vehicleToCameraSoundDistance);
+     VA.randomCrashSound = U.randomize(VA.randomCrashSound, VA.crashHard.clips.size());
+     VA.crashHard.play(VA.randomCrashSound, VA.vehicleToCameraSoundDistance);
     } else {
-     randomCrashSound = U.randomize(randomCrashSound, VA.crashSoft.clips.size());
-     VA.crashSoft.play(randomCrashSound, vehicleToCameraSoundDistance);
+     VA.randomCrashSound = U.randomize(VA.randomCrashSound, VA.crashSoft.clips.size());
+     VA.crashSoft.play(VA.randomCrashSound, VA.vehicleToCameraSoundDistance);
     }
     if (bounce > .9) {
-     VA.land.play(U.random(landType == Landing.tires ? 2 : 1), vehicleToCameraSoundDistance);
+     VA.land.play(U.random(landType == Landing.tires ? 2 : 1), VA.vehicleToCameraSoundDistance);
     }
     crashTimer = 2;
    }
@@ -1349,7 +870,7 @@ public class Vehicle extends Instance {
         }
         runCrash(netDamage);//<-Crashing self now, not the colidee
         if (W.speedY < -100) {
-         land();
+         VA.land();
         }
         if (otherV.getsLifted > 0 && otherV.Y != Y) {
          otherW.speedY -= (otherV.Y < Y ? liftsOthers : -liftsOthers) * .0025 * Math.abs(U.netValue(netSpeedX, netSpeedZ) - U.netValue(otherV.netSpeedX, otherV.netSpeedZ));
@@ -1362,19 +883,21 @@ public class Vehicle extends Instance {
         damage += durability + Double.MIN_VALUE;
         otherV.damage += otherV.durability + Double.MIN_VALUE;
         VE.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : otherV.durability;
+        setCameraShake(50);
        }
        if (vehicleType != Type.aircraft && damageDealt[U.random(4)] >= 100 && (massiveHitTimer <= 0 || otherV.damage <= otherV.durability)) {
         otherV.damage += otherV.durability + Double.MIN_VALUE;
         VE.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : otherV.durability;
-        VA.massiveHit.play(U.random(VA.massiveHit.clips.size()), vehicleToCameraSoundDistance);
+        VA.massiveHit.play(U.random(VA.massiveHit.clips.size()), VA.vehicleToCameraSoundDistance);
         massiveHitTimer = U.random(5.);
         for (VehiclePart part : otherV.parts) {
          part.deform();
          part.throwChip(U.randomPlusMinus(Math.abs(netSpeed - otherV.netSpeed) * .5));
         }
+        setCameraShake(30);
        }
       }
-      if (!Double.isNaN(spinnerSpeed) && U.distance(this, otherV) < renderRadius + otherV.collisionRadius) {//<-'renderRadius' usage probably not ideal
+      if (!Double.isNaN(spinnerSpeed) && U.distance(this, otherV) < renderRadius + otherV.collisionRadius) {//<-'renderRadius' best if spinner has largest diameter of the vehicle
        spinnerHit(otherV);
       }
      }
@@ -1383,9 +906,9 @@ public class Vehicle extends Instance {
    for (Special special : specials) {
     for (Vehicle vehicle : VE.vehicles) {
      if (!U.sameVehicle(this, vehicle) && !U.sameTeam(this, vehicle) && (!vehicle.destroyed || wrathEngaged) && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
-      double diameter = special.type == specialType.mine ? U.netValue(vehicle.netSpeedX, vehicle.netSpeedY, vehicle.netSpeedZ) : special.diameter;
+      double diameter = special.type == Special.Type.mine ? U.netValue(vehicle.netSpeedX, vehicle.netSpeedY, vehicle.netSpeedZ) : special.diameter;
       for (Shot shot : special.shots) {
-       if (shot.stage > 0 && shot.hit < 1 && (shot.doneDamaging == null || !shot.doneDamaging[vehicle.index]) && (special.type != specialType.missile || vehicle.damage <= vehicle.durability) && !(special.type == specialType.mine && (U.distance(shot, vehicle) > 2000 || vehicle.damage > vehicle.durability))) {
+       if (shot.stage > 0 && shot.hit < 1 && (shot.doneDamaging == null || !shot.doneDamaging[vehicle.index]) && (special.type != Special.Type.missile || vehicle.damage <= vehicle.durability) && !(special.type == Special.Type.mine && (U.distance(shot, vehicle) > 2000 || vehicle.damage > vehicle.durability))) {
         double amount = special.diameter + vehicle.collisionRadius, shotAverageX = (shot.X + shot.behindX) * .5, shotAverageY = (shot.Y + shot.behindY) * .5, shotAverageZ = (shot.Z + shot.behindZ) * .5;
         if (
         ((U.distance(shotAverageY, vehicle.Y, shotAverageZ, vehicle.Z) < amount || U.distance(shot.behindY, vehicle.Y, shot.behindZ, vehicle.Z) < amount) && ((shot.X > vehicle.X && shot.behindX < vehicle.X) || (shot.X < vehicle.X && shot.behindX > vehicle.X))) ||//<-inBoundsX
@@ -1394,10 +917,10 @@ public class Vehicle extends Instance {
         U.distance(shot, vehicle) < diameter + vehicle.collisionRadius) {
          hitCheck(vehicle);
          double shotDamage = special.damageDealt;
-         if (special.type == specialType.raygun || special.type == specialType.flamethrower || special.type == specialType.thewrath || special.type.name().contains(specialType.blaster.name())) {
-          shotDamage /= special.type == specialType.flamethrower ? Math.max(1, shot.stage) : 1;
+         if (special.type == Special.Type.raygun || special.type == Special.Type.flamethrower || special.type == Special.Type.thewrath || special.type.name().contains(Special.Type.blaster.name())) {
+          shotDamage /= special.type == Special.Type.flamethrower ? Math.max(1, shot.stage) : 1;
           shotDamage *= VE.tick;
-         } else if (special.type != specialType.forcefield) {
+         } else if (special.type != Special.Type.forcefield) {
           shot.hit = 1;
          }
          if ((vehicle.damage += shotDamage) <= vehicle.durability && !replay) {
@@ -1413,7 +936,7 @@ public class Vehicle extends Instance {
             wheel.speedZ += U.randomPlusMinus(special.pushPower);
            }
           }
-          if (vehicle.getsLifted >= 0 && (special.type == specialType.forcefield || U.contains(special.type.name(), specialType.shell.name(), specialType.missile.name()))) {
+          if (vehicle.getsLifted >= 0 && (special.type == Special.Type.forcefield || U.contains(special.type.name(), Special.Type.shell.name(), Special.Type.missile.name()))) {
            for (Wheel wheel : vehicle.wheels) {
             wheel.speedY += U.randomPlusMinus(special.pushPower);
            }
@@ -1421,7 +944,7 @@ public class Vehicle extends Instance {
          }
          for (VehiclePart part : vehicle.parts) {
           part.deform();
-          if (special.type != specialType.particledisintegrator) {
+          if (special.type != Special.Type.particledisintegrator) {
            part.throwChip(U.randomPlusMinus(shot.speed * .5));
           }
          }
@@ -1429,22 +952,22 @@ public class Vehicle extends Instance {
          if (special.useSmallHits) {
           VA.hitShot.play(U.random(VA.hitShot.clips.size()), shotToCameraSoundDistance);
          }
-         if (special.type == specialType.heavymachinegun || special.type == specialType.blaster) {
+         if (special.type == Special.Type.heavymachinegun || special.type == Special.Type.blaster) {
           VA.hitShot.play(U.random(7), shotToCameraSoundDistance);
-         } else if (special.type == specialType.heavyblaster || special.type == specialType.thewrath) {//<-These specials have no hitExplosive
+         } else if (special.type == Special.Type.heavyblaster || special.type == Special.Type.thewrath) {//<-These specials don't load hitExplosive audio, so don't call!
           VA.crashDestroy.play(U.random(VA.crashDestroy.clips.size()), shotToCameraSoundDistance);
-         } else if (special.type.name().contains(specialType.shell.name()) || special.type == specialType.missile || special.type == specialType.bomb) {
+         } else if (special.type.name().contains(Special.Type.shell.name()) || special.type == Special.Type.missile || special.type == Special.Type.bomb) {
           VA.crashDestroy.play(U.random(VA.crashDestroy.clips.size()), shotToCameraSoundDistance);
           VA.hitExplosive.play(U.random(VA.hitExplosive.clips.size()), shotToCameraSoundDistance);
-         } else if (special.type == specialType.railgun) {
+         } else if (special.type == Special.Type.railgun) {
           for (int n = 4; --n >= 0; ) {
            VA.crashHard.play(U.random(VA.crashHard.clips.size()), shotToCameraSoundDistance);
           }
-         } else if (special.type == specialType.forcefield) {
-          VA.crashHard.play(U.random(VA.crashHard.clips.size()), vehicleToCameraSoundDistance);
-          VA.crashHard.play(U.random(VA.crashHard.clips.size()), vehicleToCameraSoundDistance);
-          VA.crashHard.play(U.random(VA.crashHard.clips.size()), vehicleToCameraSoundDistance);
-         } else if (special.type == specialType.mine) {
+         } else if (special.type == Special.Type.forcefield) {
+          VA.crashHard.play(U.random(VA.crashHard.clips.size()), VA.vehicleToCameraSoundDistance);
+          VA.crashHard.play(U.random(VA.crashHard.clips.size()), VA.vehicleToCameraSoundDistance);
+          VA.crashHard.play(U.random(VA.crashHard.clips.size()), VA.vehicleToCameraSoundDistance);
+         } else if (special.type == Special.Type.mine) {
           VA.mineExplosion.play(shotToCameraSoundDistance);
          }
          if (U.random() < .25 && special.ricochets) {
@@ -1457,7 +980,7 @@ public class Vehicle extends Instance {
        }
       }
       if (vehicleType == Type.turret && VE.bonusHolder < 0 && damage <= durability) {
-       double bonusX = VE.bonusX, bonusY = VE.bonusY, bonusZ = VE.bonusZ, radius = special.diameter + TE.bonusBig.getRadius();
+       double bonusX = TE.bonusX, bonusY = TE.bonusY, bonusZ = TE.bonusZ, radius = special.diameter + TE.bonusBig.getRadius();
        for (Shot shot : special.shots) {
         if (shot.stage > 0) {
          double shotAverageX = (shot.X + shot.behindX) * .5, shotAverageY = (shot.Y + shot.behindY) * .5, shotAverageZ = (shot.Z + shot.behindZ) * .5;
@@ -1466,7 +989,7 @@ public class Vehicle extends Instance {
          ((U.distance(shotAverageX, bonusX, shotAverageY, bonusY) < radius || U.distance(shot.behindX, bonusX, shot.behindY, bonusY) < radius) && ((shot.Z > bonusZ && shot.behindZ < bonusZ) || (shot.Z < bonusZ && shot.behindZ > bonusZ))) ||//<-inBoundsZ
          ((U.distance(shotAverageX, bonusX, shotAverageZ, bonusZ) < radius || U.distance(shot.behindX, bonusX, shot.behindZ, bonusZ) < radius) && ((shot.Y > bonusY && shot.behindY < bonusY) || (shot.Y < bonusY && shot.behindY > bonusY))) ||//<-inBoundsY
          U.distance(shot.X, bonusX, shot.Y, bonusY, shot.Z, bonusZ) < radius) {
-          VE.setBonusHolder(this);
+          TE.setBonusHolder(this);
          }
         }
        }
@@ -1553,9 +1076,9 @@ public class Vehicle extends Instance {
          part.deform();
          part.throwChip(U.randomPlusMinus(500.));
         }
-        if (nuclear) {
+        if (nuclear) {//<-Is any of this needed?
          //VA.hitExplosive.play(U.random(VA.hitExplosive.clips.size()), vehicleToCameraSoundDistance);
-         VA.crashDestroy.play(U.random(VA.crashDestroy.clips.size()), vehicleToCameraSoundDistance);
+         VA.crashDestroy.play(U.random(VA.crashDestroy.clips.size()), VA.vehicleToCameraSoundDistance);
         }
        }
       }
@@ -1582,15 +1105,15 @@ public class Vehicle extends Instance {
         }
         part.throwChip(U.randomPlusMinus(vehicle.netSpeed));
        }
-       VA.crashHard.play(U.random(4), vehicleToCameraSoundDistance);
-       VA.crashHard.play(U.random(4), vehicleToCameraSoundDistance);
-       VA.crashHard.play(U.random(4), vehicleToCameraSoundDistance);
+       VA.crashHard.play(U.random(4), VA.vehicleToCameraSoundDistance);
+       VA.crashHard.play(U.random(4), VA.vehicleToCameraSoundDistance);
+       VA.crashHard.play(U.random(4), VA.vehicleToCameraSoundDistance);
       }
      }
     }
     if (!reviveImmortality) {
      for (Special special : specials) {
-      if (special.fire && special.type == specialType.particledisintegrator) {
+      if (special.fire && special.type == Special.Type.particledisintegrator) {
        for (Vehicle vehicle : VE.vehicles) {
         if (!U.sameVehicle(this, vehicle) && !U.sameTeam(this, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
          if (
@@ -1614,9 +1137,9 @@ public class Vehicle extends Instance {
         part.deform();
         part.throwChip(U.randomPlusMinus(500.));
        }
-       VA.crashHard.play(U.random(VA.crashHard.clips.size()), vehicleToCameraSoundDistance);
-       VA.crashHard.play(U.random(VA.crashHard.clips.size()), vehicleToCameraSoundDistance);
-       VA.crashHard.play(U.random(VA.crashHard.clips.size()), vehicleToCameraSoundDistance);
+       VA.crashHard.play(U.random(VA.crashHard.clips.size()), VA.vehicleToCameraSoundDistance);
+       VA.crashHard.play(U.random(VA.crashHard.clips.size()), VA.vehicleToCameraSoundDistance);
+       VA.crashHard.play(U.random(VA.crashHard.clips.size()), VA.vehicleToCameraSoundDistance);
       }
      }
      for (Fire fire : E.fires) {
@@ -1638,7 +1161,7 @@ public class Vehicle extends Instance {
         part.deform();
         part.throwChip(U.randomPlusMinus(boulder.speed));
        }
-       VA.crashDestroy.play(U.random(VA.crashDestroy.clips.size()), vehicleToCameraSoundDistance);
+       VA.crashDestroy.play(U.random(VA.crashDestroy.clips.size()), VA.vehicleToCameraSoundDistance);
       }
      }
      for (VolcanoRock volcanoRock : E.volcanoRocks) {
@@ -1649,7 +1172,7 @@ public class Vehicle extends Instance {
         part.deform();
         part.throwChip(U.randomPlusMinus(U.netValue(volcanoRock.speedX, volcanoRock.speedY, volcanoRock.speedZ)));
        }
-       VA.crashDestroy.play(U.random(VA.crashDestroy.clips.size()), vehicleToCameraSoundDistance);
+       VA.crashDestroy.play(U.random(VA.crashDestroy.clips.size()), VA.vehicleToCameraSoundDistance);
       }
      }
      for (Meteor meteor : E.meteors) {
@@ -1671,7 +1194,7 @@ public class Vehicle extends Instance {
         part.deform();
         part.throwChip(U.randomPlusMinus(U.netValue(meteor.speedX, E.meteorSpeed, meteor.speedZ)));
        }
-       VA.crashDestroy.play(U.random(VA.crashDestroy.clips.size()), vehicleToCameraSoundDistance);
+       VA.crashDestroy.play(U.random(VA.crashDestroy.clips.size()), VA.vehicleToCameraSoundDistance);
       }
      }
     }
@@ -1747,9 +1270,10 @@ public class Vehicle extends Instance {
   }
   AI = new AI(this);
   loadWeapons();
-  loadSounds();
-  onVolcano = E.volcanoExists && U.distance(X, E.volcanoX, Z, E.volcanoZ) < E.volcanoBottomRadius && U.distance(X, E.volcanoX, Z, E.volcanoZ) > E.volcanoTopRadius && Y > -E.volcanoBottomRadius + U.distance(X, E.volcanoX, Z, E.volcanoZ);
-  Y = onVolcano ? Math.min(Y, -E.volcanoBottomRadius + U.distance(X, E.volcanoX, Z, E.volcanoZ)) - (vehicleType == Type.turret ? turretBaseY : 0) : Y;
+  VA.load(this);
+  double volcanoDistance = U.distance(X, E.volcanoX, Z, E.volcanoZ);
+  onVolcano = E.volcanoExists && volcanoDistance < E.volcanoBottomRadius && volcanoDistance > E.volcanoTopRadius && Y > -E.volcanoBottomRadius + volcanoDistance;
+  Y = onVolcano ? Math.min(Y, -E.volcanoBottomRadius + volcanoDistance) - (vehicleType == Type.turret ? turretBaseY : 0) : Y;
   atPoolXZ = E.poolExists && U.distance(X, E.poolX, Z, E.poolZ) < E.pool[0].getRadius();
   inPool = atPoolXZ && Y + clearanceY > 0;
   localVehicleGround = E.groundLevel + (atPoolXZ ? E.poolDepth : 0);
@@ -1757,187 +1281,28 @@ public class Vehicle extends Instance {
  }
 
  private void loadWeapons() {
+  int n;
   for (Special special : specials) {
-   if (special.type == specialType.gun) {
-    special.speed = 3000;
-    special.diameter = 25;
-    special.damageDealt = 100;
-    special.pushPower = 2;
-    special.width = 4;
-    special.length = special.width * 3;
-    special.ricochets = special.useSmallHits = hasShooting = true;
-   } else if (special.type == specialType.machinegun) {
-    special.speed = 3000;
-    special.diameter = 25;
-    special.damageDealt = 50;
-    special.pushPower = 1;
-    special.width = 4;
-    special.length = special.width * 3;
-    special.ricochets = special.useSmallHits = hasShooting = true;
-   } else if (special.type == specialType.minigun) {
-    special.speed = 3000;
-    special.diameter = 10;
-    special.damageDealt = 25;
-    special.pushPower = 0;
-    special.width = 2;
-    special.length = special.width * 4;
-    special.ricochets = special.useSmallHits = hasShooting = true;
-   } else if (special.type == specialType.heavymachinegun) {
-    special.speed = 3000;
-    special.diameter = 50;
-    special.damageDealt = 100;
-    special.pushPower = 50;
-    special.width = 5;
-    special.length = special.width * 3;
-    special.ricochets = special.useSmallHits = hasShooting = true;
-   } else if (special.type == specialType.shotgun) {
-    special.speed = 3000;
-    special.diameter = 25;
-    special.damageDealt = 25;
-    special.pushPower = 1;
-    special.width = 6;
-    special.length = special.width * 2;
-    special.ricochets = special.useSmallHits = true;
-   } else if (special.type == specialType.raygun) {
-    special.speed = 15000;
-    special.diameter = 10;
-    special.damageDealt = 100;//<-Multiplied by tick in-game
-    special.pushPower = 0;
-    special.width = 5;
-    special.length = special.width * 10;
-    special.useSmallHits = hasShooting = true;
-   } else if (special.type == specialType.shell) {
-    special.speed = 500;
-    special.diameter = 100;
-    special.damageDealt = 1500;
-    special.pushPower = 1000;
-    special.width = 12;
-    special.length = special.width * 2;
-    explosionType = ExplosionType.normal;
-    special.AIAimPrecision = 10;
-    special.hasThrust = hasShooting = true;
-   } else if (special.type == specialType.powershell) {
-    special.speed = 3000;
-    special.diameter = 200;
-    special.damageDealt = 15000;
-    special.pushPower = 1000;
-    special.width = 24;
-    special.length = special.width * 2;
-    explosionType = ExplosionType.normal;
-    special.AIAimPrecision = 10;
-    special.hasThrust = hasShooting = true;
-   } else if (special.type == specialType.bomb) {
-    special.speed = 0;
-    special.diameter = 100;
-    special.damageDealt = 1500;
-    special.pushPower = 1000;
-    special.width = 12;
-    special.length = special.width * 2;
-    explosionType = ExplosionType.normal;
-   } else if (special.type == specialType.railgun) {
-    special.speed = 20000;
-    special.diameter = 500;
-    special.damageDealt = 7500;
-    special.pushPower = 1000;
-    special.width = 10;
-    special.length = special.width * 3;
-    special.AIAimPrecision = 5;
-    hasShooting = true;
-   } else if (special.type == specialType.missile) {
-    special.speed = 500;
-    special.diameter = 100;
-    special.damageDealt = 1000;
-    special.pushPower = 1000;
-    special.width = 6;
-    special.length = special.width * 4;
-    explosionType = ExplosionType.normal;
-    special.AIAimPrecision = 10;
-    special.hasThrust = hasShooting = true;
-   } else if (special.type == specialType.blaster) {
-    special.speed = 1500;
-    special.diameter = 20;
-    special.damageDealt = 500;//<-Multiplied by tick in-game
-    special.pushPower = 100;
-    special.width = 15;
-    special.useSmallHits = hasShooting = true;
-   } else if (special.type == specialType.heavyblaster) {
-    special.speed = 750;
-    special.diameter = 250;
-    special.damageDealt = 2500;//<-Multiplied by tick in-game
-    special.pushPower = 2000;
-    special.width = 200;
-    special.AIAimPrecision = 10;
-    hasShooting = true;
-   } else if (special.type == specialType.flamethrower) {
-    special.speed = 250;
-    special.diameter = 500;
-    special.damageDealt = 250;//<-Multiplied by tick in-game
-    special.pushPower = 0;
-    special.width = 10;
-    special.length = special.width;
-    hasShooting = true;
-   } else if (special.type == specialType.forcefield) {
-    special.diameter = collisionRadius * 2;
-    special.damageDealt = 2500;
-    special.pushPower = 2000;
-    special.width = collisionRadius * 2;
-   } else if (special.type == specialType.mine) {
-    special.diameter = 500;
-    special.damageDealt = 15000;
-    special.pushPower = 500;
-    special.width = 100;
-    special.length = special.width * .2;
-    explosionType = ExplosionType.normal;
-   } else if (special.type == specialType.thewrath) {
-    special.speed = 3000;
-    special.diameter = absoluteRadius;
-    special.damageDealt = 2000;//<-Multiplied by tick in-game
-    special.width = absoluteRadius * 2;
-    special.AIAimPrecision = 10;
-   }
-   special.AIAimPrecision = special.homing ? Long.MAX_VALUE : special.AIAimPrecision;
+   special.load();
   }
-  if (explosionType.name().contains(ExplosionType.nuclear.name())) {
-   explosionDiameter = 0;
-   explosionDamage = 0;
-  } else {
+  if (!explosionType.name().contains(ExplosionType.nuclear.name())) {
    explosionDiameter = 500;
    explosionDamage = 250;
   }
   explosionPush = 500;
-  int n;
   if (explosionType != ExplosionType.none) {
    for (n = E.explosionQuantity; --n >= 0; ) {
     explosions.add(new Explosion(this));
    }
-  }
-  for (Special special : specials) {
-   if (special.type != specialType.particledisintegrator && special.type != specialType.spinner) {
-    for (n = E.shotQuantity; --n >= 0; ) {
-     special.shots.add(new Shot(special));
-    }
-   }
-   if (!special.type.name().contains(specialType.blaster.name()) && special.type != specialType.raygun && special.type != specialType.forcefield && special.type != specialType.mine && special.type != specialType.thewrath) {
-    for (Port port : special.ports) {
-     port.spit = new Spit(special);
-    }
-   }
-   if (special.useSmallHits) {
-    VA.hitShot = new Sound("hitShot", Double.POSITIVE_INFINITY);
-   }
-   if (special.ricochets) {
-    VA.hitRicochet = new Sound("hitRicochet", Double.POSITIVE_INFINITY);
-   }
-   wrathStuck = special.type == specialType.thewrath ? new boolean[VE.vehiclesInMatch] : wrathStuck;
   }
   gotNukeBlasted = explosionType == ExplosionType.maxnuclear ? new boolean[VE.vehiclesInMatch] : null;
  }
 
  private void matchStartPlacement() {
   Y = XY = YZ = 0;
-  X = U.random(Math.min(50000., E.limitR)) + U.random(Math.max(-50000., E.limitL));
-  Z = U.random(Math.min(50000., E.limitFront)) + U.random(Math.max(-50000., E.limitBack));
-  XZ = vehicleType != Type.turret && VE.randomStartAngle ? U.randomPlusMinus(180.) : 0;//<-Turrets face forward for less confusing placement
+  X = U.random(Math.min(50000., E.mapBounds.right)) + U.random(Math.max(-50000., E.mapBounds.left));
+  Z = U.random(Math.min(50000., E.mapBounds.forward)) + U.random(Math.max(-50000., E.mapBounds.backward));
+  XZ = vehicleType != Type.turret && VE.randomStartAngle ? U.randomPlusMinus(180.) : 0;//<-Turrets ALWAYS face forward for less confusing placement
   if (VE.mapName.equals("Vicious Versus V3") && VE.vehiclesInMatch > 1) {
    boolean green = index < VE.vehiclesInMatch >> 1;
    if (green) {
@@ -1960,8 +1325,8 @@ public class Vehicle extends Instance {
    }
   } else if (VE.mapName.equals("the Test of Damage")) {
    if (damageDealt[U.random(4)] < 100 && vehicleType != Type.turret) {
-    X = U.random(E.limitR);
-    Z = U.random(E.limitBack);
+    X = U.random(E.mapBounds.right);
+    Z = U.random(E.mapBounds.backward);
    }
   } else if (VE.mapName.equals("Vehicular Falls")) {
    Y -= 100000;
@@ -1982,6 +1347,8 @@ public class Vehicle extends Instance {
     X = U.randomPlusMinus(14000.);
     Z = -U.random(31000.);
    }
+  } else if (VE.mapName.equals("Cold Fury")) {
+   Y = -4000;
   } else if (VE.mapName.equals("the Tunnel of Doom")) {
    if (!explosionType.name().contains(ExplosionType.nuclear.name()) && vehicleType != Type.turret) {
     X = U.randomPlusMinus(700.);
@@ -1994,7 +1361,7 @@ public class Vehicle extends Instance {
    if (vehicleType != Type.turret) {
     X = Z = 0;
    }
-  } else if (E.volcanoExists) {
+  } else if (VE.mapName.equals("Volcanic Prophecy")) {
    X *= 2;
    Z *= 2;
   } else if (VE.mapName.equals("V.E. Speedway 2000000")) {
@@ -2020,6 +1387,8 @@ public class Vehicle extends Instance {
    XZ = random ? 180 : 0;
    Z = random ? 1050000 : -1050000;
    Z += U.randomPlusMinus(25000.);
+  } else if (VE.mapName.equals("Parallel Universe Portal")) {
+   Z = 0;
   }
   if (E.gravity == 0) {
    if (VE.mapName.equals("Outer Space V1")) {
@@ -2100,11 +1469,11 @@ public class Vehicle extends Instance {
   double turnSpeed = steerInPlace ? 1 : Math.min(1, Math.max(netSpeed, Math.abs(speed)) * .025);
   turnSpeed *= speed < 0 ? -1 : 1;
   if (handbrake && mode == Mode.fly) {
-   XZ += speedXZ * turnSpeed * .2 * polarity * VE.tick;
+   XZ += speedXZ * turnSpeed * fromAngleToVelocityConstant * polarity * VE.tick;
   } else if (mode.name().startsWith(Mode.drive.name()) || phantomEngaged) {
    if (!flipped) {
-    airSpinXZ = (handbrake ? .2 : .0625) * speedXZ * turnSpeed;
-    XZ += speedXZ * turnSpeed * .2 * VE.tick;
+    airSpinXZ = (handbrake ? fromAngleToVelocityConstant : .0625) * speedXZ * turnSpeed;
+    XZ += speedXZ * turnSpeed * fromAngleToVelocityConstant * VE.tick;
    }
   } else if (mode != Mode.fly && (!aerialControlEnhanced || mode != Mode.stunt)) {
    XZ += airSpinXZ * VE.tick;
@@ -2186,14 +1555,14 @@ public class Vehicle extends Instance {
      wheel.speedY -= U.random(.3) * Math.abs(speed) * bounce;
     }
     if (netSpeedY < -50 && bounce > .9) {
-     VA.land.playIfNotPlaying(U.random(VA.land.clips.size()), vehicleToCameraSoundDistance);
+     VA.land.playIfNotPlaying(U.random(VA.land.clips.size()), VA.vehicleToCameraSoundDistance);
     }
    } else if (terrainProperties.contains(" maxbounce ")) {
     for (Wheel wheel : wheels) {
      wheel.speedY -= U.random(.6) * Math.abs(speed) * bounce;
     }
     if (netSpeedY < -50 && bounce > .9) {
-     VA.land.playIfNotPlaying(U.random(VA.land.clips.size()), vehicleToCameraSoundDistance);
+     VA.land.playIfNotPlaying(U.random(VA.land.clips.size()), VA.vehicleToCameraSoundDistance);
     }
    }
    mode = Mode.neutral;
@@ -2206,7 +1575,7 @@ public class Vehicle extends Instance {
   if (!phantomEngaged) {
    double hitsGroundY = -5;
    if (onAntiGravity) {
-    hitsGroundY = Double.POSITIVE_INFINITY;
+    hitsGroundY = Double.POSITIVE_INFINITY;//<-Why was this done? To eliminate '-5' traction-lock, maybe?
     onAntiGravity = false;
    }
    double bounceBackForce = flipped ? 1 : Math.abs(U.sin(XY)) + Math.abs(U.sin(YZ)),
@@ -2215,7 +1584,7 @@ public class Vehicle extends Instance {
    for (Wheel wheel : wheels) {
     if (wheel.Y > hitsGroundY + localVehicleGround) {
      mode = Mode.drive;
-     if (Y + clearance > localVehicleGround + 100) {//Remove?
+     if (Y + clearance > localVehicleGround + 100) {//Check, and Remove if bounce dust looks pointless
       deployDust(wheel);
      }
      wheel.Y = localVehicleGround;
@@ -2223,7 +1592,7 @@ public class Vehicle extends Instance {
       runCrash(wheel.speedY * bounceBackForce * .1);
      }
      if (wheel.speedY > 100) {
-      land();
+      VA.land();
      }
      if (wheel.speedY > 0) {
       wheel.speedY *= destroyed ? 0 : -bounce * flatPlaneBounce;
@@ -2231,7 +1600,7 @@ public class Vehicle extends Instance {
      wheel.XY -= wheel.XY * .25;
      wheel.YZ -= wheel.YZ * .25;
      if (flipped && terrainProperties.contains(" hard ")) {
-      sparks(wheel, true);
+      wheel.sparks(true);
      }
      wheel.terrainRGB[0] = E.groundRGB[0];
      wheel.terrainRGB[1] = E.groundRGB[1];
@@ -2249,8 +1618,9 @@ public class Vehicle extends Instance {
     spinnerHit(null);
    }
    mode = amphibious && inPool ? Mode.drivePool : mode;
-   terrainProperties = E.terrain + (U.contains(E.terrain, " paved ", " rock ", " grid ", " metal ", " brightmetal") ? " hard " : " ground ");
-   runPhysicsVehicleTrackPlaneInteraction(hitsGroundY, crashLand, bounceBackForce, flatPlaneBounce, gravityCompensation);
+   terrainProperties = E.vehicleTerrain;
+   setTerrainFromTrackPlanes(gravityCompensation);
+   runPhysicsVehicleTrackPlaneInteraction(crashLand, bounceBackForce, flatPlaneBounce, gravityCompensation);
    mode = onVolcano ? Mode.drive : mode;
    if (mode == Mode.drive && (wheels.get(0).angledSurface || wheels.get(1).angledSurface || wheels.get(2).angledSurface || wheels.get(3).angledSurface)) {
     XY = (Math.abs(XY) > 90 ? 180 : 0) + (wheels.get(0).XY + wheels.get(1).XY + wheels.get(2).XY + wheels.get(3).XY) * .25;
@@ -2281,16 +1651,16 @@ public class Vehicle extends Instance {
    runPhysicsCollisionSpin();
   }
   speed = topSpeeds[2] < Long.MAX_VALUE ? U.clamp(-topSpeeds[2], speed, topSpeeds[2]) : speed;
-  if (damage > durability && !destroyed) {
+  if (explosionsWhenDestroyed > 0 && damage > durability && !destroyed) {
    for (n = (int) explosionsWhenDestroyed; --n >= 0; ) {
     explosions.get(currentExplosion).deploy(U.randomPlusMinus(absoluteRadius), U.randomPlusMinus(absoluteRadius), U.randomPlusMinus(absoluteRadius), this);
     currentExplosion = ++currentExplosion >= E.explosionQuantity ? 0 : currentExplosion;
-    VA.explode.play(U.random(VA.explode.clips.size()), vehicleToCameraSoundDistance);
    }
+   setCameraShake(30);
+   VA.explode.play(U.random(VA.explode.clips.size()), VA.vehicleToCameraSoundDistance);
   }
   if (!phantomEngaged) {
    runPhysicsInTornado();
-   runPhysicsHitTsunami();
   }
   for (Wheel wheel : wheels) {
    if (!Double.isNaN(wheel.hitOtherX)) {
@@ -2361,27 +1731,12 @@ public class Vehicle extends Instance {
     XZ += Math.abs(YZ) > 90 && Math.abs(XY) < 90 ? 180 : 0;
     XY = YZ = 0;
    }
-   if (damage <= durability && mode == Mode.drive && (bounce > 0 || absorbShock)) {
-    if (vehicleType == Type.vehicle && !flipped) {
-     XY += speed * clearanceY * (absorbShock ? 1 : bounce) * speedXZ * (speed < 0 ? -.0000133 : .0000133) * (Math.abs(XY) > 10 ? .5 : 1);
-    }
-    double vibrate = terrainProperties.contains(" rock ") ? .0003 : terrainProperties.contains(" ground ") ? .00015 : 0;
-    if (vibrate > 0) {
-     if (absorbShock) {
-      for (Wheel wheel : wheels) {
-       wheel.vibrate = U.randomPlusMinus(Math.min(vibrate * netSpeed * clearanceY * 2, clearanceY));
-      }
-     } else {
-      YZ += U.clamp(-180 - U.random(180.), U.randomPlusMinus(vibrate) * netSpeed * clearanceY * bounce, 180 + U.random(180.));
-      XY += U.clamp(-180 - U.random(180.), U.randomPlusMinus(vibrate) * netSpeed * clearanceY * bounce, 180 + U.random(180.));
-     }
-    }
-   }
+   runPhysicsGroundCruise();
   }
   if (engine == Engine.hotrod && !destroyed && U.random() < .5) {
    XY += U.random() < .5 ? 1 : -1;
   }
-  runVehicleTrackInteraction(replay);
+  runVehicleCourseInteraction(replay);
   runPhysicsStunts(replay);
   speed *= (wheels.get(0).againstWall || wheels.get(1).againstWall || wheels.get(2).againstWall || wheels.get(3).againstWall) && grip > 100 && E.gravity != 0 ? .95 : 1;
   if (drag != 0) {
@@ -2393,15 +1748,15 @@ public class Vehicle extends Instance {
   }
   speed -= Math.abs(speed) > topSpeeds[1] ? speed * Math.abs(speed) * .0000005 * VE.tick : 0;
   if (E.slowVehiclesWhenAtLimit) {
-   if (X > E.limitR || X < E.limitL) {
+   if (X > E.mapBounds.right || X < E.mapBounds.left) {
     wheels.get(U.random(4)).speedX = wheels.get(U.random(4)).speedZ = 0;
     speed *= .95;
    }
-   if (Math.abs(Y) > Math.abs(E.limitY)) {
+   if (Math.abs(Y) > Math.abs(E.mapBounds.Y)) {
     wheels.get(U.random(4)).speedY = 0;
     speed *= .95;
    }
-   if (Z > E.limitFront || Z < E.limitBack) {
+   if (Z > E.mapBounds.forward || Z < E.mapBounds.backward) {
     wheels.get(U.random(4)).speedX = wheels.get(U.random(4)).speedZ = 0;
     speed *= .95;
    }
@@ -2412,9 +1767,9 @@ public class Vehicle extends Instance {
     wheel.speedY = Math.min(wheel.speedY, 0);
    }
   }
-  X = U.clamp(E.limitL, X, E.limitR);
-  Z = U.clamp(E.limitBack, Z, E.limitFront);
-  Y = U.clamp(E.limitY, Y, -E.limitY);
+  X = U.clamp(E.mapBounds.left, X, E.mapBounds.right);
+  Z = U.clamp(E.mapBounds.backward, Z, E.mapBounds.forward);
+  Y = U.clamp(E.mapBounds.Y, Y, -E.mapBounds.Y);
   mode = (mode == Mode.stunt || mode == Mode.fly) && destroyed ? Mode.neutral : mode;
   while (Math.abs(XZ - cameraXZ) > 180) {
    cameraXZ += cameraXZ < XZ ? 360 : -360;
@@ -2424,7 +1779,7 @@ public class Vehicle extends Instance {
  }
 
  private void runPhysicsVehicleMound(double clearance, double gravityCompensation) {
-  for (TrackPart TP : VE.trackParts) {
+  for (TrackPart TP : TE.trackParts) {
    if (TP.mound != null) {
     double distance = U.distance(X, TP.X, Z, TP.Z),
     radiusTop = TP.mound.getMinorRadius(), moundHeight = TP.mound.getHeight();
@@ -2445,6 +1800,7 @@ public class Vehicle extends Instance {
        YZ = -baseAngle * U.cos(vehicleMoundXZ);
        Y = finalHeight;
        mode = Mode.drive;
+       terrainProperties = E.vehicleTerrain;
        for (Wheel wheel : wheels) {
         wheel.terrainRGB[0] = E.groundRGB[0];
         wheel.terrainRGB[1] = E.groundRGB[1];
@@ -2560,14 +1916,54 @@ public class Vehicle extends Instance {
      vehicleTurretSpeedYZ += (vehicleTurretSpeedYZ < 0 ? turnRate : vehicleTurretSpeedYZ > 0 ? -turnRate : 0) * 2 * VE.tick;
     }
    }
-   vehicleTurretXZ += vehicleTurretSpeedXZ * .2 * VE.tick;
+   vehicleTurretXZ += vehicleTurretSpeedXZ * fromAngleToVelocityConstant * VE.tick;
    while (vehicleTurretXZ < -180) vehicleTurretXZ += 360;
    while (vehicleTurretXZ > 180) vehicleTurretXZ -= 360;
-   vehicleTurretYZ = U.clamp(turretVerticalRanges[0], vehicleTurretYZ + vehicleTurretSpeedYZ * .2 * VE.tick, turretVerticalRanges[1]);
+   vehicleTurretYZ = U.clamp(turretVerticalRanges[0], vehicleTurretYZ + vehicleTurretSpeedYZ * fromAngleToVelocityConstant * VE.tick, turretVerticalRanges[1]);
    if (!destroyed && hear) {
-    VA.turret.loop(vehicleToCameraSoundDistance);
+    VA.turret.loop(VA.vehicleToCameraSoundDistance);
    } else {
     VA.turret.stop();
+   }
+  }
+ }
+
+ private void runPhysicsGroundCruise() {
+  if (damage <= durability && mode == Mode.drive && bounce > 0) {
+   if (vehicleType == Type.vehicle && !flipped) {
+    XY += speed * clearanceY * bounce * speedXZ * (speed < 0 ? -.0000133 : .0000133) * (Math.abs(XY) > 10 ? .5 : 1);
+   }
+   boolean rockTerrain = terrainProperties.contains(" rock ");
+   if (rockTerrain || terrainProperties.contains(" ground ")) {
+    if (Double.isNaN(shockAbsorb)) {
+     double vibrate = terrainProperties.contains(" rock ") ? .0003 : .00015;
+     YZ += U.clamp(-180 - U.random(180.), U.randomPlusMinus(vibrate) * netSpeed * clearanceY * bounce, 180 + U.random(180.));
+     XY += U.clamp(-180 - U.random(180.), U.randomPlusMinus(vibrate) * netSpeed * clearanceY * bounce, 180 + U.random(180.));
+    } else {
+     double vibrate = rockTerrain ? 50 : 25;
+     double[] storeVibrate = new double[4];
+     for (int n = 4; --n >= 0; ) {
+      storeVibrate[n] = U.randomPlusMinus(Math.min(vibrate * netSpeed * bounce * .002, vibrate));
+      wheels.get(n).vibrate = storeVibrate[n] * shockAbsorb;
+     }
+     if (shockAbsorb < 1) {
+      double setXY = 0, setYZ = 0;
+      setXY -= storeVibrate[0];
+      setXY += storeVibrate[1];
+      setXY -= storeVibrate[2];
+      setXY += storeVibrate[3];
+      setXY /= wheelGapLeftToRight;
+      setXY -= setXY * shockAbsorb;
+      setYZ -= storeVibrate[0];
+      setYZ -= storeVibrate[1];
+      setYZ += storeVibrate[2];
+      setYZ += storeVibrate[3];
+      setYZ /= wheelGapFrontToBack;
+      setYZ -= setYZ * shockAbsorb;
+      YZ -= setYZ * clearanceY * .5;
+      XY -= setXY * clearanceY * .5;
+     }
+    }
    }
   }
  }
@@ -2607,11 +2003,18 @@ public class Vehicle extends Instance {
  }
 
  private void runPhysicsSkidsAndDust() {
+  boolean markedSnow = false;
+  if (terrainProperties.contains(" snow ")) {
+   for (Wheel wheel : wheels) {
+    wheel.skidmark(true);
+   }
+   markedSnow = true;
+  }
   boolean kineticFriction = Math.abs(Math.abs(speed) - netSpeed) > 15, driveEngine = !U.contains(engine.name(), "prop", Engine.jet.name(), Engine.rocket.name());
   if (((driveEngine && kineticFriction) || StrictMath.pow(speedXZ, 2) > 300000 / netSpeed) && (kineticFriction || Math.abs(speed) > topSpeeds[1] * .9)) {
    if (terrainProperties.contains(" hard ") && contact == Contact.metal) {
     for (Wheel wheel : wheels) {
-     sparks(wheel, true);
+     wheel.sparks(true);
     }
    }
    if (contact == Contact.rubber || !terrainProperties.contains(" hard ")) {
@@ -2620,12 +2023,13 @@ public class Vehicle extends Instance {
     }
    }
    if (!terrainProperties.contains(" ice ")) {
-    for (Wheel wheel : wheels) {
-     skidmark(wheel);
-     wheel.minimumY = localVehicleGround;
+    if (!markedSnow) {
+     for (Wheel wheel : wheels) {
+      wheel.skidmark(false);
+     }
     }
     if (damage <= durability && !flipped && contact != Contact.none) {
-     skid();
+     VA.skid();
     }
    }
   } else if (terrainProperties.contains(" snow ")) {
@@ -2646,7 +2050,7 @@ public class Vehicle extends Instance {
  private void runPhysicsAirEngage() {
   if (vehicleType == Type.vehicle && handbrake && mode == Mode.neutral) {
    mode = Mode.stunt;
-   VA.airEngage.playIfNotPlaying(vehicleToCameraSoundDistance);
+   VA.airEngage.playIfNotPlaying(VA.vehicleToCameraSoundDistance);
   }
   if (vehicleType == Type.aircraft && drive2) {
    boolean engageFly = mode == Mode.neutral;
@@ -2656,7 +2060,7 @@ public class Vehicle extends Instance {
    }
    if (engageFly) {
     mode = Mode.fly;
-    VA.airEngage.playIfNotPlaying(vehicleToCameraSoundDistance);
+    VA.airEngage.playIfNotPlaying(VA.vehicleToCameraSoundDistance);
    }
   }
  }
@@ -2728,10 +2132,10 @@ public class Vehicle extends Instance {
  private void runPhysicsFlight(double turnAmount) {
   if (mode == Mode.fly) {
    if (handbrake) {
-    if (Math.abs(XY) < turnAmount * .2 * VE.tick) {
+    if (Math.abs(XY) < turnAmount * fromAngleToVelocityConstant * VE.tick) {
      XY = 0;
     } else {
-     XY += (XY < 0 ? .2 : XY > 0 ? -.2 : 0) * turnAmount * VE.tick;
+     XY += (XY < 0 ? 1 : XY > 0 ? -1 : 0) * turnAmount * fromAngleToVelocityConstant * VE.tick;
     }
    } else {
     XY -= speedXZ * .27 * VE.tick;
@@ -2834,17 +2238,18 @@ public class Vehicle extends Instance {
  }
 
  private void runPhysicsHitTsunami() {
+  //* Turrets automatically have getsPushed/Lifted set to -1
   for (TsunamiPart tsunamiPart : E.tsunamiParts) {
-   if (U.distance(tsunamiPart) < collisionRadius + tsunamiPart.C.getRadius()) {
-    if (getsPushed >= 0) {
+   if (U.distance(this, tsunamiPart) < collisionRadius + tsunamiPart.C.getRadius()) {
+    if (getsPushed >= 0) {//*
      for (Wheel wheel : wheels) {
       wheel.speedX += E.tsunamiSpeedX * .5 * VE.tick;
       wheel.speedZ += E.tsunamiSpeedZ * .5 * VE.tick;
      }
     }
-    if (getsLifted >= 0) {
+    if (getsLifted >= 0) {//*
      for (Wheel wheel : wheels) {
-      wheel.speedY += Y < tsunamiPart.Y ? E.gravity * 4 * VE.tick : Y > tsunamiPart.Y ? E.gravity * -4 * VE.tick : 0;
+      wheel.speedY += E.gravity * VE.tick * (Y < tsunamiPart.Y ? 4 : Y > tsunamiPart.Y ? -4 : 0);
      }
     }
     for (int n1 = 20; --n1 >= 0; ) {
@@ -2854,7 +2259,7 @@ public class Vehicle extends Instance {
      E.tsunamiSpeedZ + U.randomPlusMinus(Math.max(E.tsunamiSpeed, netSpeed)));
      currentSplash = ++currentSplash >= E.splashQuantity ? 0 : currentSplash;
     }
-    VA.tsunamiSplash.playIfNotPlaying(vehicleToCameraSoundDistance);
+    VA.tsunamiSplash.playIfNotPlaying(VA.vehicleToCameraSoundDistance);
    }
   }
  }
@@ -2873,14 +2278,14 @@ public class Vehicle extends Instance {
     speedXZ -= (speedXZ > 0 ? 2 : 1) * turnRate * VE.tick;
     speedXZ = Math.max(speedXZ, -maxTurn);
     if (!destroyed) {
-     VA.turret.loop(vehicleToCameraSoundDistance);
+     VA.turret.loop(VA.vehicleToCameraSoundDistance);
     }
    }
    if ((turnL && !turnR) || (steerByMouse && speedXZ < VE.mouseSteerX)) {
     speedXZ += (speedXZ < 0 ? 2 : 1) * turnRate * VE.tick;
     speedXZ = Math.min(speedXZ, maxTurn);
     if (!destroyed) {
-     VA.turret.loop(vehicleToCameraSoundDistance);
+     VA.turret.loop(VA.vehicleToCameraSoundDistance);
     }
    }
    if (speedXZ != 0 && !turnL && !turnR && !steerByMouse) {
@@ -2895,14 +2300,14 @@ public class Vehicle extends Instance {
    speedYZ -= (speedYZ > 0 ? 2 : 1) * turnRate * VE.tick;
    speedYZ = Math.max(speedYZ, -maxTurn);
    if (!destroyed) {
-    VA.turret.loop(vehicleToCameraSoundDistance);
+    VA.turret.loop(VA.vehicleToCameraSoundDistance);
    }
   }
   if (reverse || (steerByMouse && speedYZ < VE.mouseSteerY)) {
    speedYZ += (speedYZ < 0 ? 2 : 1) * turnRate * VE.tick;
    speedYZ = Math.min(speedYZ, maxTurn);
    if (!destroyed) {
-    VA.turret.loop(vehicleToCameraSoundDistance);
+    VA.turret.loop(VA.vehicleToCameraSoundDistance);
    }
   }
   if (speedYZ != 0 && !drive && !reverse && !steerByMouse) {
@@ -2912,7 +2317,7 @@ public class Vehicle extends Instance {
     speedYZ += (speedYZ < 0 ? 1 : speedYZ > 0 ? -1 : 0) * turnRate * 2 * VE.tick;
    }
   }
-  double sharpShoot = handbrake ? .02 : .2;
+  double sharpShoot = fromAngleToVelocityConstant * (handbrake ? .1 : 1);
   XZ += speedXZ * sharpShoot * VE.tick;
   YZ += speedYZ * sharpShoot * VE.tick;
   for (Wheel wheel : wheels) {
@@ -2932,15 +2337,16 @@ public class Vehicle extends Instance {
     explosions.get(currentExplosion).deploy(U.randomPlusMinus(absoluteRadius), U.randomPlusMinus(absoluteRadius), U.randomPlusMinus(absoluteRadius), this);
     currentExplosion = ++currentExplosion >= E.explosionQuantity ? 0 : currentExplosion;
    }
-   VA.explode.play(U.random(VA.explode.clips.size()), vehicleToCameraSoundDistance);
-   VA.crashDestroy.play(U.random(VA.crashDestroy.clips.size()), vehicleToCameraSoundDistance);
+   setCameraShake(30);
+   VA.explode.play(U.random(VA.explode.clips.size()), VA.vehicleToCameraSoundDistance);
+   VA.crashDestroy.play(U.random(VA.crashDestroy.clips.size()), VA.vehicleToCameraSoundDistance);
   }
-  X = U.clamp(E.limitL, X, E.limitR);
-  Z = U.clamp(E.limitBack, Z, E.limitFront);
-  Y = U.clamp(E.limitY, Y, -E.limitY);
+  X = U.clamp(E.mapBounds.left, X, E.mapBounds.right);
+  Z = U.clamp(E.mapBounds.backward, Z, E.mapBounds.forward);
+  Y = U.clamp(E.mapBounds.Y, Y, -E.mapBounds.Y);
  }
 
- private void runVehicleTrackInteraction(boolean replay) {
+ private void runVehicleCourseInteraction(boolean replay) {
   if (!TE.points.isEmpty()) {
    Point P = TE.points.get(point);
    if (P.type == Point.Type.mustPassAbsolute && mode != Mode.fly) {
@@ -2952,8 +2358,9 @@ public class Vehicle extends Instance {
   }
   if (!TE.checkpoints.isEmpty() && !phantomEngaged) {
    double checkSize = VE.mapName.equals("Circle Race XL") ? speed : 0;
-   if ((TE.checkpoints.get(checkpointsPassed).type == Checkpoint.Type.passZ || TE.checkpoints.get(checkpointsPassed).type == Checkpoint.Type.passAny) &&
-   Math.abs(Z - TE.checkpoints.get(checkpointsPassed).Z) < (60 + checkSize) + Math.abs(wheels.get(0).speedZ + wheels.get(1).speedZ + wheels.get(2).speedZ + wheels.get(3).speedZ) * .25 * VE.tick && Math.abs(X - TE.checkpoints.get(checkpointsPassed).X) < 700 && Math.abs((Y - TE.checkpoints.get(checkpointsPassed).Y) + 350) < 450) {
+   Checkpoint C = TE.checkpoints.get(checkpointsPassed);
+   if ((C.type == Checkpoint.Type.passZ || C.type == Checkpoint.Type.passAny) &&
+   Math.abs(Z - C.Z) < (60 + checkSize) + Math.abs(netSpeedZ) * VE.tick && Math.abs(X - C.X) < 700 && Math.abs((Y - C.Y) + 350) < 450) {
     checkpointsPassed++;
     point++;
     if (index == VE.vehiclePerspective) {
@@ -2971,8 +2378,8 @@ public class Vehicle extends Instance {
      checkpointsPassed = point = 0;
     }
    }
-   if ((TE.checkpoints.get(checkpointsPassed).type == Checkpoint.Type.passX || TE.checkpoints.get(checkpointsPassed).type == Checkpoint.Type.passAny) &&
-   Math.abs(X - TE.checkpoints.get(checkpointsPassed).X) < (60 + checkSize) + Math.abs(wheels.get(0).speedX + wheels.get(1).speedX + wheels.get(2).speedX + wheels.get(3).speedX) * .25 * VE.tick && Math.abs(Z - TE.checkpoints.get(checkpointsPassed).Z) < 700 && Math.abs((Y - TE.checkpoints.get(checkpointsPassed).Y) + 350) < 450) {
+   if ((C.type == Checkpoint.Type.passX || C.type == Checkpoint.Type.passAny) &&
+   Math.abs(X - C.X) < (60 + checkSize) + Math.abs(netSpeedX) * VE.tick && Math.abs(Z - C.Z) < 700 && Math.abs((Y - C.Y) + 350) < 450) {
     checkpointsPassed++;
     point++;
     if (index == VE.vehiclePerspective) {
@@ -2999,31 +2406,24 @@ public class Vehicle extends Instance {
   point = point >= TE.points.size() || point < 0 ? 0 : point;
  }
 
- private void runPhysicsVehicleTrackPlaneInteraction(double hitsGroundY, boolean crashLand, double bounceBackForce, double flatPlaneBounce, double gravityCompensation) {
+ private void runPhysicsVehicleTrackPlaneInteraction(boolean crashLand, double bounceBackForce, double flatPlaneBounce, double gravityCompensation) {
   double wallPlaneBounce = Math.min(Math.abs(U.cos(XY)) + Math.abs(U.cos(YZ)), 1);
   boolean spinnerHit = false;
-  for (TrackPart trackPart : VE.trackParts) {
+  for (TrackPart trackPart : TE.trackParts) {
    if (!trackPart.trackPlanes.isEmpty() && U.distance(X, trackPart.X, Z, trackPart.Z) < trackPart.renderRadius + renderRadius) {
     for (TrackPlane trackPlane : trackPart.trackPlanes) {
      double trackX = trackPlane.X + trackPart.X, trackY = trackPlane.Y + trackPart.Y, trackZ = trackPlane.Z + trackPart.Z,
-     radiusX = trackPlane.radiusX + (trackPlane.addSpeed && Math.abs(U.sin(XZ)) > U.sin45 ? netSpeed * VE.tick : 0),
+     velocityXZ = Math.abs(U.sin(XZ)),
+     radiusX = trackPlane.radiusX + (trackPlane.addSpeed && velocityXZ > U.sin45 ? netSpeed * VE.tick : 0),
      radiusY = trackPlane.radiusY + (trackPlane.addSpeed ? netSpeed * VE.tick : 0),
-     radiusZ = trackPlane.radiusZ + (trackPlane.addSpeed && Math.abs(U.sin(XZ)) < U.sin45 ? netSpeed * VE.tick : 0);
-     boolean isTree = trackPlane.type.contains(" tree "), gate = trackPlane.type.contains("gate"), needsTerrainRGB = false;
+     radiusZ = trackPlane.radiusZ + (trackPlane.addSpeed && velocityXZ < U.sin45 ? netSpeed * VE.tick : 0);
+     boolean isTree = trackPlane.type.contains(" tree "), gate = trackPlane.type.contains("gate"),
+     isWall = trackPlane.wall != TrackPlane.Wall.none;
      String trackProperties = "";
-     if (!isTree && !gate && (trackPlane.wall != TrackPlane.Wall.none || (Math.abs(X - trackX) < radiusX && Math.abs(Z - trackZ) < radiusZ && trackY + (radiusY * .5) >= Y))) {
+     if (!isTree && !gate && (isWall || (Math.abs(X - trackX) < radiusX && Math.abs(Z - trackZ) < radiusZ && trackY + (radiusY * .5) >= Y))) {
       trackProperties = trackPlane.type + (U.contains(trackPlane.type, " paved ", " rock ", " grid ", " antigravity ", " metal ", " brightmetal") ? " hard " : " ground ");
-      if (trackPlane.wall == TrackPlane.Wall.none) {
-       terrainProperties = trackProperties;
-       needsTerrainRGB = true;
-      }
      }
      for (Wheel wheel : wheels) {
-      if (needsTerrainRGB) {
-       wheel.terrainRGB[0] = trackPlane.RGB[0];
-       wheel.terrainRGB[1] = trackPlane.RGB[1];
-       wheel.terrainRGB[2] = trackPlane.RGB[2];
-      }
       boolean inX = Math.abs(wheel.X - trackX) <= radiusX, inZ = Math.abs(wheel.Z - trackZ) <= radiusZ;
       if (Math.abs(wheel.Y - (trackY + gravityCompensation)) <= trackPlane.radiusY) {
        if (inX && inZ) {
@@ -3037,12 +2437,12 @@ public class Vehicle extends Instance {
           if (Math.abs(trackPlane.YZ) == 90) {
            if (Math.abs(wheel.speedZ) > topSpeeds[0]) {
             wheel.speedZ *= .333;
-            VA.gate.play(1, vehicleToCameraSoundDistance);
+            VA.gate.play(1, VA.vehicleToCameraSoundDistance);
            }
           } else if (Math.abs(trackPlane.XY) == 90) {
            if (Math.abs(wheel.speedX) > topSpeeds[0]) {
             wheel.speedX *= .333;
-            VA.gate.play(1, vehicleToCameraSoundDistance);
+            VA.gate.play(1, VA.vehicleToCameraSoundDistance);
            }
           }
          } else {
@@ -3050,25 +2450,25 @@ public class Vehicle extends Instance {
           wheel.speedX *= Math.abs(trackPlane.XY) == 90 ? 3 : 1;
           speed *= (speed > 0 && speed < topSpeeds[1]) || (speed < 0 && speed > -topSpeeds[0]) ? 1.25 : 1;
           if (wheel.speedX != 0 || wheel.speedZ != 0) {
-           VA.gate.play(0, vehicleToCameraSoundDistance);
+           VA.gate.play(0, VA.vehicleToCameraSoundDistance);
           }
          }
         } else if (trackProperties.contains(" antigravity ")) {
          wheel.speedY -= E.gravity * 2 * VE.tick;
          onAntiGravity = true;
-        } else if (trackPlane.wall == TrackPlane.Wall.none) {
-         if (trackPlane.YZ == 0 && trackPlane.XY == 0 && wheel.Y > trackY - 5) {//'- 5' is for better traction control--not to be used for stationary objects
+        } else if (!isWall) {
+         if (trackPlane.YZ == 0 && trackPlane.XY == 0 && wheel.Y > trackY - 5) {//'- 5' is for better traction control--not to be used for stationary objects. Do not transfer '-5' to the assignment
           mode = Mode.drive;
-          wheel.Y = Math.min(Math.max(hitsGroundY, E.groundLevel), trackY);//<-Extremely confusing!
+          wheel.Y = Math.min(localVehicleGround, trackY);
           if (flipped && trackProperties.contains(" hard ")) {
-           sparks(wheel, true);
+           wheel.sparks(true);
           }
           if (crashLand) {
            runCrash(wheel.speedY * bounceBackForce * .1);
           }
           if (wheel.speedY > 100) {
            deployDust(wheel);
-           land();
+           VA.land();
           }
           if (wheel.speedY > 0) {
            wheel.speedY *= destroyed ? 0 : -bounce * flatPlaneBounce;
@@ -3084,7 +2484,7 @@ public class Vehicle extends Instance {
            if (!trackProperties.contains(" hard ")) {
             deployDust(wheel);
            } else if (flipped) {
-            sparks(wheel, true);
+            wheel.sparks(true);
            }
            if (Y >= trackY || wheel.speedY >= 0 || Math.abs(speed) < E.gravity * 4 * VE.tick || Math.abs((U.cos(XZ) > 0 ? -YZ : YZ) - trackPlane.YZ) < 30) {
             wheel.YZ += (-trackPlane.YZ * U.cos(XZ) - wheel.YZ) * .25;
@@ -3100,7 +2500,7 @@ public class Vehicle extends Instance {
            if (!trackProperties.contains(" hard ")) {
             deployDust(wheel);
            } else if (flipped) {
-            sparks(wheel, true);
+            wheel.sparks(true);
            }
            if (Y >= trackY || wheel.speedY >= 0 || Math.abs(speed) < E.gravity * 4 * VE.tick || (Math.abs((U.sin(XZ) < 0 ? -YZ : YZ) - trackPlane.XY) < 30)) {
             wheel.YZ += (trackPlane.XY * U.sin(XZ) - wheel.YZ) * .25;
@@ -3111,7 +2511,7 @@ public class Vehicle extends Instance {
          }
         }
        }
-       if (trackPlane.wall != TrackPlane.Wall.none) {
+       if (isWall) {
         double vehicleRadius = collisionRadius * .5, contactX = trackPlane.radiusX + vehicleRadius, contactZ = trackPlane.radiusZ + vehicleRadius;
         if (inX && Math.abs(wheel.Z - trackZ) <= contactZ) {
          if (trackPlane.wall == TrackPlane.Wall.front && wheel.Z < trackZ + contactZ && wheel.speedZ < 0) {
@@ -3120,7 +2520,7 @@ public class Vehicle extends Instance {
           }
           wheel.Z = trackZ + contactZ;
           if (trackProperties.contains(" hard ")) {
-           sparks(wheel, false);
+           wheel.sparks(false);
           }
           runCrash(wheel.speedZ * trackPlane.damage * .1);
           wheel.speedZ += Math.abs(wheel.speedZ) * bounce * wallPlaneBounce;
@@ -3132,7 +2532,7 @@ public class Vehicle extends Instance {
           }
           wheel.Z = trackZ - contactZ;
           if (trackProperties.contains(" hard ")) {
-           sparks(wheel, false);
+           wheel.sparks(false);
           }
           runCrash(wheel.speedZ * trackPlane.damage * .1);
           wheel.speedZ -= Math.abs(wheel.speedZ) * bounce * wallPlaneBounce;
@@ -3146,7 +2546,7 @@ public class Vehicle extends Instance {
           }
           wheel.X = trackX + contactX;
           if (trackProperties.contains(" hard ")) {
-           sparks(wheel, false);
+           wheel.sparks(false);
           }
           runCrash(wheel.speedX * trackPlane.damage * .1);
           wheel.speedX += Math.abs(wheel.speedX) * bounce * wallPlaneBounce;
@@ -3158,7 +2558,7 @@ public class Vehicle extends Instance {
           }
           wheel.X = trackX - contactX;
           if (trackProperties.contains(" hard ")) {
-           sparks(wheel, false);
+           wheel.sparks(false);
           }
           runCrash(wheel.speedX * trackPlane.damage * .1);
           wheel.speedX -= Math.abs(wheel.speedX) * bounce * wallPlaneBounce;
@@ -3173,6 +2573,49 @@ public class Vehicle extends Instance {
   }
   if (spinnerHit) {
    spinnerHit(null);
+  }
+ }
+
+ private void setTerrainFromTrackPlanes(double gravityCompensation) {
+  for (TrackPart trackPart : TE.trackParts) {
+   if (!trackPart.trackPlanes.isEmpty() && U.distance(X, trackPart.X, Z, trackPart.Z) < trackPart.renderRadius + renderRadius) {
+    for (TrackPlane trackPlane : trackPart.trackPlanes) {
+     if (trackPlane.wall == TrackPlane.Wall.none && !trackPlane.type.contains(" tree ") && !trackPlane.type.contains("gate")) {
+      double trackX = trackPlane.X + trackPart.X, trackY = trackPlane.Y + trackPart.Y, trackZ = trackPlane.Z + trackPart.Z;
+      String addHard = U.contains(trackPlane.type, " paved ", " rock ", " grid ", " antigravity ", " metal ", " brightmetal") ? " hard " : " ground ";
+      if (Math.abs(X - trackX) <= trackPlane.radiusX && Math.abs(Z - trackZ) <= trackPlane.radiusZ && Math.abs(Y - (trackY + gravityCompensation)) <= trackPlane.radiusY) {
+       if (trackPlane.YZ == 0 && trackPlane.XY == 0) {
+        terrainProperties = trackPlane.type + addHard;
+        for (Wheel wheel : wheels) {
+         wheel.terrainRGB[0] = trackPlane.RGB[0];
+         wheel.terrainRGB[1] = trackPlane.RGB[1];
+         wheel.terrainRGB[2] = trackPlane.RGB[2];
+        }
+       } else if (trackPlane.YZ != 0) {
+        double setY = trackY + (Z - trackZ) * (trackPlane.radiusY / trackPlane.radiusZ) * (trackPlane.YZ > 0 ? 1 : trackPlane.YZ < 0 ? -1 : 0);
+        if (Y >= setY - 100) {
+         terrainProperties = trackPlane.type + addHard;
+         for (Wheel wheel : wheels) {
+          wheel.terrainRGB[0] = trackPlane.RGB[0];
+          wheel.terrainRGB[1] = trackPlane.RGB[1];
+          wheel.terrainRGB[2] = trackPlane.RGB[2];
+         }
+        }
+       } else if (trackPlane.XY != 0) {
+        double setY = trackY + (X - trackX) * (trackPlane.radiusY / trackPlane.radiusX) * (trackPlane.XY > 0 ? 1 : trackPlane.XY < 0 ? -1 : 0);
+        if (Y >= setY - 100) {
+         terrainProperties = trackPlane.type + addHard;
+         for (Wheel wheel : wheels) {
+          wheel.terrainRGB[0] = trackPlane.RGB[0];
+          wheel.terrainRGB[1] = trackPlane.RGB[1];
+          wheel.terrainRGB[2] = trackPlane.RGB[2];
+         }
+        }
+       }
+      }
+     }
+    }
+   }
   }
  }
 
@@ -3227,7 +2670,7 @@ public class Vehicle extends Instance {
     fixSphere.deploy();
    }
    if (gamePlay) {
-    VA.fix.play(vehicleToCameraSoundDistance);
+    VA.fix.play(VA.vehicleToCameraSoundDistance);
    }
   }
  }
@@ -3240,15 +2683,35 @@ public class Vehicle extends Instance {
   if (!specials.isEmpty()) {
    phantomEngaged = false;
    for (Special special : specials) {
-    if (special.fire && special.type == specialType.phantom) {
+    if (special.fire && special.type == Special.Type.phantom) {
      phantomEngaged = true;
      break;
     }
    }
   }
-  vehicleToCameraSoundDistance = index == VE.vehiclePerspective && Camera.view == Camera.View.driver ? 0 : Math.sqrt(distanceToCamera) * .08;
+  VA.vehicleToCameraSoundDistance = index == VE.vehiclePerspective && Camera.view == Camera.View.driver ? 0 : Math.sqrt(distanceToCamera) * .08;
   massiveHitTimer -= massiveHitTimer > 0 ? VE.tick : 0;
-  screenFlash -= screenFlash > 0 ? explosionType == ExplosionType.maxnuclear ? VE.tick * .01 : VE.tick * .1 : 0;
+  if (screenFlash > 0) {
+   screenFlash -= VE.tick * (explosionType == ExplosionType.maxnuclear ? .01 : .1);
+  }
+  if (cameraShake > 0) {
+   cameraShakeXZ = U.randomPlusMinus(cameraShake * cameraShake);
+   cameraShakeYZ = U.randomPlusMinus(cameraShake * cameraShake);
+   cameraShake -= VE.tick;
+  } else {
+   cameraShakeXZ = cameraShakeYZ = 0;
+  }
+  /* double multipleBase = 30 * VE.tick;
+   if (Math.abs(cameraShakeXZ) <= multipleBase) {
+    cameraShakeXZ = 0;
+   } else {
+    cameraShakeXZ -= multipleBase * (cameraShakeXZ > 0 ? 1 : -1);
+   }
+   if (Math.abs(cameraShakeYZ) <= multipleBase) {
+    cameraShakeYZ = 0;
+   } else {
+    cameraShakeYZ -= multipleBase * (cameraShakeYZ > 0 ? 1 : -1);
+   }*/
   inWrath = false;
   if (damage > durability) {
    for (VehiclePart part : parts) {
@@ -3256,15 +2719,16 @@ public class Vehicle extends Instance {
    }
    onFire = true;
    if (destructTimer <= 0) {
-    VA.explode.play(vehicleToCameraSoundDistance);
+    VA.explode.play(VA.vehicleToCameraSoundDistance);
+    setCameraShake(20);
     if (explosionsWhenDestroyed > 0) {
-     VA.explode.play(1, vehicleToCameraSoundDistance * .5);
+     VA.explode.play(1, VA.vehicleToCameraSoundDistance * .5);
      nukeDetonate();
     }
    }
    destroyed = (destructTimer += VE.tick) >= 8 || destroyed;
    if (destroyed && gamePlay) {
-    VA.burn.loop(vehicleToCameraSoundDistance);
+    VA.burn.loop(VA.vehicleToCameraSoundDistance);
    }
    runMaxNukeBlast(gamePlay);
   } else {
@@ -3281,13 +2745,14 @@ public class Vehicle extends Instance {
   if (VE.bonusHolder == index && passBonus) {
    for (Vehicle vehicle : VE.vehicles) {
     if (!U.sameVehicle(this, vehicle) && U.sameTeam(this, vehicle) && U.distance(this, vehicle) < collisionRadius + vehicle.collisionRadius) {
-     VE.setBonusHolder(vehicle);
+     TE.setBonusHolder(vehicle);
     }
    }
   }
   runPhysicsSpinner(gamePlay);
-  boolean isJet = U.contains(engine.name(), Engine.jet.name(), Engine.turbine.name(), Engine.rocket.name());
-  boolean thrustDrive = drive2 || (drive && mode != Mode.fly);
+  runPhysicsHitTsunami();
+  boolean isJet = U.contains(engine.name(), Engine.jet.name(), Engine.turbine.name(), Engine.rocket.name()),
+  thrustDrive = drive2 || (drive && mode != Mode.fly);
   thrusting = !destroyed && ((speedBoost > 0 && boost) || exhaust > 0 || (mode != Mode.stunt && isJet &&
   (thrustDrive || (mode == Mode.fly && engine != Engine.turbine && engineClipQuantity * (Math.abs(speed) / topSpeeds[1]) >= 1))));
   if (thrusting) {
@@ -3301,10 +2766,10 @@ public class Vehicle extends Instance {
     }
    }
   }
-  if (VE.fixPointsExist && fixSpheres.get(U.random(fixSpheres.size())).stage <= 0 && !phantomEngaged) {
-   for (TrackPart part : VE.trackParts) {
+  if (TE.fixPointsExist && fixSpheres.get(U.random(fixSpheres.size())).stage <= 0 && !phantomEngaged) {
+   for (TrackPart part : TE.trackParts) {
     if (part.isFixpoint) {
-     boolean sideways = Math.abs(part.XZ) > 45;
+     boolean sideways = TE.isSidewaysXZ(part.XZ);
      if (U.distance(sideways ? Z : X, sideways ? part.Z : part.X, Y, part.Y) <= 500 && Math.abs(sideways ? X - part.X : Z - part.Z) <= 200 + Math.abs(netSpeedZ) * VE.tick) {
       fix(gamePlay);
      }
@@ -3313,7 +2778,7 @@ public class Vehicle extends Instance {
   }
   XY = !VE.matchStarted && engine == Engine.hotrod ? U.randomPlusMinus(2.) : XY;
   for (Special special : specials) {
-   if (special.type == specialType.phantom) {
+   if (special.type == Special.Type.phantom) {
     if (special.fire) {
      for (VehiclePart part : parts) {
       if (U.random() < .5) {
@@ -3321,7 +2786,7 @@ public class Vehicle extends Instance {
       }
      }
      if (gamePlay) {
-      special.sound.loop(vehicleToCameraSoundDistance);
+      special.sound.loop(VA.vehicleToCameraSoundDistance);
      }
     } else {
      special.sound.stop();
@@ -3329,31 +2794,31 @@ public class Vehicle extends Instance {
       part.MV.setMaterial(part.PM);
      }
     }
-   } else if (special.type == specialType.teleport && special.fire) {
+   } else if (special.type == Special.Type.teleport && special.fire) {
     X += U.randomPlusMinus(50000.);
     Y += U.randomPlusMinus(50000.);
     Z += U.randomPlusMinus(50000.);
     if (gamePlay) {
-     special.sound.play(vehicleToCameraSoundDistance);
+     special.sound.play(VA.vehicleToCameraSoundDistance);
     }
    }
   }
   if (engine == Engine.train && gamePlay && VE.matchStarted) {
    n = U.random(9);
    if (Math.abs(speed) * VE.tick > U.random(5000.)) {
-    VA.train.playIfNotPlaying(n, vehicleToCameraSoundDistance);
+    VA.train.playIfNotPlaying(n, VA.vehicleToCameraSoundDistance);
    }
    if (U.startsWith(mode.name(), Mode.drive.name(), Mode.neutral.name()) && !destroyed && (drive || reverse)) {
     if (Math.abs(speed) > topSpeeds[1] * .75 && !VA.train.running(9)) {
-     VA.train.playIfNotPlaying(10, vehicleToCameraSoundDistance);
+     VA.train.playIfNotPlaying(10, VA.vehicleToCameraSoundDistance);
     } else if (!VA.train.running(10)) {
-     VA.train.playIfNotPlaying(9, vehicleToCameraSoundDistance);
+     VA.train.playIfNotPlaying(9, VA.vehicleToCameraSoundDistance);
     }
    }
   }
   if (VA.backUp != null) {
    if (gamePlay && speed < 0 && !destroyed) {
-    VA.backUp.loop(vehicleToCameraSoundDistance);
+    VA.backUp.loop(VA.vehicleToCameraSoundDistance);
    } else {
     VA.backUp.stop();
    }
@@ -3362,19 +2827,19 @@ public class Vehicle extends Instance {
   boolean againstEngine = false;
   if (damage <= durability && gamePlay) {
    if (VA.chuff != null && chuffTimer <= 0 && Math.abs(speed) < 1 && (drive || reverse)) {
-    VA.chuff.play(U.random(VA.chuff.clips.size()), vehicleToCameraSoundDistance);
-    VA.chuff.play(U.random(VA.chuff.clips.size()), vehicleToCameraSoundDistance);
+    VA.chuff.play(U.random(VA.chuff.clips.size()), VA.vehicleToCameraSoundDistance);
+    VA.chuff.play(U.random(VA.chuff.clips.size()), VA.vehicleToCameraSoundDistance);
     chuffTimer = 22;
    }
    if (VA.fly != null && mode == Mode.fly && (drive || reverse || turnL || turnR || (steerByMouse && (Math.abs(VE.mouseSteerX) > U.random(2000.) || Math.abs(VE.mouseSteerY) > U.random(2000.))))) {
-    VA.fly.playIfNotPlaying(U.random(VA.fly.clips.size()), vehicleToCameraSoundDistance);
+    VA.fly.playIfNotPlaying(U.random(VA.fly.clips.size()), VA.vehicleToCameraSoundDistance);
    }
    if (vehicleType != Type.turret) {
     n = 0;
     if (mode != Mode.stunt) {
      n = vehicleType == Type.vehicle && steerInPlace && (turnL || turnR) ? 1 : n;
-     boolean aircraft = vehicleType == Type.aircraft, flying = mode == Mode.fly;
-     boolean driveGet = !flying && aircraft ? drive || drive2 : flying ? drive2 : drive,
+     boolean aircraft = vehicleType == Type.aircraft, flying = mode == Mode.fly,
+     driveGet = !flying && aircraft ? drive || drive2 : flying ? drive2 : drive,
      reverseGet = !flying && aircraft ? reverse || reverse2 : flying ? reverse2 : reverse;
      if (driveGet || reverseGet || mode == Mode.fly) {
       n =
@@ -3400,14 +2865,14 @@ public class Vehicle extends Instance {
   }
   if (VA.grind != null) {
    if (againstEngine) {
-    VA.grind.loop(vehicleToCameraSoundDistance);
+    VA.grind.loop(VA.vehicleToCameraSoundDistance);
    } else {
     VA.grind.stop();
    }
   }
   if (speedBoost > 0) {
    if (boost && gamePlay && !destroyed) {
-    VA.boost.loop(vehicleToCameraSoundDistance);
+    VA.boost.loop(VA.vehicleToCameraSoundDistance);
    } else {
     VA.boost.stop();
    }
@@ -3419,23 +2884,23 @@ public class Vehicle extends Instance {
    forceTimer += U.random(netSpeed) * VE.tick;
    int speedCheck = netSpeed > 1000 ? 5 : netSpeed > 500 ? 4 : netSpeed > 250 ? 3 : 2;
    if (steerInPlace && vehicleType != Type.turret && mode == Mode.drive && (turnL || turnR) && !flipped && speedCheck < 3) {
-    VA.force.play(U.random(2), vehicleToCameraSoundDistance);
+    VA.force.play(U.random(2), VA.vehicleToCameraSoundDistance);
     forceTimer = 0;
    }
    if (forceTimer > 800) {
-    VA.force.play(U.random(speedCheck), vehicleToCameraSoundDistance);
+    VA.force.play(U.random(speedCheck), VA.vehicleToCameraSoundDistance);
     forceTimer = 0;
    }
   }
   chuffTimer -= chuffTimer > 0 ? VE.tick : 0;
   crashTimer -= crashTimer > 0 ? VE.tick : 0;
-  landTimer -= landTimer > 0 ? VE.tick : 0;
+  VA.landTimer -= VA.landTimer > 0 ? VE.tick : 0;
   if (!Double.isNaN(splashing)) {
    if (splashing > 150 && Camera.Y <= 0) {
-    VA.splashOverSurface.loop(vehicleToCameraSoundDistance);
+    VA.splashOverSurface.loop(VA.vehicleToCameraSoundDistance);
     VA.splash.stop();
    } else if (splashing > 0) {
-    VA.splash.loop(vehicleToCameraSoundDistance);
+    VA.splash.loop(VA.vehicleToCameraSoundDistance);
     VA.splashOverSurface.stop();
    } else {
     VA.splash.stop();
@@ -3448,8 +2913,8 @@ public class Vehicle extends Instance {
    if (lastEngineStage != engineStage) {
     if (U.random() < 1 / (double) engineClipQuantity) {
      exhaust = 5;
-     randomExhaustSound = U.randomize(randomExhaustSound, 6);
-     VA.exhaust.play(randomExhaustSound, vehicleToCameraSoundDistance);
+     VA.randomExhaustSound = U.randomize(VA.randomExhaustSound, VA.exhaust.clips.size());
+     VA.exhaust.play(VA.randomExhaustSound, VA.vehicleToCameraSoundDistance);
     }
     lastEngineStage = engineStage;
    }
@@ -3478,8 +2943,8 @@ public class Vehicle extends Instance {
      }
     }
     if (n1 > -2) {
-     randomScrapeSound = U.randomize(randomScrapeSound, VA.scrape.clips.size());
-     VA.scrape.resume(randomScrapeSound, vehicleToCameraSoundDistance);
+     VA.randomScrapeSound = U.randomize(VA.randomScrapeSound, VA.scrape.clips.size());
+     VA.scrape.resume(VA.randomScrapeSound, VA.vehicleToCameraSoundDistance);
     }
    } else {
     VA.scrape.stop();
@@ -3505,13 +2970,13 @@ public class Vehicle extends Instance {
    }
   }
   if (n > -1) {
-   VA.engine.loop(n, vehicleToCameraSoundDistance);
+   VA.engine.loop(n, VA.vehicleToCameraSoundDistance);
    if (wheelDiscord) {
     VA.engine.randomizeFramePosition(n);
    }
    if (engine == Engine.turbine) {
     double thrustGain = Math.max(0, StrictMath.pow(1 / (Math.abs(netSpeed) / topSpeeds[1]), 4));
-    VA.turbineThrust.loop(vehicleToCameraSoundDistance + (n >= engineClipQuantity - 1 ? 0 : thrustGain));
+    VA.turbineThrust.loop(VA.vehicleToCameraSoundDistance + (n >= engineClipQuantity - 1 ? 0 : thrustGain));
    }
   } else if (engine == Engine.turbine) {
    VA.turbineThrust.stop();
@@ -3554,7 +3019,7 @@ public class Vehicle extends Instance {
    if (gamePlay) {
     spinnerSpeed *= .999;
     if (spinSound >= 0) {
-     VA.spinner.loop(spinSound, vehicleToCameraSoundDistance);
+     VA.spinner.loop(spinSound, VA.vehicleToCameraSoundDistance);
     }
    } else if (spinSound >= 0) {
     VA.spinner.stop(spinSound);
@@ -3594,11 +3059,13 @@ public class Vehicle extends Instance {
    spinnerSpeed -= spinnerSpeed * speedReduction;
    if (absSpeed > .125) {
     if (speedReduction >= 1) {
-     VA.massiveHit.play(U.random(VA.massiveHit.clips.size()), vehicleToCameraSoundDistance);
+     setCameraShake(30);
+     VA.massiveHit.play(U.random(VA.massiveHit.clips.size()), VA.vehicleToCameraSoundDistance);
     } else if (absSpeed > .25) {
-     VA.crashHard.play(U.random(5), vehicleToCameraSoundDistance);
+     setCameraShake(15);
+     VA.crashHard.play(U.random(5), VA.vehicleToCameraSoundDistance);
     } else {
-     VA.crashSoft.play(U.random(3), vehicleToCameraSoundDistance);
+     VA.crashSoft.play(U.random(3), VA.vehicleToCameraSoundDistance);
     }
    }
   }
@@ -3608,6 +3075,7 @@ public class Vehicle extends Instance {
   if (explosionType.name().contains(ExplosionType.nuclear.name())) {
    screenFlash = 1;
    if (explosionType == ExplosionType.maxnuclear) {
+    setCameraShake(100);
     nukeBlastSphereSize = 0;
     nukeBlastX = X;
     nukeBlastY = Y;
@@ -3620,9 +3088,10 @@ public class Vehicle extends Instance {
      nukeBlast.XZ = U.random(360.);
      nukeBlast.YZ = U.random(360.);
     }
-    VA.nuke.play(vehicleToCameraSoundDistance * .25);
+    VA.nuke.play(VA.vehicleToCameraSoundDistance * .25);
    } else {
-    VA.nuke.play(U.random(VA.nuke.clips.size()), vehicleToCameraSoundDistance * .5);
+    setCameraShake(50);
+    VA.nuke.play(U.random(VA.nuke.clips.size()), VA.vehicleToCameraSoundDistance * .5);
    }
   }
  }
@@ -3650,244 +3119,15 @@ public class Vehicle extends Instance {
   }
  }
 
- private void land() {
-  if (damage <= durability && landTimer <= 0 && vehicleType != Type.turret) {
-   if (landType == Landing.crash) {
-    VA.crashHard.play(U.random(VA.crashHard.clips.size()), vehicleToCameraSoundDistance);
-   } else if ((Math.abs(YZ) < 30 && Math.abs(XY) < 30) || (Math.abs(YZ) > 150 && Math.abs(XY) > 150)) {
-    VA.land.play(U.random(VA.land.clips.size()), vehicleToCameraSoundDistance);
-   } else {
-    VA.crashSoft.play(U.random(VA.crashSoft.clips.size()), vehicleToCameraSoundDistance);
-   }
-   landTimer = 5;
-  }
- }
-
- private void skid() {
-  if (contact != Contact.metal) {
-   int n;
-   if (terrainProperties.contains(" hard ")) {
-    for (n = 5; --n >= 0; ) {
-     if (VA.skid.running(n)) {
-      n = -2;
-      break;
-     }
-    }
-    if (n > -2) {
-     randomSkidSound = U.randomize(randomSkidSound, 5);
-     VA.skid.resume(randomSkidSound, vehicleToCameraSoundDistance);
-    }
-   } else {
-    for (n = 10; --n >= 5; ) {
-     if (VA.skid.running(n)) {
-      n = -2;
-      break;
-     }
-    }
-    if (n > -2) {
-     randomSkidSound = U.randomize(randomSkidSound, 5);
-     VA.skid.resume(randomSkidSound + 5, vehicleToCameraSoundDistance);
-    }
-   }
-   skidding = true;
-  }
- }
-
- private void loadSounds() {//Sounds are loaded by order of importance, as not all of them may load on Linux systems. It's not as elegant but should be done.
-  boolean turret = vehicleType == Type.turret;
-  if (!turret) {
-   if (engineClipQuantity < 1) {
-    File[] engines = new File(U.soundFolder).listFiles((D, name) -> name.startsWith(engine.name() + "-") && name.endsWith(U.soundExtension));
-    engineClipQuantity = Objects.requireNonNull(engines).length;
-    VA.engine = new Sound(engine.name() + "-", engineClipQuantity, enginePitchBase);
-   } else {
-    VA.engine = new Sound();
-    for (int n = 0; n < engineClipQuantity; n++) {
-     VA.engine.addClip(engine.name(), enginePitchBase);
-     if (engineTuning == EngineTuning.harmonicSeries) {
-      enginePitchBase += engineTuneRatio;
-     } else {
-      enginePitchBase *= StrictMath.pow(engineTuneRatio, 1 / (double) (engineClipQuantity - 1));
-     }
-    }
-   }
-   if (contact == Contact.rubber) {
-    VA.skid = new Sound("skid", 10);
-   }
-   VA.scrape = new Sound("scrape", Double.POSITIVE_INFINITY);
-   VA.force = new Sound("force", 5);
-  }
-  if (turret || hasTurret) {
-   VA.turret = new Sound("turret");
-  }
-  VA.explode = new Sound("explode", explosionsWhenDestroyed > 0 && !explosionType.name().contains(ExplosionType.nuclear.name()) ? 2 : 1);
-  VA.crashHard = new Sound("crashHard", Double.POSITIVE_INFINITY);
-  VA.crashDestroy = new Sound("crashDestroy", Double.POSITIVE_INFINITY);
-  VA.crashSoft = new Sound("crashSoft", Double.POSITIVE_INFINITY);
-  if (vehicleType == Type.aircraft && !explosionType.name().contains(ExplosionType.nuclear.name()) && !floats) {
-   VA.fly = new Sound("fly", Double.POSITIVE_INFINITY);
-  }
-  if (speedBoost > 0 && engine != Engine.turbine) {
-   VA.boost = new Sound("boost");
-  }
-  if (landType != Landing.crash) {
-   VA.land = new Sound(landType.name(), Double.POSITIVE_INFINITY);
-  }
-  if (engine.name().contains("truck") || engine == Engine.tank || engine == Engine.massive) {
-   VA.grind = new Sound("grind");
-  }
-  VA.fix = new Sound("fix");
-  VA.burn = new Sound("burn");
-  if (!Double.isNaN(exhaust)) {
-   VA.exhaust = new Sound("exhaust", Double.POSITIVE_INFINITY);
-  }
-  if (!E.tsunamiParts.isEmpty()) {
-   VA.tsunamiSplash = new Sound("tsunamiSplash");
-  }
-  if (!turret) {
-   if (E.poolExists) {
-    VA.splash = new Sound("splash");
-    VA.splashOverSurface = new Sound("splashOver");
-    splashing = 0;
-   }
-   VA.gate = new Sound("gateSpeed");
-   VA.gate.addClip("gateSlow", 1);
-  }
-  boolean loadHitExplosive = false, loadMineExplosion = false;
-  for (Special special : specials) {
-   loadHitExplosive = special.type.name().contains(specialType.shell.name()) || special.type == specialType.missile || special.type == specialType.bomb || special.type == specialType.mine || explosionType.name().startsWith(ExplosionType.nuclear.name()) || loadHitExplosive;
-   loadMineExplosion = special.type == specialType.mine || loadMineExplosion;
-  }
-  if (loadHitExplosive) {
-   VA.hitExplosive = new Sound("hitExplosive", Double.POSITIVE_INFINITY);
-  }
-  if (loadMineExplosion) {
-   VA.mineExplosion = new Sound("mineExplode");
-  }
-
-  boolean hasSpinner = !Double.isNaN(spinnerSpeed);
-  if (hasSpinner) {
-   VA.spinner = new Sound();
-   int spinnerClips = 8, n;
-   double equalTemperament = 1, multiple = StrictMath.pow(2, 1 / 3.);
-   for (n = spinnerClips - 1; --n >= 0; ) {
-    equalTemperament /= multiple;
-   }
-   for (n = spinnerClips; --n >= 0; ) {
-    VA.spinner.addClip("spinner", equalTemperament);
-    equalTemperament *= multiple;
-   }
-  }
-  if (vehicleType != Type.aircraft && (hasSpinner || (damageDealt[0] >= 100 || damageDealt[1] >= 100 || damageDealt[2] >= 100 || damageDealt[3] >= 100))) {
-   VA.massiveHit = new Sound("massiveHit", Double.POSITIVE_INFINITY);
-  }
-  if (explosionType.name().startsWith(ExplosionType.nuclear.name())) {
-   VA.nuke = new Sound("nuke", 2);
-  } else if (explosionType == ExplosionType.maxnuclear) {
-   VA.nuke = new Sound("nukeMax", 2);
-  }
-  if (engine == Engine.authentictruck || engine == Engine.train) {
-   if (engine == Engine.train) {
-    VA.chuff = new Sound("chuff", 4);
-    VA.train = new Sound("train", 11);
-   } else {
-    VA.chuff = new Sound("chuff", 5);
-    VA.backUp = new Sound("backUp");
-   }
-  } else if (engine == Engine.turbine) {
-   VA.turbineThrust = new Sound("turbineThrust");
-  }
-  VA.airEngage = turret ? null : new Sound("aA");
+ private void setCameraShake(double in) {
+  cameraShake = Math.max(cameraShake, in);
  }
 
  private void stopSounds() {
-  for (Special special : specials) {
-   if (special.type == specialType.phantom) {
-    special.sound.stop();
-   }
-  }
-  if (VA.boost != null) {
-   VA.boost.stop();
-  }
-  if (VA.grind != null) {
-   VA.grind.stop();
-  }
-  if (VA.train != null) {
-   VA.train.stop(9);
-   VA.train.stop(10);
-  }
-  if (VA.turret != null) {
-   VA.turret.stop();
-  }
-  if (vehicleType != Type.turret) {
-   VA.engine.stop();
-  }
- }
-
- public void runSpecial(Special special, boolean gamePlay) {
-  if (special.type != Vehicle.specialType.particledisintegrator && special.type != Vehicle.specialType.spinner && special.type != Vehicle.specialType.phantom && special.type != Vehicle.specialType.teleport) {
-   if (gamePlay) {
-    if (special.timer <= 0) {
-     if (special.fire && !destroyed) {
-      special.time();
-      shoot(special);
-      wrathEngaged = special.type == specialType.thewrath;
-      if (wrathEngaged) {
-       for (int n = VE.vehiclesInMatch; --n >= 0; ) {
-        wrathStuck[n] = false;
-       }
-      }
-     }
-    } else {
-     special.timer -= VE.tick;
-    }
-    if (wrathEngaged) {
-     shoot(special);
-     thrusting = true;
-     speed = Math.min(speed + ((U.random() < .5 ? accelerationStages[0] : accelerationStages[1]) * 4 * VE.tick), topSpeeds[2]);
-     damage = Math.min(damage, durability);
-     screenFlash = (.5 + U.random(.5)) / Math.max(Math.sqrt(distanceToCamera) * .015, 1);
-     wrathEngaged = !(special.timer < 850) && wrathEngaged;
-    }
-   }
-   if (!destroyed && special.type == specialType.flamethrower) {
-    for (Port port : special.ports) {
-     port.spit.deploy(this, special, port);
-    }
-   }
-   for (Shot shot : special.shots) {
-    shot.run(this, special, gamePlay);
-   }
-   for (Port port : special.ports) {
-    if (port.spit != null) {
-     port.spit.run(this, special, port, gamePlay);
-    }
-   }
-  }
- }
-
- private void shoot(Special special) {
-  for (Port port : special.ports) {
-   double[] shotX = {port.X}, shotY = {port.Y}, shotZ = {port.Z};
-   U.rotate(shotX, shotY, XY);
-   U.rotate(shotY, shotZ, YZ);
-   U.rotate(shotX, shotZ, XZ);
-   special.shots.get(special.currentShot).deploy(this, special, port);
-   special.currentShot = ++special.currentShot >= E.shotQuantity ? 0 : special.currentShot;
-  }
-  for (Port port : special.ports) {
-   if (port.spit != null) {
-    port.spit.deploy(this, special, port);
-   }
-  }
-  if (special.type == specialType.phantom) {
-   special.sound.loop(vehicleToCameraSoundDistance);
-  } else if ((special.type != specialType.flamethrower || VE.globalFlick) && !wrathEngaged) {
-   special.sound.play(vehicleToCameraSoundDistance * (special.type == specialType.thewrath ? .5 : 1));
-  }
+  if (VA != null) VA.stop(this);
  }
 
  public void closeSounds() {
-  if (VA != null) VA.close(this);
+  if (VA != null) VA.close();
  }
 }
