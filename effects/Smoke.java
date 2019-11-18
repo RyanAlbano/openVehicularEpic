@@ -11,17 +11,17 @@ import ve.vehicles.*;
 public class Smoke extends Core {
 
  public final Cylinder C;
- private double speedX, speedY, speedZ,stage;
+ private double speedX, speedY, speedZ, stage;
 
  public Smoke(VehiclePart VP) {
   C = new Cylinder(1, 1);
   PhongMaterial PM = new PhongMaterial();
-  U.setDiffuseRGB(PM, 0, 0, 0, .25);
-  U.setSpecularRGB(PM, 0, 0, 0);
-  C.setMaterial(PM);
+  U.Phong.setDiffuseRGB(PM, 0, 0, 0, .25);
+  U.Phong.setSpecularRGB(PM, 0);
+  U.setMaterialSecurely(C, PM);
   absoluteRadius = .02 * VP.absoluteRadius;
   U.setScale(C, absoluteRadius);
-  //U.add(this);<-Smokes added in Vehicle because the add-order matters
+  //U.add(this);<-Not added here because the add-order matters
  }
 
  public void deploy(VehiclePart VP) {
@@ -43,9 +43,8 @@ public class Smoke extends Core {
     X += speedX * VE.tick;
     Y += speedY * VE.tick;
     Z += speedZ * VE.tick;
-    boolean wind = E.wind > 0;
-    X += wind ? E.windX * VE.tick : 0;
-    Z += wind ? E.windZ * VE.tick : 0;
+    X += E.Wind.speedX * VE.tick;
+    Z += E.Wind.speedZ * VE.tick;
     if (U.renderWithLOD(this)) {
      U.randomRotate(C);
      U.setTranslate(C, this);

@@ -1,10 +1,12 @@
-package ve.vehicles;
+package ve.vehicles.specials;
 
 import javafx.scene.paint.*;
 import javafx.scene.shape.*;
 import ve.Core;
 import ve.VE;
+import ve.utilities.SL;
 import ve.utilities.U;
+import ve.vehicles.Vehicle;
 
 public class Spit extends Core {
 
@@ -24,18 +26,18 @@ public class Spit extends Core {
   MV = new MeshView(TM);
   MV.setCullFace(CullFace.NONE);
   PhongMaterial PM = new PhongMaterial();
-  U.setDiffuseRGB(PM, 0, 0, 0);
-  U.setSpecularRGB(PM, 0, 0, 0);
-  MV.setMaterial(PM);
-  U.add(MV);
+  U.Phong.setDiffuseRGB(PM, 0);
+  U.Phong.setSpecularRGB(PM, 0);
+  U.setMaterialSecurely(MV, PM);
+  U.Nodes.add(MV);
   MV.setVisible(false);
  }
 
  void deploy(Vehicle vehicle, Special special, Port port) {
   boolean complex = special.aimType != Special.AimType.normal;
   U.rotate(MV,
-  -(vehicle.YZ - (complex ? vehicle.vehicleTurretYZ : 0) + (port.YZ * U.cos(vehicle.XY)) + (port.XZ * U.sin(vehicle.XY))),
-  vehicle.XZ + (complex ? vehicle.vehicleTurretXZ : 0) + (port.XZ * U.cos(vehicle.XY)) + (port.YZ * U.sin(vehicle.XY)) * vehicle.polarity);
+  -(vehicle.YZ - (complex ? vehicle.VT.YZ : 0) + (port.YZ * U.cos(vehicle.XY)) + (port.XZ * U.sin(vehicle.XY))),
+  vehicle.XZ + (complex ? vehicle.VT.XZ : 0) + (port.XZ * U.cos(vehicle.XY)) + (port.YZ * U.sin(vehicle.XY)) * vehicle.P.polarity);
   stage = Double.MIN_VALUE;
  }
 
@@ -47,8 +49,8 @@ public class Spit extends Core {
    } else {
     double[] spitX = {port.X}, spitY = {port.Y}, spitZ = {port.Z};
     if (special.aimType != Special.AimType.normal) {
-     U.rotateWithPivot(spitZ, spitY, vehicle.vehicleTurretPivotY, vehicle.vehicleTurretPivotZ, vehicle.vehicleTurretYZ);
-     U.rotateWithPivot(spitX, spitZ, 0, vehicle.vehicleTurretPivotZ, vehicle.vehicleTurretXZ);
+     U.rotateWithPivot(spitZ, spitY, vehicle.VT.pivotY, vehicle.VT.pivotZ, vehicle.VT.YZ);
+     U.rotateWithPivot(spitX, spitZ, 0, vehicle.VT.pivotZ, vehicle.VT.XZ);
     }
     U.rotate(spitX, spitY, vehicle.XY);
     U.rotate(spitY, spitZ, vehicle.YZ);
@@ -69,7 +71,7 @@ public class Spit extends Core {
  public void render() {
   if (stage > 0 && U.render(this)) {
    U.setTranslate(MV, this);
-   ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(U.getImage("firelight" + U.random(3)));
+   ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.Images.fireLight + U.random(3)));
    MV.setVisible(true);
   } else {
    MV.setVisible(false);

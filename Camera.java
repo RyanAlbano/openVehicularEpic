@@ -19,6 +19,7 @@ public enum Camera {//<-Don't extend Core!
  static final double defaultZoom = 75;
  public static double zoom = defaultZoom;
  static double zoomChange = 1;
+ static boolean shake;
  static final boolean[] toUserPerspective = new boolean[2];
  static final boolean[] restoreZoom = new boolean[2];
  static final boolean[] lookForward = new boolean[2];
@@ -39,9 +40,16 @@ public enum Camera {//<-Don't extend Core!
   static final double maximumFar = Double.MAX_VALUE * .125;
  }
 
+ public enum shakePresets {//Only useful at vehicle's positions--not for explosive shots, mines etc.
+  ;
+  public static final long vehicleDeath = 20, vehicleExplode = 30,
+  massiveHit = 30, maxSpinnerHit = 30,
+  normalNuclear = 50, maxNuclear = 100;
+ }
+
  public enum View {docked, near, distant, driver, flow, watchMove, watch}
 
- static void boot() {
+ static {
   camera.getTransforms().add(rotateXY);
   camera.setNearClip(clipRange.normalNear);
   camera.setFarClip(clipRange.maximumFar);
@@ -54,10 +62,10 @@ public enum Camera {//<-Don't extend Core!
   camera2.setTranslateY(0);
   camera2.setTranslateZ(0);
   VE.scene3D.setCamera(camera);
-  TE.arrowScene.setCamera(camera2);
+  TE.Arrow.scene.setCamera(camera2);
  }
 
- static void run(Vehicle playerV) {
+ static void run(Vehicle playerV, boolean gamePlay) {
   aroundVehicleXZ = lookForward[0] && lookForward[1] ? 0 : aroundVehicleXZ;
   camera.setNearClip(view == View.driver ? clipRange.minimumNear : clipRange.normalNear);
   double cameraVehicleXZ, cameraVehicleY;
@@ -70,8 +78,8 @@ public enum Camera {//<-Don't extend Core!
    cameraVehicleY = mainView ? 250 : playerV.height * .9;
   }
   if (view == View.driver) {
-   boolean syncToTurret = playerV.hasTurret && playerV.driverInVehicleTurret;
-   double xy1 = playerV.XY, yz1 = playerV.YZ - (syncToTurret ? playerV.vehicleTurretYZ : 0), xz1 = playerV.XZ + (syncToTurret ? playerV.vehicleTurretXZ : 0);
+   boolean syncToTurret = playerV.VT != null && playerV.VT.driverInside;
+   double xy1 = playerV.XY, yz1 = playerV.YZ - (syncToTurret ? playerV.VT.YZ : 0), xz1 = playerV.XZ + (syncToTurret ? playerV.VT.XZ : 0);
    aroundVehicleXZ = 0;
    if (lookAround != 0) {
     aroundVehicleXZ = 180;
@@ -79,10 +87,10 @@ public enum Camera {//<-Don't extend Core!
     xy1 *= -1;
     yz1 *= -1;
    }
-   double[] driverViewY = {playerV.driverViewY}, driverViewZ = {playerV.driverViewZ}, driverViewX = {playerV.driverViewX * VE.driverSeat};
-   if (syncToTurret && playerV.vehicleTurretPivotZ != 0) {
-    U.rotateWithPivot(driverViewZ, driverViewY, -playerV.vehicleTurretPivotZ * .5, 0, -playerV.vehicleTurretYZ);
-    U.rotateWithPivot(driverViewX, driverViewZ, 0, playerV.vehicleTurretPivotZ, playerV.vehicleTurretXZ);
+   double[] driverViewY = {playerV.driverViewY}, driverViewZ = {playerV.driverViewZ}, driverViewX = {playerV.driverViewX * VE.Options.driverSeat};
+   if (syncToTurret && playerV.VT.pivotZ != 0) {
+    U.rotateWithPivot(driverViewZ, driverViewY, -playerV.VT.pivotZ * .5, 0, -playerV.VT.YZ);
+    U.rotateWithPivot(driverViewX, driverViewZ, 0, playerV.VT.pivotZ, playerV.VT.XZ);
    }
    U.rotate(driverViewX, driverViewY, playerV.XY);
    U.rotate(driverViewY, driverViewZ, playerV.YZ);
@@ -95,9 +103,8 @@ public enum Camera {//<-Don't extend Core!
    Z = playerV.Z + driverViewZ[0];
   } else if (view == View.flow) {
    XY = 0;
-   boolean gamePlay = VE.status == VE.Status.play || VE.status == VE.Status.replay;
-   double moveRate = .125 * VE.tick, xd = -cameraVehicleY - (lastViewNear ? 0 : playerV.extraViewHeight) - (gamePlay ? Math.abs(playerV.speed) : 0);
-   flowFlip = playerV.speed != 0 ? playerV.speed < 0 : flowFlip;
+   double moveRate = .125 * VE.tick, xd = -cameraVehicleY - (lastViewNear ? 0 : playerV.extraViewHeight) - (gamePlay ? Math.abs(playerV.P.speed) : 0);
+   flowFlip = playerV.P.speed != 0 ? playerV.P.speed < 0 : flowFlip;
    if (flowFlip) {
     while (Math.abs(-playerV.XZ + 180 - XZ) > 180) {
      XZ += XZ < -playerV.XZ + 180 ? 360 : -360;
@@ -128,7 +135,7 @@ public enum Camera {//<-Don't extend Core!
     while (Math.abs(playerV.X - X) > 10000) X += playerV.X > X ? 20000 : -20000;
     while (Math.abs(playerV.Z - Z) > 10000) Z += playerV.Z > Z ? 20000 : -20000;
     while (Math.abs(playerV.Y - Y) > 10000) Y += playerV.Y > Y ? 20000 : -20000;
-    Y = Math.min(Y, E.groundLevel - playerV.collisionRadius + (E.poolExists && U.distance(X, E.poolX, Z, E.poolZ) < E.pool[0].getRadius() ? E.poolDepth : 0));
+    Y = Math.min(Y, E.Ground.level - playerV.collisionRadius() + (E.Pool.exists && U.distance(X, E.Pool.X, Z, E.Pool.Z) < E.Pool.C[0].getRadius() ? E.Pool.depth : 0));
    }
    double vehicleCameraDistanceX = playerV.X - X, vehicleCameraDistanceZ = playerV.Z - Z, vehicleCameraDistanceY = playerV.Y - Y;
    XZ = -((90 + (vehicleCameraDistanceX >= 0 ? 180 : 0)) + U.arcTan(vehicleCameraDistanceZ / vehicleCameraDistanceX));
@@ -136,18 +143,18 @@ public enum Camera {//<-Don't extend Core!
   } else {
    long viewMultiply = view == View.distant ? 10 : 1;
    XY = 0;
-   if (playerV.vehicleType == Vehicle.Type.vehicle) {
+   if (playerV.type == Vehicle.Type.vehicle) {
     YZ = 0;
-    boolean syncToTurret = playerV.hasTurret && !playerV.turretAutoAim;
+    boolean syncToTurret = playerV.VT != null && !playerV.VT.hasAutoAim;
     if (syncToTurret) {
      aroundVehicleXZ = 0;
     } else if (Math.abs(lookAround) > 0 && !(lookForward[0] && lookForward[1])) {
      aroundVehicleXZ += lookAround > 0 ? 10 : -10;
     }
-    double sourceCameraXZ = playerV.cameraXZ + aroundVehicleXZ + (syncToTurret ? playerV.vehicleTurretXZ : 0);
+    double sourceCameraXZ = playerV.P.cameraXZ + aroundVehicleXZ + (syncToTurret ? playerV.VT.XZ : 0);
     XZ = -sourceCameraXZ;
-    double[] setX = {syncToTurret ? playerV.vehicleTurretPivotZ * U.sin(playerV.vehicleTurretXZ) : 0},
-    setZ = {syncToTurret ? (playerV.vehicleTurretPivotZ * .5 * U.sin(Math.abs(playerV.vehicleTurretXZ)) - playerV.vehicleTurretPivotZ * 2 * U.sin(Math.abs(playerV.vehicleTurretXZ * .5))) : 0};
+    double[] setX = {syncToTurret ? playerV.VT.pivotZ * U.sin(playerV.VT.XZ) : 0},
+    setZ = {syncToTurret ? (playerV.VT.pivotZ * .5 * U.sin(Math.abs(playerV.VT.XZ)) - playerV.VT.pivotZ * 2 * U.sin(Math.abs(playerV.VT.XZ * .5))) : 0};
     setZ[0] -= cameraVehicleXZ * viewMultiply;
     U.rotate(setX, setZ, sourceCameraXZ);
     X = setX[0] + playerV.X;
@@ -175,11 +182,13 @@ public enum Camera {//<-Don't extend Core!
   if (Math.abs(aroundVehicleXZ) > 180) {
    aroundVehicleXZ += aroundVehicleXZ < -180 ? 360 : -360;
   }
-  if (VE.cameraShake) {
+  if (shake) {
    double shakeXZ = 0, shakeYZ = 0;
    for (Vehicle vehicle : VE.vehicles) {
-    shakeXZ += vehicle.cameraShakeXZ / Math.max(1, vehicle.distanceToCamera * .1);
-    shakeYZ += vehicle.cameraShakeYZ / Math.max(1, vehicle.distanceToCamera * .1);
+    if (vehicle.cameraShake > 0) {
+     shakeXZ += U.randomPlusMinus(vehicle.cameraShake * vehicle.cameraShake) / Math.max(1, vehicle.distanceToCamera * .1);
+     shakeYZ += U.randomPlusMinus(vehicle.cameraShake * vehicle.cameraShake) / Math.max(1, vehicle.distanceToCamera * .1);
+    }
    }
    XZ += U.clamp(-45, shakeXZ, 45);
    YZ += U.clamp(-45, shakeYZ, 45);
@@ -189,25 +198,25 @@ public enum Camera {//<-Don't extend Core!
 
  static void runAroundTrack() {
   YZ = 10;
-  Y = TE.mapSelectY - 5000;
+  Y = TE.MS.Y - 5000;
   XY = 0;
-  X = TE.mapSelectX - (17000 * U.sin(aroundMapXZ));
-  Z = TE.mapSelectZ - (17000 * U.cos(aroundMapXZ));
+  X = TE.MS.X - (17000 * U.sin(aroundMapXZ));
+  Z = TE.MS.Z - (17000 * U.cos(aroundMapXZ));
   mapSelectRandomRotationDirection *= U.random() > .999 ? -1 : 1;
   aroundMapXZ += mapSelectRandomRotationDirection * VE.tick;
   while (aroundMapXZ > 180) aroundMapXZ -= 360;
   while (aroundMapXZ < -180) aroundMapXZ += 360;
-  if ((VE.trackTimer += VE.tick) > 6) {
-   VE.trackPoint = ++VE.trackPoint >= TE.points.size() ? 0 : VE.trackPoint;
-   VE.trackTimer = 0;
+  if ((TE.MS.timer += VE.tick) > 6) {
+   TE.MS.point = ++TE.MS.point >= TE.points.size() ? 0 : TE.MS.point;
+   TE.MS.timer = 0;
   }
   if (TE.points.isEmpty()) {
-   TE.mapSelectX = TE.mapSelectZ = TE.mapSelectY = 0;
+   TE.MS.X = TE.MS.Z = TE.MS.Y = 0;
   } else {
-   TE.mapSelectX -= (TE.mapSelectX - TE.points.get(VE.trackPoint).X) * .1 * VE.tick;
-   TE.mapSelectY -= (TE.mapSelectY - TE.points.get(VE.trackPoint).Y) * .1 * VE.tick;
-   TE.mapSelectZ -= (TE.mapSelectZ - TE.points.get(VE.trackPoint).Z) * .1 * VE.tick;
-   TE.mapSelectY = Math.min(TE.mapSelectY, 0);
+   TE.MS.X -= (TE.MS.X - TE.points.get(TE.MS.point).X) * .1 * VE.tick;
+   TE.MS.Y -= (TE.MS.Y - TE.points.get(TE.MS.point).Y) * .1 * VE.tick;
+   TE.MS.Z -= (TE.MS.Z - TE.points.get(TE.MS.point).Z) * .1 * VE.tick;
+   TE.MS.Y = Math.min(TE.MS.Y, 0);
   }
   XZ = aroundMapXZ;
   setAngleTable();

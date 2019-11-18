@@ -2,6 +2,8 @@ package ve.vehicles;
 
 import javafx.geometry.Point3D;
 import javafx.scene.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 import javafx.scene.transform.*;
 import ve.*;
@@ -35,10 +37,9 @@ public class VehiclePart extends InstancePart {
  final Thrust thrust;
  private double brightness = Double.NaN;
  private final double steerAngleMultiply;
- double explodeStage, explodeTimer;
- private double explodeX, explodeY, explodeZ, explodeSpeedX, explodeSpeedY, explodeSpeedZ;
- double explodeGravitySpeed;
- private double explodeAngle, explodeAngleSpeed;
+ ExplodeStage explodeStage = ExplodeStage.intact;
+ private double explodeSpeedX, explodeSpeedY, explodeSpeedZ;
+ private double explodeAngleSpeed;
  private double[] thrustPoint;
  List<Smoke> smokes;
  int currentSmoke;
@@ -47,25 +48,28 @@ public class VehiclePart extends InstancePart {
  private final double pivotX, pivotY, pivotZ;
  private int wheelShockAbsorbAssign = -1;
  private final DrawMode defaultDrawMode;
+ private Color RGB;
 
  enum Thrust {fire, blue, white}
 
- public VehiclePart(Vehicle inV, double[] i_X, double[] i_Y, double[] i_Z, int vertexQuantity, double[] i_RGB, String type, String textureType) {
+ enum ExplodeStage {intact, thrown}
+
+ public VehiclePart(Vehicle inV, double[] i_X, double[] i_Y, double[] i_Z, int vertexQuantity, Color i_RGB, String type, String textureType) {
   this(inV, i_X, i_Y, i_Z, vertexQuantity, i_RGB, type, textureType, 0, 0, 0);
  }
 
- VehiclePart(Vehicle inV, double[] i_X, double[] i_Y, double[] i_Z, int vertexQuantity, double[] i_RGB, String type, String textureType, double pivotX, double pivotY, double pivotZ) {
+ VehiclePart(Vehicle inV, double[] i_X, double[] i_Y, double[] i_Z, int vertexQuantity, Color i_RGB, String type, String textureType, double pivotX, double pivotY, double pivotZ) {
   V = inV;
   V.vertexQuantity += vertexQuantity;
   int n;
-  textureType = type.contains(" noTexture ") ? "" : V.modelProperties.contains(" mapTerrain ") ? E.terrain : textureType;
+  textureType = type.contains(" noTexture ") ? "" : textureType;
   this.pivotX = pivotX;
   this.pivotY = pivotY;
   this.pivotZ = pivotZ;
   double[] storeX = new double[vertexQuantity], storeY = new double[vertexQuantity], storeZ = new double[vertexQuantity];
   light = type.contains(" light ");
   selfIlluminate = type.contains(" selfIlluminate ");
-  fireLight = type.contains(" fire ") && VE.defaultVehicleLightBrightness > 0;
+  fireLight = type.contains(" fire ") && VE.Map.defaultVehicleLightBrightness > 0;
   pointLight = light || fireLight ? new PointLight() : null;
   thrust = type.contains(" thrustWhite ") ? Thrust.white : type.contains(" thrustBlue ") ? Thrust.blue : type.contains(" thrust ") ? Thrust.fire : null;
   blink = type.contains(" blink ");
@@ -147,15 +151,15 @@ public class VehiclePart extends InstancePart {
    coordinates[(n * 3) + 2] = (float) storeZ[n];
   }
   TM.getPoints().setAll(coordinates);
-  coordinates = U.random() < .5 ? new float[]{0, 1, 1, 1, 1, 0, 0, 0} : new float[]{0, 0, 1, 0, 1, 1, 0, 1};
+  float[] textureCoordinates = U.random() < .5 ? E.textureCoordinateBase0 : E.textureCoordinateBase1;
   for (n = 0; n < vertexQuantity / (double) 3; n++) {
-   TM.getTexCoords().addAll(coordinates);
+   TM.getTexCoords().addAll(textureCoordinates);//<-'addAll'--NOT 'setAll'
   }
   if (type.contains(" triangles ")) {
    setTriangles(vertexQuantity);
   } else if (type.contains(" conic ")) {
    setConic(V, vertexQuantity);
-   thrustPoint = thrust != null && thrust != Thrust.white ? new double[]{TM.getPoints().get(0), TM.getPoints().get(1), TM.getPoints().get(2)} : null;
+   thrustPoint = thrust != null && thrust != Thrust.white ? new double[]{TM.getPoints().get(0), TM.getPoints().get(1), TM.getPoints().get(2)} : thrustPoint;
   } else if (type.contains(" strip ")) {
    setStrip(V, vertexQuantity);
   } else if (type.contains(" squares ")) {
@@ -176,46 +180,40 @@ public class VehiclePart extends InstancePart {
   defaultDrawMode = type.contains(" line ") ? DrawMode.LINE : DrawMode.FILL;
   MV.setDrawMode(defaultDrawMode);
   MV.setCullFace(CullFace.BACK);
-  if (V.realVehicle && thrust == null) {
-   chip = new Chip(this);
-   flame = new Flame(this);
+  PM = new PhongMaterial();
+  RGB = type.contains(" theRandomColor ") ? V.theRandomColor : i_RGB;
+  Color storeRGB = RGB;
+  if (type.contains(" reflect ")) {
+   RGB = U.getColor(E.skyRGB);
   }
-  if (type.contains(" theRandomColor ")) {
-   RGB[0] = V.theRandomColor[0];
-   RGB[1] = V.theRandomColor[1];
-   RGB[2] = V.theRandomColor[2];
-  } else {
-   RGB[0] = i_RGB[0];
-   RGB[1] = i_RGB[1];
-   RGB[2] = i_RGB[2];
+  if (light && (type.contains(" reflect ") || (storeRGB.getRed() == storeRGB.getGreen() && storeRGB.getGreen() == storeRGB.getBlue()))) {
+   RGB = U.getColor(1, 1, 1);
   }
-  double[] storeRGB = {RGB[0], RGB[1], RGB[2]};
-  for (n = 3; --n >= 0; ) {
-   RGB[n] = type.contains(" reflect ") ? E.skyRGB[n] : RGB[n];
-   RGB[n] = light && (type.contains(" reflect ") || storeRGB[0] == storeRGB[1] && storeRGB[1] == storeRGB[2]) ? 1 : RGB[n];
-   RGB[n] = V.modelProperties.contains(" mapTerrain ") ? E.terrainRGB[n] : RGB[n];
-   RGB[n] = blink || thrust != null ? 0 : RGB[n];
+  if (blink || thrust != null) {
+   RGB = U.getColor(0, 0, 0);
   }
-  U.setDiffuseRGB(PM, RGB[0], RGB[1], RGB[2]);
+  U.Phong.setDiffuseRGB(PM, RGB);
   if (light) {
    setBrightness();
   }
   if (type.contains(" noSpecular ") || blink || thrust != null) {
-   U.setSpecularRGB(PM, 0, 0, 0);
-  } else if (type.contains(" shiny ")) {
-   U.setSpecularRGB(PM, 1, 1, 1);
-   PM.setSpecularPower(E.SpecularPowers.shiny);
+   U.Phong.setSpecularRGB(PM, 0);
   } else {
-   U.setSpecularRGB(PM, .5, .5, .5);
-   PM.setSpecularPower(E.SpecularPowers.standard);
+   boolean shiny = type.contains(" shiny ");
+   U.Phong.setSpecularRGB(PM, shiny ? E.Specular.Colors.shiny : E.Specular.Colors.standard);
+   PM.setSpecularPower(shiny ? E.Specular.Powers.shiny : E.Specular.Powers.standard);
   }
   if (selfIlluminate) {
-   U.setSelfIllumination(PM, RGB[0], RGB[1], RGB[2]);
+   U.Phong.setSelfIllumination(PM, RGB);
   }
-  MV.setMaterial(PM);
-  PM.setDiffuseMap(U.getImage(textureType));
-  PM.setSpecularMap(U.getImage(textureType));
-  PM.setBumpMap(U.getImageNormal(textureType));
+  U.setMaterialSecurely(MV, PM);
+  PM.setDiffuseMap(U.Images.get(textureType));
+  PM.setSpecularMap(U.Images.get(textureType));
+  PM.setBumpMap(U.Images.getNormalMap(textureType));
+  if (V.realVehicle && thrust == null) {//<-Instantiate after setting PM--will this help get correct Chip texture properties?
+   chip = new Chip(this);
+   flame = new Flame(this);
+  }
   if (VE.status != VE.Status.vehicleViewer) {
    fastCull = type.contains(" fastCullB ") ? 0 : fastCull;
    fastCull = type.contains(" fastCullF ") ? 2 : fastCull;
@@ -234,39 +232,29 @@ public class VehiclePart extends InstancePart {
  }
 
  private void setBrightness() {
-  U.setSelfIllumination(PM, RGB[0] * 2 * brightness, RGB[1] * 2 * brightness, RGB[2] * 2 * brightness);
+  U.Phong.setSelfIllumination(PM, RGB.getRed() * 2 * brightness, RGB.getGreen() * 2 * brightness, RGB.getBlue() * 2 * brightness);
   if (light) {
-   U.setLightRGB(pointLight, RGB[0] * brightness, RGB[1] * brightness, RGB[2] * brightness);
+   U.Nodes.Light.setRGB(pointLight, RGB.getRed() * brightness, RGB.getGreen() * brightness, RGB.getBlue() * brightness);
   }
  }
 
- void setPosition(boolean gamePlay) {
-  double[] placementX = {displaceX + (controller ? V.driverViewX * VE.driverSeat : 0)}, placementY = {displaceY}, placementZ = {displaceZ};
-  if (explodeStage > 0) {
-   if (explodeStage == 1) {
-    long random = U.random(3);
-    explodeAngle = random == 2 ? V.XY : random == 1 ? V.YZ : V.XZ;
+ void setPosition(boolean nullPhysics) {
+  double[] placementX = {displaceX + (controller ? V.driverViewX * VE.Options.driverSeat : 0)}, placementY = {displaceY}, placementZ = {displaceZ};
+  if (!V.isIntegral()) {
+   if (explodeStage == ExplodeStage.intact) {
+    damage.setAxis(new Point3D(U.random(), U.random(), U.random()));
+    explodeSpeedX = U.randomPlusMinus(150.);
+    explodeSpeedY = U.randomPlusMinus(150.);
+    explodeSpeedZ = U.randomPlusMinus(150.);
     explodeAngleSpeed = U.randomPlusMinus(40.);
-    explodeX = explodeY = explodeZ = explodeGravitySpeed = 0;
-    explodeSpeedX = U.randomPlusMinus(200.);
-    explodeSpeedY = U.randomPlusMinus(200.);
-    explodeSpeedZ = U.randomPlusMinus(200.);
-    explodeStage = 2;
+    explodeStage = ExplodeStage.thrown;
    }
-   explodeAngle += explodeStage < 3 ? explodeAngleSpeed * VE.tick : 0;
-   damage.setAngle(explodeAngle);
-   if (gamePlay) {
-    if (explodeStage < 3) {
-     explodeX += explodeSpeedX * VE.tick;
-     explodeZ += explodeSpeedZ * VE.tick;
-    }
-    explodeY += explodeSpeedY * VE.tick;
-    explodeGravitySpeed += E.gravity * VE.tick;
-    explodeY += V.mode.name().startsWith(Vehicle.Mode.drive.name()) ? explodeGravitySpeed * VE.tick : 0;
-   }
-   if (explodeY + V.Y > V.localVehicleGround) {//<-Same value check as assigned below--just expressed more intuitively
-    explodeY = V.localVehicleGround - V.Y;
-    explodeStage = Math.max(3, explodeStage);
+   damage.setAngle(explodeAngleSpeed * V.P.explodeStage);
+   double explodeX = explodeSpeedX * V.P.explodeStage;
+   double explodeZ = explodeSpeedZ * V.P.explodeStage;
+   double explodeY = explodeSpeedY * V.P.explodeStage;
+   if (explodeY + V.Y > V.P.localVehicleGround) {//<-Same value check as assigned below--just expressed more intuitively
+    explodeY = V.P.localVehicleGround - V.Y;
    }
    placementX[0] += explodeX;
    placementY[0] += explodeY;
@@ -276,17 +264,17 @@ public class VehiclePart extends InstancePart {
    placementY[0] += V.absoluteRadius * U.randomPlusMinus(.001);
    placementZ[0] += V.absoluteRadius * U.randomPlusMinus(.001);
   }
-  if (!V.inWrath) {
-   if (pivotZ != 0 || pivotX != 0 || (!controller && V.hasTurret)) {//<-May need to be further amended later so things don't rotate unintentionally
+  if (nullPhysics || !V.P.inWrath) {//<-Here, 'nullPhysics' is only called to prevent nullPointer in Physics
+   if (!nullPhysics && (pivotZ != 0 || pivotX != 0 || (!controller && V.VT != null))) {//<-May need to be further amended later so things don't rotate unintentionally
     if (steer.contains(" YZ ") || vehicleTurretBarrel) {
      U.rotateWithPivot(placementZ, placementY,
-     vehicleTurretBarrel ? V.vehicleTurretPivotY + pivotY : (pivotZ + displaceZ), vehicleTurretBarrel ? V.vehicleTurretPivotZ + pivotZ : (pivotY + displaceY),
-     vehicleTurretBarrel ? V.vehicleTurretYZ : ((steer.contains(" fromYZ ") ? -V.speedYZ : V.speedXZ) * steerAngleMultiply));
+     vehicleTurretBarrel ? V.VT.pivotY + pivotY : (pivotZ + displaceZ), vehicleTurretBarrel ? V.VT.pivotZ + pivotZ : (pivotY + displaceY),
+     vehicleTurretBarrel ? V.VT.YZ : ((steer.contains(" fromYZ ") ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply));
     }
     if (steer.contains(" XZ ") || vehicleTurret) {
      U.rotateWithPivot(placementX, placementZ,
-     pivotX + (vehicleTurret ? 0 : displaceX), vehicleTurret ? V.vehicleTurretPivotZ : (pivotZ + displaceZ),
-     vehicleTurret ? V.vehicleTurretXZ : ((steer.contains(" fromYZ ") && !steer.contains(" fromXZ ") ? -V.speedYZ : V.speedXZ) * steerAngleMultiply));
+     pivotX + (vehicleTurret ? 0 : displaceX), vehicleTurret ? V.VT.pivotZ : (pivotZ + displaceZ),
+     vehicleTurret ? V.VT.XZ : ((steer.contains(" fromYZ ") && !steer.contains(" fromXZ ") ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply));
     }
    }
    if (V.XY != 0) {
@@ -302,15 +290,13 @@ public class VehiclePart extends InstancePart {
   }
  }
 
- void render() {
-  if ((E.renderType.name().contains(E.RenderType.fullDistance.name()) || (size * E.renderLevel >= V.distanceToCamera * Camera.zoom)) &&
-  (E.renderType == E.RenderType.fullDistanceALL || (explodeStage <= 3 &&
-  !(exterior && V.inDriverView) &&
-  !(flickPolarity == 1 && V.flicker) && !(flickPolarity == 2 && !V.flicker) &&
-  !(landingGear && V.mode == Vehicle.Mode.fly) &&
+ void render(boolean nullPhysics, boolean renderALL) {
+  if (renderALL || ((E.renderType == E.RenderType.fullDistance || (size * E.renderLevel >= V.distanceToCamera * Camera.zoom)) &&
+  (!(exterior && V.inDriverView) && !(flickPolarity == 1 && V.flicker) && !(flickPolarity == 2 && !V.flicker) &&
+  !(landingGear && !nullPhysics && V.P.mode == Physics.Mode.fly) &&
   (thrust == null || (V.thrusting && !V.destroyed))))) {
    boolean render = true;
-   if (!Double.isNaN(fastCull) && E.renderType != E.RenderType.fullDistanceALL) {
+   if (!Double.isNaN(fastCull) && !renderALL) {
     long shiftedAxis = Math.round(fastCull);
     if (V.XZ > 45 && V.XZ < 135) {
      shiftedAxis = --shiftedAxis < -1 ? 2 : shiftedAxis;
@@ -328,23 +314,26 @@ public class VehiclePart extends InstancePart {
    }
    if (render) {
     if (!base) {
-     if (steer.contains(" XY ")) {
-      steerXY.setXY((steer.contains(" fromYZ ") ? V.speedYZ : V.speedXZ) * steerAngleMultiply);
-     }
-     if (wheel) {
-      steerYZ.setYZ(side > 0 ? V.wheelSpin[0] : side < 0 ? V.wheelSpin[1] : 0);
-     } else if (steer.contains(" YZ ")) {
-      steerYZ.setYZ((steer.contains(" fromYZ ") ? -V.speedYZ : V.speedXZ) * steerAngleMultiply);//<-Master script
-     }
-     if (steer.contains(" XZ ")) {
-      steerXZ.setXZ((steer.contains(" fromYZ ") && !steer.contains(" fromXZ ") ? -V.speedYZ : V.speedXZ) * steerAngleMultiply);//<-Master script
-     } else if (vehicleTurret) {
-      steerXZ.setXZ(V.vehicleTurretXZ);
-      if (vehicleTurretBarrel) {
-       steerYZ.setYZ(V.vehicleTurretYZ);
+     if (!nullPhysics) {
+      if (steer.contains(" XY ")) {
+       steerXY.setXY((steer.contains(" fromYZ ") ? V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply);
       }
-     } else if (spinner) {
-      steerXZ.setXZ(V.spinnerXZ);
+      if (wheel) {
+       steerYZ.setYZ(side > 0 ? V.P.wheelSpin[0] : side < 0 ? V.P.wheelSpin[1] : 0);
+      } else if (steer.contains(" YZ ")) {
+       steerYZ.setYZ((steer.contains(" fromYZ ") ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply);//<-Master script
+      }
+      if (steer.contains(" XZ ")) {
+       steerXZ.setXZ((steer.contains(" fromYZ ") && !steer.contains(" fromXZ ") ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply);//<-Master script
+      } else if (vehicleTurret) {//<-May fail if the vehicle is never assigned a vehicle turret
+       steerXZ.setXZ(V.VT.XZ);
+       if (vehicleTurretBarrel) {
+        steerYZ.setYZ(V.VT.YZ);
+       }
+      }
+     }
+     if (spinner) {
+      steerXZ.setXZ(V.spinner.XZ);//<-May fail if the vehicle is never assigned a 'spinner' special
      }
      U.inert.set();
      matrix.set(U.inert.multiply(steerXY).multiply(steerYZ).multiply(steerXZ).multiply(V.rotation));
@@ -352,8 +341,8 @@ public class VehiclePart extends InstancePart {
     if (!V.destroyed) {
      if (fireLight) {
       U.setTranslate(pointLight, this);
-      U.setLightRGB(pointLight, 1, .5 + U.random(.25), 0);
-      U.addLight(pointLight);
+      U.Nodes.Light.setRGB(pointLight, 1, .5 + U.random(.25), 0);
+      U.Nodes.Light.add(pointLight);
      } else if (light) {
       if (brightness != V.lightBrightness) {
        brightness = V.lightBrightness;
@@ -361,13 +350,13 @@ public class VehiclePart extends InstancePart {
       }
       if (brightness > 0) {
        U.setTranslate(pointLight, this);
-       U.addLight(pointLight);
+       U.Nodes.Light.add(pointLight);
       }
      }
     }
-    if (E.renderType.name().contains(E.RenderType.fullDistance.name()) || U.render(this, -renderRadius)) {
+    if (U.render(this, -renderRadius)) {
      if (thrust != null) {
-      PM.setSelfIlluminationMap(U.getImage(thrust == Thrust.white ? "white" : ((thrust == Thrust.blue ? "blueJet" : "firelight") + U.random(3))));
+      PM.setSelfIlluminationMap(U.Images.get(thrust == Thrust.white ? SL.Images.white : ((thrust == Thrust.blue ? "blueJet" : SL.Images.fireLight) + U.random(3))));
       if (thrustPoint != null) {
        double thrustShift = V.absoluteRadius * .02;
        for (int n = 3; --n >= 0; ) {
@@ -378,23 +367,23 @@ public class VehiclePart extends InstancePart {
      U.setTranslate(MV, this);
      visible = true;
      if (blink) {
-      PM.setSelfIlluminationMap(V.destroyed ? null : U.getImage("blink" + U.random(3)));
+      PM.setSelfIlluminationMap(V.destroyed ? null : U.Images.get(SL.Instance.blink + U.random(3)));
      }
     }
    }
   }
  }
 
- void throwChip(double power) {
+ public void throwChip(double power) {
   if (chip != null) {
    chip.deploy(V, power);
   }
  }
 
- void deform() {
+ public void deform() {
   if (!noDeformation) {
    damage.setAxis(new Point3D(U.random(), U.random(), U.random()));
-   damage.setAngle(U.randomPlusMinus((V.damage / V.durability) * 6.));
+   damage.setAngle(U.randomPlusMinus(V.getDamage(true) * 6.));
   }
  }
 

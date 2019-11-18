@@ -15,11 +15,11 @@ class Splash extends Core {
 
  Splash() {
   C = new Cylinder(1, 1);
-  C.setMaterial(new PhongMaterial());
-  if (E.poolType == E.Pool.lava) {
-   U.setSelfIllumination((PhongMaterial) C.getMaterial(), E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]);
+  U.setMaterialSecurely(C, new PhongMaterial());
+  if (E.Pool.type == E.Pool.Type.lava) {
+   U.Phong.setSelfIllumination((PhongMaterial) C.getMaterial(), E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]);
   }
-  U.add(C);
+  U.Nodes.add(C);
   C.setVisible(false);
  }
 
@@ -48,15 +48,15 @@ class Splash extends Core {
     if (U.getDepth(this) > 0) {
      U.randomRotate(C);
      double splashRGB = U.random(2.), r = .5 * splashRGB, g = splashRGB, b = 1;
-     if (E.poolType == E.Pool.lava) {
+     if (E.Pool.type == E.Pool.Type.lava) {
       r = 1;
       g = 2 * splashRGB;
       b = 0;
-     } else if (E.poolType == E.Pool.acid) {
+     } else if (E.Pool.type == E.Pool.Type.acid) {
       r = b = .5 * splashRGB;
       g = 1;
      }
-     U.setDiffuseRGB((PhongMaterial) C.getMaterial(), r, g, b);
+     U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), r, g, b);
      U.setTranslate(C, this);
      show = true;
     }

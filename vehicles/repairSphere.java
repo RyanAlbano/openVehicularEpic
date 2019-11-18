@@ -3,18 +3,19 @@ package ve.vehicles;
 import javafx.scene.shape.Sphere;
 import ve.Core;
 import ve.VE;
+import ve.environment.E;
 import ve.utilities.U;
 
-class FixSphere extends Core {
+public class repairSphere extends Core {
 
  private final Sphere S;
- double stage;
+ public double stage;
  private double speedX, speedY, speedZ;
 
- FixSphere(Vehicle V) {
+ repairSphere(Vehicle V) {
   S = new Sphere(U.random(V.absoluteRadius * .1));
-  S.setMaterial(V.fixSpherePM);
-  U.add(S);
+  U.setMaterialSecurely(S, E.repairSpherePM);
+  U.Nodes.add(S);
   S.setVisible(false);
  }
 

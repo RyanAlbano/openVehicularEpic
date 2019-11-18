@@ -1,5 +1,6 @@
 package ve;
 
+import ve.utilities.SL;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
 
@@ -41,7 +42,7 @@ public enum Network {
    int n;
    runLoadThread = true;
    if (mode == Mode.HOST) {
-    VE.userPlayer = 0;
+    VE.userPlayerIndex = 0;
     VE.playerNames[0] = userName;
     try {
      server = new ServerSocket(port);
@@ -56,7 +57,7 @@ public enum Network {
       }
       while (true) {
        String s = readIn(out.size() - 1);
-       if (s.startsWith("CANCEL")) {
+       if (s.startsWith(SL.Network.cancel)) {
         VE.escapeToLast(false);
        } else if (s.startsWith("Name(")) {
         VE.playerNames[out.size()] = U.getString(s, 0);
@@ -68,18 +69,18 @@ public enum Network {
         out.get(out.size() - 1).println("#Vehicles(" + VE.vehiclesInMatch);
         out.get(out.size() - 1).println("Name0(" + userName);
         out.get(out.size() - 1).println("Join#(" + out.size());
-        out.get(out.size() - 1).println("MatchLength(" + VE.matchLength);
-       } else if (s.startsWith("joinerReady")) {
+        out.get(out.size() - 1).println("MatchLength(" + VE.Options.matchLength);
+       } else if (s.startsWith(SL.Network.joinerReady)) {
         System.out.println(VE.playerNames[out.size()] + " Joined Successfully");
         break;
        }
       }
       if (out.size() + 1 >= VE.vehiclesInMatch) {
        for (PrintWriter PW : out) {
-        PW.println("HostReady");
+        PW.println(SL.Network.hostReady);
        }
        VE.status = VE.Status.vehicleSelect;
-       VE.section = VE.vehiclePick = 0;
+       VE.UI.page = VE.VS.index = 0;
        waiting = runLoadThread = false;
       }
       VE.gameFPS = U.refreshRate;
@@ -95,25 +96,25 @@ public enum Network {
      out.get(0).println("Name(" + userName);
      while (runLoadThread) {
       String s = readIn(0);
-      if (s.startsWith("CANCEL")) {
+      if (s.startsWith(SL.Network.cancel)) {
        VE.escapeToLast(false);
        break;
       }
       VE.vehiclesInMatch = s.startsWith("#Vehicles(") ? (int) Math.round(U.getValue(s, 0)) : VE.vehiclesInMatch;
       if (s.startsWith("Join#(")) {
-       VE.userPlayer = (int) Math.round(U.getValue(s, 0));
-       VE.playerNames[VE.userPlayer] = userName;
+       VE.userPlayerIndex = (int) Math.round(U.getValue(s, 0));
+       VE.playerNames[VE.userPlayerIndex] = userName;
       } else if (s.startsWith("Name")) {
        for (n = maxPlayers; --n >= 0; ) {
         VE.playerNames[n] = s.startsWith("Name" + n) ? U.getString(s, 0) : VE.playerNames[n];
        }
       } else if (s.startsWith("MatchLength(")) {
-       VE.matchLength = Math.round(U.getValue(s, 0));
-       out.get(0).println("joinerReady");
-      } else if (s.startsWith("HostReady")) {
+       VE.Options.matchLength = Math.round(U.getValue(s, 0));
+       out.get(0).println(SL.Network.joinerReady);
+      } else if (s.startsWith(SL.Network.hostReady)) {
        VE.status = VE.Status.vehicleSelect;
-       VE.vehiclePick = VE.userPlayer;
-       VE.section = 0;
+       VE.VS.index = VE.userPlayerIndex;
+       VE.UI.page = 0;
        waiting = runLoadThread = false;
       }
       VE.gameFPS = U.refreshRate;
@@ -122,7 +123,7 @@ public enum Network {
      E.printStackTrace();
      VE.status = VE.Status.loadLAN;
      joinError = "Could not connect to Host";
-     VE.section = 0;
+     VE.UI.page = 0;
      VE.errorTimer = 50;
     }
    }
@@ -132,18 +133,17 @@ public enum Network {
   gameSetup.start();
  }
 
- static void preMatchCommunication() {
-  boolean gamePlay = VE.status == VE.Status.play || VE.status == VE.Status.replay;
+ static void preMatchCommunication(boolean gamePlay) {
   if (mode != Mode.OFF) {
    int n;
    if (mode == Mode.HOST) {
-    if (VE.timer <= 0) {
+    if (VE.timerBase20 <= 0) {
      for (PrintWriter PW : out) {
-      PW.println("Vehicle0(" + VE.vehicles.get(0).vehicleName);
+      PW.println("Vehicle0(" + VE.vehicles.get(0).name);
      }
      if (gamePlay) {
       for (PrintWriter PW : out) {
-       PW.println("Map(" + VE.mapName);
+       PW.println("Map(" + VE.Map.name);
       }
       if (waiting) {
        for (PrintWriter PW : out) {
@@ -154,7 +154,7 @@ public enum Network {
     }
     for (n = VE.vehiclesInMatch; --n > 0; ) {
      String s = readIn(n - 1);
-     if (s.startsWith("CANCEL")) {
+     if (s.startsWith(SL.Network.cancel)) {
       VE.escapeToLast(false);
      } else if (s.startsWith("Vehicle(")) {
       VE.vehicleNumber[n] = VE.getVehicleIndex(U.getString(s, 0));
@@ -163,31 +163,31 @@ public enum Network {
         out.println("Vehicle" + n + "(" + U.getString(s, 0));
        }
       }
-     } else if (gamePlay && s.startsWith("Ready")) {
+     } else if (gamePlay && s.startsWith(SL.Network.ready)) {
       ready[n] = true;
       if (VE.vehiclesInMatch > 2) {
        for (PrintWriter out : out) {
-        out.println("Ready" + n);
+        out.println(SL.Network.ready + n);
        }
       }
      }
     }
    } else {
-    if (VE.timer <= 0) {
-     out.get(0).println("Vehicle(" + VE.vehicles.get(0).vehicleName);
+    if (VE.timerBase20 <= 0) {
+     out.get(0).println("Vehicle(" + VE.vehicles.get(0).name);
      if (gamePlay && waiting) {
-      out.get(0).println("Ready");
+      out.get(0).println(SL.Network.ready);
      }
     }
     String s = readIn(0);
-    if (s.startsWith("CANCEL")) {
+    if (s.startsWith(SL.Network.cancel)) {
      VE.escapeToLast(false);
     } else if (VE.status == VE.Status.mapJump && s.startsWith("Map(")) {
-     VE.map = VE.getMapName(U.getString(s, 0));
+     VE.map = VE.Map.getMapName(U.getString(s, 0));
      VE.status = VE.Status.mapLoadPass0;
     } else if (gamePlay) {
      for (n = VE.vehiclesInMatch; --n >= 0; ) {
-      ready[n] = s.startsWith("Ready" + n) || ready[n];
+      ready[n] = s.startsWith(SL.Network.ready + n) || ready[n];
      }
     }
    }
@@ -201,21 +201,21 @@ public enum Network {
    while (runGameThread[n]) {
     if (mode == Mode.HOST) {
      s = readIn(n - 1);
-     if (s.startsWith("BonusOpen")) {
+     if (s.startsWith(SL.Network.bonusOpen)) {
       bonusHolder = -1;
       if (VE.vehiclesInMatch > 2) {
        for (int n1 = VE.vehiclesInMatch; --n1 > 0; ) {
         if (n1 != n) {
-         out.get(n1 - 1).println("BonusOpen");
+         out.get(n1 - 1).println(SL.Network.bonusOpen);
         }
        }
       }
-     } else if (s.startsWith("BONUS")) {
+     } else if (s.startsWith(SL.Network.bonus)) {
       bonusHolder = n;
       if (VE.vehiclesInMatch > 2) {
        for (int n1 = VE.vehiclesInMatch; --n1 > 0; ) {
         if (n1 != n) {
-         out.get(n1 - 1).println("BONUS" + n);
+         out.get(n1 - 1).println(SL.Network.bonus + n);
         }
        }
       }
@@ -238,8 +238,8 @@ public enum Network {
       V.XZ = U.getValue(vehicleData[n], 3);
       V.YZ = U.getValue(vehicleData[n], 4);
       V.XY = U.getValue(vehicleData[n], 5);
-      V.speed = U.getValue(vehicleData[n], 6);
-      V.damage = U.getValue(vehicleData[n], 7);
+      V.P.speed = U.getValue(vehicleData[n], 6);
+      V.setDamage(U.getValue(vehicleData[n], 7));
       V.checkpointsPassed = (int) Math.round(U.getValue(vehicleData[n], 8));
       V.lightBrightness = U.getValue(vehicleData[n], 9);
       V.drive = vehicleData[n].contains(" ^ ");
@@ -259,8 +259,8 @@ public enum Network {
      s = readIn(0);
      hostLeftMatch = s.startsWith("END") || hostLeftMatch;
      for (Vehicle vehicle : VE.vehicles) {
-      if (vehicle.index != VE.userPlayer) {
-       bonusHolder = s.startsWith("BonusOpen") ? -1 : s.startsWith("BONUS" + vehicle.index) ? vehicle.index : bonusHolder;
+      if (vehicle.index != VE.userPlayerIndex) {
+       bonusHolder = s.startsWith(SL.Network.bonusOpen) ? -1 : s.startsWith(SL.Network.bonus + vehicle.index) ? vehicle.index : bonusHolder;
        if (s.startsWith(vehicle.index + "(")) {
         vehicleData[vehicle.index] = s;
         vehicle.X = U.getValue(vehicleData[vehicle.index], 0);
@@ -269,8 +269,8 @@ public enum Network {
         vehicle.XZ = U.getValue(vehicleData[vehicle.index], 3);
         vehicle.YZ = U.getValue(vehicleData[vehicle.index], 4);
         vehicle.XY = U.getValue(vehicleData[vehicle.index], 5);
-        vehicle.speed = U.getValue(vehicleData[vehicle.index], 6);
-        vehicle.damage = U.getValue(vehicleData[vehicle.index], 7);
+        vehicle.P.speed = U.getValue(vehicleData[vehicle.index], 6);
+        vehicle.setDamage(U.getValue(vehicleData[vehicle.index], 7));
         vehicle.checkpointsPassed = (int) Math.round(U.getValue(vehicleData[vehicle.index], 8));
         vehicle.lightBrightness = U.getValue(vehicleData[vehicle.index], 9);
         vehicle.drive = vehicleData[vehicle.index].contains(" ^ ");
@@ -290,7 +290,7 @@ public enum Network {
      }
     }
     try {
-     Thread.sleep(1);
+     Thread.sleep(1);//<-Remove?
     } catch (InterruptedException ignored) {
     }
    }
@@ -301,23 +301,23 @@ public enum Network {
  }
 
  static void matchDataOut() {
-  Vehicle V = VE.vehicles.get(VE.userPlayer);
+  Vehicle V = VE.vehicles.get(VE.userPlayerIndex);
   long specialsQuantity = V.specials.size();
-  V.drive = VE.keyUp;
-  V.reverse = VE.keyDown;
-  V.turnL = VE.keyLeft;
-  V.turnR = VE.keyRight;
-  V.handbrake = VE.keySpace;
+  V.drive = VE.Keys.Up;
+  V.reverse = VE.Keys.Down;
+  V.turnL = VE.Keys.Left;
+  V.turnR = VE.Keys.Right;
+  V.handbrake = VE.Keys.Space;
   if (specialsQuantity > 0) {
-   V.specials.get(0).fire = VE.keySpecial[0];
+   V.specials.get(0).fire = VE.Keys.Special[0];
   }
   if (specialsQuantity > 1) {
-   V.specials.get(1).fire = VE.keySpecial[1];
+   V.specials.get(1).fire = VE.Keys.Special[1];
   }
-  V.boost = VE.keyBoost;
+  V.boost = VE.Keys.keyBoost;
   String s;
   if (VE.status == VE.Status.play) {
-   s = "(" + V.X + "," + V.Y + "," + V.Z + "," + V.XZ + "," + V.YZ + "," + V.XY + "," + V.speed + "," + V.damage + "," + V.checkpointsPassed + "," + V.lightBrightness + ")";
+   s = "(" + V.X + "," + V.Y + "," + V.Z + "," + V.XZ + "," + V.YZ + "," + V.XY + "," + V.P.speed + "," + V.getDamage(false) + "," + V.checkpointsPassed + "," + V.lightBrightness + ")";
    s += V.drive ? " ^ " : "";
    s += V.reverse ? " v " : "";
    s += V.turnL ? " < " : "";

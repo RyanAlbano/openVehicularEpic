@@ -1,5 +1,6 @@
 package ve;
 
+import ve.environment.E;
 import ve.utilities.U;
 
 import java.io.*;
@@ -7,6 +8,7 @@ import java.util.*;
 import javax.sound.sampled.*;
 
 public class Sound {
+ private int currentIndex;
 
  static class ClipVE {
 
@@ -17,10 +19,20 @@ public class Sound {
   ClipVE(String sound, double ratio) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
    try (AudioInputStream AIS = AudioSystem.getAudioInputStream(new BufferedInputStream(new FileInputStream(new File(sound))))) {
     AudioFormat AF = AIS.getFormat();
-    AudioInputStream AIS2 = AudioSystem.getAudioInputStream(new AudioFormat(AF.getFrameRate(), Math.min(AF.getSampleSizeInBits(), VE.degradedSoundEffects ? 8 : 16), Math.min(AF.getChannels(), VE.degradedSoundEffects ? 1 : 2), true, AF.isBigEndian()), AIS);
-    float setRate = (float) (AF.getFrameRate() * ratio);//<-'AF' gets changed--do NOT inline!
-    AF = AIS2.getFormat();
-    AudioInputStream convertedAIS = new AudioInputStream(AIS2, new AudioFormat(setRate, AF.getSampleSizeInBits(), AF.getChannels(), true, AF.isBigEndian()), AIS2.getFrameLength());
+    AudioInputStream AIS2 = AudioSystem.getAudioInputStream(new AudioFormat
+    (AF.getFrameRate(),
+    Math.min(AF.getSampleSizeInBits(), VE.Options.degradedSoundEffects ? 8 : 16),
+    Math.min(AF.getChannels(), VE.Options.degradedSoundEffects ? 1 : 2),
+    true,
+    AF.isBigEndian()),
+    AIS);
+    AudioFormat convertedAF = AIS2.getFormat();
+    AudioInputStream convertedAIS = new AudioInputStream(AIS2, new AudioFormat(
+    (float) (AF.getFrameRate() * ratio),
+    convertedAF.getSampleSizeInBits(),
+    convertedAF.getChannels(), true,
+    convertedAF.isBigEndian()),
+    AIS2.getFrameLength());
     clip = (Clip) AudioSystem.getLine(new DataLine.Info(Clip.class, convertedAIS.getFormat()));
     clip.open(convertedAIS);
     gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
@@ -66,8 +78,13 @@ public class Sound {
   }
  }
 
- public boolean running() {//Keep
-  return running(0);
+ public boolean running() {
+  for (ClipVE clip : clips) {
+   if (clip.clip.isRunning()) {
+    return true;
+   }
+  }
+  return false;
  }
 
  public boolean running(int index) {
@@ -78,13 +95,16 @@ public class Sound {
   play(0, gain);
  }
 
- public void play(int index, double gain) {
-  if (!VE.muteSound && index < clips.size()) {
-   clips.get(index).clip.stop();
-   if (gain < 80) {
-    clips.get(index).gain.setValue((float) -gain);
-    clips.get(index).clip.setFramePosition(0);
-    clips.get(index).clip.loop(0);
+ public void play(double index, double gain) {
+  if (!VE.Match.muteSound) {
+   setCurrentIndex(index);
+   if (currentIndex < clips.size()) {
+    clips.get(currentIndex).clip.stop();
+    if (gain < 80) {
+     clips.get(currentIndex).gain.setValue((float) -gain);
+     clips.get(currentIndex).clip.setFramePosition(0);
+     clips.get(currentIndex).clip.loop(0);
+    }
    }
   }
  }
@@ -93,11 +113,15 @@ public class Sound {
   playIfNotPlaying(0, gain);
  }
 
- public void playIfNotPlaying(int index, double gain) {
-  if (!VE.muteSound && index < clips.size() && !clips.get(index).clip.isRunning() && gain < 80) {
-   clips.get(index).gain.setValue((float) -gain);
-   clips.get(index).clip.setFramePosition(0);
-   clips.get(index).clip.loop(0);
+ public void playIfNotPlaying(double index, double gain) {
+  if (!VE.Match.muteSound) {
+   setCurrentIndex(index);
+   gain *= E.soundMultiple;
+   if (currentIndex < clips.size() && !clips.get(currentIndex).clip.isRunning() && gain < 80) {
+    clips.get(currentIndex).gain.setValue((float) -gain);
+    clips.get(currentIndex).clip.setFramePosition(0);
+    clips.get(currentIndex).clip.loop(0);
+   }
   }
  }
 
@@ -105,15 +129,19 @@ public class Sound {
   loop(0, gain);
  }
 
- public void loop(int index, double gain) {
-  if (!VE.muteSound && index < clips.size()) {
-   if (Math.abs(clips.get(index).lastGain - clips.get(index).gain.getValue()) > 1) {
-    clips.get(index).clip.flush();
-    clips.get(index).lastGain = clips.get(index).gain.getValue();
-   }
-   clips.get(index).gain.setValue(Math.max((float) -gain, -80));
-   if (gain < 80 && !clips.get(index).clip.isRunning()) {
-    clips.get(index).clip.loop(-1);
+ public void loop(double index, double gain) {
+  if (!VE.Match.muteSound) {
+   setCurrentIndex(index);
+   if (currentIndex < clips.size()) {
+    if (Math.abs(clips.get(currentIndex).lastGain - clips.get(currentIndex).gain.getValue()) > 1) {
+     clips.get(currentIndex).clip.flush();
+     clips.get(currentIndex).lastGain = clips.get(currentIndex).gain.getValue();
+    }
+    gain *= E.soundMultiple;
+    clips.get(currentIndex).gain.setValue(Math.max((float) -gain, -80));
+    if (gain < 80 && !clips.get(currentIndex).clip.isRunning()) {
+     clips.get(currentIndex).clip.loop(-1);
+    }
    }
   }
  }
@@ -122,20 +150,28 @@ public class Sound {
   resume(0, gain);
  }
 
- public void resume(int n, double gain) {
-  if (!VE.muteSound && n < clips.size()) {
-   if (Math.abs(clips.get(n).lastGain - clips.get(n).gain.getValue()) > 1) {
-    clips.get(n).clip.flush();
-    clips.get(n).lastGain = clips.get(n).gain.getValue();
-   }
-   clips.get(n).gain.setValue(Math.max((float) -gain, -80));
-   if (gain < 80 && !clips.get(n).clip.isRunning()) {
-    if (clips.get(n).clip.getFramePosition() >= clips.get(n).clip.getFrameLength()) {
-     clips.get(n).clip.setFramePosition(0);
+ public void resume(double index, double gain) {
+  if (!VE.Match.muteSound) {
+   setCurrentIndex(index);
+   if (currentIndex < clips.size()) {
+    if (Math.abs(clips.get(currentIndex).lastGain - clips.get(currentIndex).gain.getValue()) > 1) {
+     clips.get(currentIndex).clip.flush();
+     clips.get(currentIndex).lastGain = clips.get(currentIndex).gain.getValue();
     }
-    clips.get(n).clip.loop(0);
+    gain *= E.soundMultiple;
+    clips.get(currentIndex).gain.setValue(Math.max((float) -gain, -80));
+    if (gain < 80 && !clips.get(currentIndex).clip.isRunning()) {
+     if (clips.get(currentIndex).clip.getFramePosition() >= clips.get(currentIndex).clip.getFrameLength()) {
+      clips.get(currentIndex).clip.setFramePosition(0);
+     }
+     clips.get(currentIndex).clip.loop(0);
+    }
    }
   }
+ }
+
+ private void setCurrentIndex(double index) {
+  currentIndex = Double.isNaN(index) ? U.randomize(currentIndex, clips.size()) : (int) Math.round(index);
  }
 
  public void randomizeFramePosition(int index) {

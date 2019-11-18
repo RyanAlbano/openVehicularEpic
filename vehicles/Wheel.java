@@ -2,6 +2,7 @@ package ve.vehicles;
 
 import java.util.*;
 
+import javafx.scene.paint.Color;
 import ve.Core;
 import ve.effects.*;
 import ve.utilities.U;
@@ -16,7 +17,7 @@ public class Wheel extends Core {
  double skidmarkSize;
  double minimumY;
  double sparkPoint;
- public final double[] terrainRGB = new double[3];
+ public Color terrainRGB = U.getColor(0);
  boolean angledSurface, againstWall;
  final Collection<Spark> sparks = new ArrayList<>();
  List<Skidmark> skidmarks;
@@ -46,14 +47,14 @@ public class Wheel extends Core {
     spark.deploy(sparkX, sparkY, sparkZ, sparkSpeed);
    }
   }
-  V.scraping = true;
+  V.VA.scraping = true;
  }
 
  void skidmark(boolean forSnow) {
-  if (skidmarks != null && !V.flipped && !V.destroyed && !V.phantomEngaged && ((forSnow && V.netSpeed > 0) || Math.abs(Math.abs(V.speed) - U.netValue(speedX, speedZ)) > 10 + U.random(5.) || Math.abs(V.speed) > 50 + U.random(50.))) {
+  if (skidmarks != null && !V.P.flipped && !V.destroyed && !V.phantomEngaged && ((forSnow && V.P.netSpeed > 0) || Math.abs(Math.abs(V.P.speed) - U.netValue(speedX, speedZ)) > 10 + U.random(5.) || Math.abs(V.P.speed) > 50 + U.random(50.))) {
    skidmarks.get(currentSkidmark).deploy(V, this, forSnow);
    currentSkidmark = ++currentSkidmark >= skidmarks.size() ? 0 : currentSkidmark;
   }
-  minimumY = V.localVehicleGround;
+  minimumY = V.P.localVehicleGround;
  }
 }

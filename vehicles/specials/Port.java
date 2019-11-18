@@ -1,4 +1,4 @@
-package ve.vehicles;
+package ve.vehicles.specials;
 
 import ve.Core;
 

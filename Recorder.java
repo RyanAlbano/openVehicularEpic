@@ -1,56 +1,34 @@
 package ve;
 
 import ve.trackElements.TE;
-import ve.vehicles.Vehicle;
+
+import java.util.ArrayList;
+import java.util.List;
 
 enum Recorder {
  ;
-
  static final int totalFrames = 500;
  static int recordFrame;
  static int gameFrame;
- private static int[] recordBonusHolder;
  static long recordingsCount, recorded;
- private static double[][] X, Y, Z, XZ, XY, YZ, vehicleTurretXZ, vehicleTurretYZ, speed;
- private static double[][][] speedX, speedY, speedZ;
- private static double[][] speedXZ, speedYZ;
- private static double[][] damage;
- private static double[] bonusX, bonusY, bonusZ;
- private static boolean[][] drive;
- private static boolean[][] reverse;
- private static boolean[][] special0;
- private static boolean[][] special1;
- private static boolean[][] boost;
- private static double[][] spinnerSpeed;
- private static Vehicle.Mode[][] mode;
+ private static final double[] bonusX, bonusY, bonusZ;
+ private static final int[] bonusHolder;
+ static final List<Vehicle> vehicles = new ArrayList<>();
 
- static void boot() {
-  X = new double[VE.maxPlayers][totalFrames];
-  Y = new double[VE.maxPlayers][totalFrames];
-  Z = new double[VE.maxPlayers][totalFrames];
-  XZ = new double[VE.maxPlayers][totalFrames];
-  XY = new double[VE.maxPlayers][totalFrames];
-  YZ = new double[VE.maxPlayers][totalFrames];
-  vehicleTurretXZ = new double[VE.maxPlayers][totalFrames];
-  vehicleTurretYZ = new double[VE.maxPlayers][totalFrames];
-  speedXZ = new double[VE.maxPlayers][totalFrames];
-  speedYZ = new double[VE.maxPlayers][totalFrames];
-  speedX = new double[VE.maxPlayers][4][totalFrames];
-  speedY = new double[VE.maxPlayers][4][totalFrames];
-  speedZ = new double[VE.maxPlayers][4][totalFrames];
-  speed = new double[VE.maxPlayers][totalFrames];
-  damage = new double[VE.maxPlayers][totalFrames];
-  mode = new Vehicle.Mode[VE.maxPlayers][totalFrames];
-  drive = new boolean[VE.maxPlayers][totalFrames];
-  reverse = new boolean[VE.maxPlayers][totalFrames];
-  special0 = new boolean[VE.maxPlayers][totalFrames];
-  special1 = new boolean[VE.maxPlayers][totalFrames];
-  boost = new boolean[VE.maxPlayers][totalFrames];
-  spinnerSpeed = new double[VE.maxPlayers][totalFrames];
-  recordBonusHolder = new int[totalFrames];
+ static {
+  bonusHolder = new int[totalFrames];
   bonusX = new double[totalFrames];
   bonusY = new double[totalFrames];
   bonusZ = new double[totalFrames];
+  for (int n = VE.maxPlayers; --n >= 0; ) {
+   vehicles.add(new Vehicle());
+  }
+ }
+
+ enum Tsunami {
+  ;
+  static final double[] tsunamiX = new double[totalFrames], tsunamiZ = new double[totalFrames];
+  static final ve.environment.Tsunami.Direction[] direction = new ve.environment.Tsunami.Direction[totalFrames];
  }
 
  static void updateFrame() {
@@ -60,100 +38,144 @@ enum Recorder {
   }
  }
 
- static void record(Vehicle vehicle) {
-  if (VE.status == VE.Status.play) {
-   int index = vehicle.index;
-   X[index][gameFrame] = vehicle.X;
-   Y[index][gameFrame] = vehicle.Y;
-   Z[index][gameFrame] = vehicle.Z;
-   XZ[index][gameFrame] = vehicle.XZ;
-   YZ[index][gameFrame] = vehicle.YZ;
-   XY[index][gameFrame] = vehicle.XY;
-   if (vehicle.hasTurret) {
-    vehicleTurretXZ[index][gameFrame] = vehicle.vehicleTurretXZ;
-    vehicleTurretYZ[index][gameFrame] = vehicle.vehicleTurretYZ;
-   }
-   speedXZ[index][gameFrame] = vehicle.speedXZ;
-   speedYZ[index][gameFrame] = vehicle.speedYZ;
-   for (int n1 = 4; --n1 >= 0; ) {
-    speedX[index][n1][gameFrame] = vehicle.wheels.get(n1).speedX;
-    speedY[index][n1][gameFrame] = vehicle.wheels.get(n1).speedY;
-    speedZ[index][n1][gameFrame] = vehicle.wheels.get(n1).speedZ;
-   }
-   speed[index][gameFrame] = vehicle.speed;
-   damage[index][gameFrame] = vehicle.damage;
-   mode[index][gameFrame] = vehicle.mode;
-   drive[index][gameFrame] = vehicle.drive;
-   reverse[index][gameFrame] = vehicle.reverse;
-   long specialsQuantity = vehicle.specials.size();
-   if (specialsQuantity > 0) {
-    special0[index][gameFrame] = vehicle.specials.get(0).fire;
-   }
-   if (specialsQuantity > 1) {
-    special1[index][gameFrame] = vehicle.specials.get(1).fire;
-   }
-   boost[index][gameFrame] = vehicle.boost;
-   spinnerSpeed[index][gameFrame] = vehicle.spinnerSpeed;
+ static void recordGeneral() {
+  bonusHolder[gameFrame] = VE.bonusHolder;
+  bonusX[gameFrame] = TE.Bonus.X;
+  bonusY[gameFrame] = TE.Bonus.Y;
+  bonusZ[gameFrame] = TE.Bonus.Z;
+  if (!ve.environment.Tsunami.parts.isEmpty()) {
+   Tsunami.tsunamiX[gameFrame] = ve.environment.Tsunami.X;
+   Tsunami.tsunamiZ[gameFrame] = ve.environment.Tsunami.Z;
+   Tsunami.direction[gameFrame] = ve.environment.Tsunami.direction;
   }
- }
-
- static void recordBonusHolder() {
-  recordBonusHolder[gameFrame] = VE.bonusHolder;
-  bonusX[gameFrame] = TE.bonusX;
-  bonusY[gameFrame] = TE.bonusY;
-  bonusZ[gameFrame] = TE.bonusZ;
  }
 
  static void playBack() {
   if (VE.status == VE.Status.replay) {
-   if (++recordingsCount >= recorded || VE.keyEnter || VE.keySpace || VE.keyEscape) {
+   if (++recordingsCount >= recorded || VE.Keys.Enter || VE.Keys.Space || VE.Keys.Escape) {
     VE.status = VE.Status.paused;
     recordFrame = gameFrame - 1;
     while (recordFrame < 0) recordFrame += totalFrames;
-    if (VE.keyEnter || VE.keySpace || VE.keyEscape) {
-     VE.UI.play(1, 0);
+    if (VE.Keys.Enter || VE.Keys.Space || VE.Keys.Escape) {
+     VE.Sounds.UI.play(1, 0);
     }
-    VE.keyUp = VE.keyDown = VE.keyEnter = VE.keySpace = VE.keyEscape = false;
+    VE.Keys.Up = VE.Keys.Down = VE.Keys.Enter = VE.Keys.Space = VE.Keys.Escape = false;
    }
-   VE.bonusHolder = recordBonusHolder[recordFrame];
-   TE.bonusX = bonusX[recordFrame];
-   TE.bonusY = bonusY[recordFrame];
-   TE.bonusZ = bonusZ[recordFrame];
-   for (Vehicle vehicle : VE.vehicles) {
-    int index = vehicle.index;
-    vehicle.X = X[index][recordFrame];
-    vehicle.Y = Y[index][recordFrame];
-    vehicle.Z = Z[index][recordFrame];
-    vehicle.XZ = XZ[index][recordFrame];
-    vehicle.YZ = YZ[index][recordFrame];
-    vehicle.XY = XY[index][recordFrame];
-    if (vehicle.hasTurret) {
-     vehicle.vehicleTurretXZ = vehicleTurretXZ[index][recordFrame];
-     vehicle.vehicleTurretYZ = vehicleTurretYZ[index][recordFrame];
-    }
-    vehicle.speedXZ = speedXZ[index][recordFrame];
-    vehicle.speedYZ = speedYZ[index][recordFrame];
-    for (int n1 = 4; --n1 >= 0; ) {
-     vehicle.wheels.get(n1).speedX = speedX[index][n1][recordFrame];
-     vehicle.wheels.get(n1).speedY = speedY[index][n1][recordFrame];
-     vehicle.wheels.get(n1).speedZ = speedZ[index][n1][recordFrame];
-    }
-    vehicle.speed = speed[index][recordFrame];
-    vehicle.damage = damage[index][recordFrame];
-    vehicle.mode = mode[index][recordFrame];
-    vehicle.drive = drive[index][recordFrame];
-    vehicle.reverse = reverse[index][recordFrame];
-    long specialsQuantity = vehicle.specials.size();
-    if (specialsQuantity > 0) {
-     vehicle.specials.get(0).fire = special0[index][recordFrame];
-    }
-    if (specialsQuantity > 1) {
-     vehicle.specials.get(1).fire = special1[index][recordFrame];
-    }
-    vehicle.boost = boost[index][recordFrame];
-    vehicle.spinnerSpeed = spinnerSpeed[index][recordFrame];
+   VE.bonusHolder = bonusHolder[recordFrame];
+   TE.Bonus.X = bonusX[recordFrame];
+   TE.Bonus.Y = bonusY[recordFrame];
+   TE.Bonus.Z = bonusZ[recordFrame];
+   ve.environment.Tsunami.X = Tsunami.tsunamiX[recordFrame];
+   ve.environment.Tsunami.Z = Tsunami.tsunamiZ[recordFrame];
+   ve.environment.Tsunami.direction = Tsunami.direction[recordFrame];
+   for (int n = VE.vehiclesInMatch; --n >= 0; ) {
+    vehicles.get(n).playBack();
    }
    recordFrame = ++recordFrame >= totalFrames ? 0 : recordFrame;
+  }
+ }
+
+ static class Vehicle {
+  private final double[] X = new double[totalFrames], Y = new double[totalFrames], Z = new double[totalFrames],
+  XZ = new double[totalFrames], XY = new double[totalFrames], YZ = new double[totalFrames],
+  vehicleTurretXZ = new double[totalFrames], vehicleTurretYZ = new double[totalFrames], speed = new double[totalFrames];
+  private final double[][] speedX = new double[4][totalFrames], speedY = new double[4][totalFrames], speedZ = new double[4][totalFrames];
+  private final double[] speedXZ = new double[totalFrames], speedYZ = new double[totalFrames];
+  private final double[] damage = new double[totalFrames];
+  private final boolean[] drive = new boolean[totalFrames], reverse = new boolean[totalFrames];
+  private final boolean[] special0 = new boolean[totalFrames], special1 = new boolean[totalFrames], special2 = new boolean[totalFrames];//<-Must add more if more specials are added in the future
+  private final boolean[] boost = new boolean[totalFrames];
+  private final double[] explodeStage = new double[totalFrames];
+  private boolean subtractExplodeStage;//<-Had to be added to ensure correct operation
+  private final double[] spinnerSpeed = new double[totalFrames];
+  private final boolean[] wrathEngaged = new boolean[totalFrames];
+  private final ve.vehicles.Physics.Mode[] mode = new ve.vehicles.Physics.Mode[totalFrames];
+
+  void recordVehicle(ve.vehicles.Vehicle vehicle) {
+   if (VE.status == VE.Status.play) {
+    X[gameFrame] = vehicle.X;
+    Y[gameFrame] = vehicle.Y;
+    Z[gameFrame] = vehicle.Z;
+    XZ[gameFrame] = vehicle.XZ;
+    YZ[gameFrame] = vehicle.YZ;
+    XY[gameFrame] = vehicle.XY;
+    if (vehicle.VT != null) {
+     vehicleTurretXZ[gameFrame] = vehicle.VT.XZ;
+     vehicleTurretYZ[gameFrame] = vehicle.VT.YZ;
+    }
+    speedXZ[gameFrame] = vehicle.P.speedXZ;
+    speedYZ[gameFrame] = vehicle.P.speedYZ;
+    for (int n = 4; --n >= 0; ) {
+     speedX[n][gameFrame] = vehicle.wheels.get(n).speedX;
+     speedY[n][gameFrame] = vehicle.wheels.get(n).speedY;
+     speedZ[n][gameFrame] = vehicle.wheels.get(n).speedZ;
+    }
+    speed[gameFrame] = vehicle.P.speed;
+    damage[gameFrame] = vehicle.getDamage(false);
+    mode[gameFrame] = vehicle.P.mode;
+    drive[gameFrame] = vehicle.drive;
+    reverse[gameFrame] = vehicle.reverse;
+    long specialsQuantity = vehicle.specials.size();
+    if (specialsQuantity > 0) {
+     special0[gameFrame] = vehicle.specials.get(0).fire;
+    }
+    if (specialsQuantity > 1) {
+     special1[gameFrame] = vehicle.specials.get(1).fire;
+    }
+    if (specialsQuantity > 2) {
+     special2[gameFrame] = vehicle.specials.get(2).fire;
+    }
+    boost[gameFrame] = vehicle.boost;
+    explodeStage[gameFrame] = vehicle.P.explodeStage;
+    subtractExplodeStage = vehicle.P.subtractExplodeStage;
+    if (vehicle.spinner != null) {
+     spinnerSpeed[gameFrame] = vehicle.spinner.speed;
+    }
+    wrathEngaged[gameFrame] = vehicle.P.wrathEngaged;
+   }
+  }
+
+  void playBack() {
+   ve.vehicles.Vehicle vehicle = VE.vehicles.get(vehicles.indexOf(this));
+   vehicle.X = X[recordFrame];
+   vehicle.Y = Y[recordFrame];
+   vehicle.Z = Z[recordFrame];
+   vehicle.XZ = XZ[recordFrame];
+   vehicle.YZ = YZ[recordFrame];
+   vehicle.XY = XY[recordFrame];
+   if (vehicle.VT != null) {
+    vehicle.VT.XZ = vehicleTurretXZ[recordFrame];
+    vehicle.VT.YZ = vehicleTurretYZ[recordFrame];
+   }
+   vehicle.P.speedXZ = speedXZ[recordFrame];
+   vehicle.P.speedYZ = speedYZ[recordFrame];
+   for (int n1 = 4; --n1 >= 0; ) {
+    vehicle.wheels.get(n1).speedX = speedX[n1][recordFrame];
+    vehicle.wheels.get(n1).speedY = speedY[n1][recordFrame];
+    vehicle.wheels.get(n1).speedZ = speedZ[n1][recordFrame];
+   }
+   vehicle.P.speed = speed[recordFrame];
+   vehicle.setDamage(damage[recordFrame]);
+   vehicle.P.mode = mode[recordFrame];
+   vehicle.drive = drive[recordFrame];
+   vehicle.reverse = reverse[recordFrame];
+   long specialsQuantity = vehicle.specials.size();
+   if (specialsQuantity > 0) {
+    vehicle.specials.get(0).fire = special0[recordFrame];
+   }
+   if (specialsQuantity > 1) {
+    vehicle.specials.get(1).fire = special1[recordFrame];
+   }
+   if (specialsQuantity > 2) {
+    vehicle.specials.get(2).fire = special2[recordFrame];
+   }
+   vehicle.boost = boost[recordFrame];
+   vehicle.P.explodeStage = explodeStage[recordFrame];
+   vehicle.P.subtractExplodeStage = subtractExplodeStage;
+   if (vehicle.spinner != null) {
+    vehicle.spinner.speed = spinnerSpeed[recordFrame];
+   }
+   vehicle.P.wrathEngaged = wrathEngaged[recordFrame];
   }
  }
 }

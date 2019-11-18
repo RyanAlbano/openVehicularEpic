@@ -113,7 +113,7 @@ public class MainFrame extends JFrame {
     Converter.saveFile(fileDialog.getSelectedFile(), new Converter().convert(fileDialog.getSelectedFile(), invertX.isSelected(), invertY.isSelected(), invertZ.isSelected()));
     JOptionPane.showMessageDialog(this, "Conversion Successful", "Completed", JOptionPane.INFORMATION_MESSAGE);
    } catch (IllegalStateException e) {
-    JOptionPane.showMessageDialog(this, ".OBJ must be fully Triangulated", "Error", JOptionPane.ERROR_MESSAGE);
+    JOptionPane.showMessageDialog(this, Converter.triangulationError, "Error", JOptionPane.ERROR_MESSAGE);
    }
   } else {
    JOptionPane.showMessageDialog(this, "File selected is not an .OBJ", "Error", JOptionPane.ERROR_MESSAGE);

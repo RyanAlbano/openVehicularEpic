@@ -5,6 +5,7 @@ import javafx.scene.shape.Cylinder;
 
 import ve.Core;
 import ve.VE;
+import ve.utilities.SL;
 import ve.utilities.U;
 
 public class Spark extends Core {
@@ -16,11 +17,11 @@ public class Spark extends Core {
  public Spark() {
   C = new Cylinder(.001, 1, 3);
   PhongMaterial PM = new PhongMaterial();
-  U.setDiffuseRGB(PM, 0, 0, 0);
-  U.setSpecularRGB(PM, 0, 0, 0);
-  PM.setSelfIlluminationMap(U.getImage("firelight" + U.random(3)));//<-Integer random for lists
-  C.setMaterial(PM);
-  U.add(C);
+  U.Phong.setDiffuseRGB(PM, 0);
+  U.Phong.setSpecularRGB(PM, 0);
+  PM.setSelfIlluminationMap(U.Images.get(SL.Images.fireLight + U.random(3)));//<-Integer random for lists
+  U.setMaterialSecurely(C, PM);
+  U.Nodes.add(C);
   C.setVisible(false);
  }
 

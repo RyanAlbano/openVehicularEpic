@@ -1,23 +1,26 @@
-package ve.vehicles;
+package ve.vehicles.specials;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 import ve.Core;
 import ve.VE;
 import ve.environment.E;
+import ve.utilities.SL;
 import ve.utilities.U;
+import ve.vehicles.Vehicle;
 
 public class Shot extends Core {
 
  private final MeshView MV;
  private MeshView thrust;
- double behindX, behindY, behindZ;
- double stage;
- double speed;
+ public double behindX, behindY, behindZ;
+ public double stage;
+ public double speed;
  private double gravityDistance;
- double homeXZ, homeYZ;
- long hit;
- boolean[] doneDamaging;
+ public double homeXZ;
+ public double homeYZ;
+ public long hit;
+ public boolean[] doneDamaging;
 
  Shot(Special special) {
   TriangleMesh shotMesh = new TriangleMesh();
@@ -62,14 +65,14 @@ public class Shot extends Core {
   MV.setCullFace(CullFace.NONE);
   PhongMaterial PM = new PhongMaterial();
   if (special.type == Special.Type.raygun || special.type.name().contains(Special.Type.blaster.name()) || special.type == Special.Type.forcefield || special.type == Special.Type.thewrath) {
-   U.setSpecularRGB(PM, 0, 0, 0);
-   PM.setSelfIlluminationMap(U.getImage("white"));
+   U.Phong.setSpecularRGB(PM, 0);
+   PM.setSelfIlluminationMap(U.Images.get(SL.Images.white));
   } else {
-   U.setDiffuseRGB(PM, .5, .5, .5);
-   U.setSpecularRGB(PM, 1, 1, 1);
+   U.Phong.setDiffuseRGB(PM, .5);
+   U.Phong.setSpecularRGB(PM, 1);//<-E.Specular.Shiny not called, since it's not really a 'shiny' object
   }
-  PM.setSpecularPower(special.type == Special.Type.flamethrower ? 0 : E.SpecularPowers.standard);
-  MV.setMaterial(PM);
+  PM.setSpecularPower(special.type == Special.Type.flamethrower ? 0 : E.Specular.Powers.standard);
+  U.setMaterialSecurely(MV, PM);
   if (special.hasThrust) {
    TriangleMesh thrustMesh = new TriangleMesh();
    thrustMesh.getTexCoords().setAll(0, 0);
@@ -86,10 +89,10 @@ public class Shot extends Core {
    3, 0, 4, 0, 5, 0);
    thrust = new MeshView(thrustMesh);
    thrust.setCullFace(CullFace.NONE);
-   thrust.setMaterial(new PhongMaterial());
+   U.setMaterialSecurely(thrust, new PhongMaterial());
    thrust.setVisible(false);
   }
-  U.add(MV, thrust);
+  U.Nodes.add(MV, thrust);
   MV.setVisible(false);
   if (special.type == Special.Type.forcefield) {
    doneDamaging = new boolean[VE.vehiclesInMatch];
@@ -100,11 +103,11 @@ public class Shot extends Core {
   boolean complexAim = special.aimType != Special.AimType.normal;
   double[] shotX = {port.X}, shotY = {port.Y}, shotZ = {port.Z};
   if (complexAim) {
-   U.rotateWithPivot(shotZ, shotY, V.vehicleTurretPivotY, V.vehicleTurretPivotZ, V.vehicleTurretYZ);
-   U.rotateWithPivot(shotX, shotZ, 0, V.vehicleTurretPivotZ, V.vehicleTurretXZ);
+   U.rotateWithPivot(shotZ, shotY, V.VT.pivotY, V.VT.pivotZ, V.VT.YZ);
+   U.rotateWithPivot(shotX, shotZ, 0, V.VT.pivotZ, V.VT.XZ);
   }
-  double setXZ = V.XZ + (complexAim ? V.vehicleTurretXZ : 0),
-  setYZ = V.YZ - (complexAim ? V.vehicleTurretYZ : 0);
+  double setXZ = V.XZ + (complexAim ? V.VT.XZ : 0),
+  setYZ = V.YZ - (complexAim ? V.VT.YZ : 0);
   U.rotate(shotX, shotY, V.XY);
   U.rotate(shotY, shotZ, V.YZ);
   U.rotate(shotX, shotZ, V.XZ);
@@ -114,9 +117,9 @@ public class Shot extends Core {
   behindX = X + (speed * (U.sin(XZ) * U.cos(YZ)) * VE.tick);
   behindY = Y + (speed * U.sin(YZ) * VE.tick);
   behindZ = Z - (speed * (U.cos(XZ) * U.cos(YZ)) * VE.tick);
-  XZ = setXZ + (port.XZ * U.cos(V.XY)) + (port.YZ * U.sin(V.XY)) * V.polarity + U.randomPlusMinus(special.randomAngle);
+  XZ = setXZ + (port.XZ * U.cos(V.XY)) + (port.YZ * U.sin(V.XY)) * V.P.polarity + U.randomPlusMinus(special.randomAngle);
   YZ = setYZ + (port.YZ * U.cos(V.XY)) + (port.XZ * U.sin(V.XY)) + U.randomPlusMinus(special.randomAngle);
-  speed = special.type == Special.Type.mine ? 0 : special.speed + (V.speed * U.cos(Math.abs(V.XZ - XZ)));
+  speed = special.type == Special.Type.mine ? 0 : special.speed + (V.P.speed * U.cos(Math.abs(V.XZ - XZ)));
   gravityDistance = hit = 0;
   U.rotate(MV, -YZ, XZ);
   stage = Double.MIN_VALUE;
@@ -156,16 +159,16 @@ public class Shot extends Core {
      if (special.type == Special.Type.shell || special.type == Special.Type.missile || special.type == Special.Type.bomb) {
       V.explosions.get(V.currentExplosion).deploy(X, Y, Z, null);
       V.currentExplosion = ++V.currentExplosion >= E.explosionQuantity ? 0 : V.currentExplosion;
-      V.VA.hitExplosive.play(U.random(V.VA.hitExplosive.clips.size()), Math.sqrt(U.distance(this)) * .08);
+      V.VA.hitExplosive.play(Double.NaN, Math.sqrt(U.distance(this)) * .08);
      } else if (special.type == Special.Type.powershell || special.type == Special.Type.mine) {
       for (int i = 6; --i >= 0; ) {
        V.explosions.get(V.currentExplosion).deploy(((X + behindX) * .5) + U.randomPlusMinus(2000.), ((Y + behindY) * .5) + U.randomPlusMinus(2000.), ((Z + behindZ) * .5) + U.randomPlusMinus(2000.), null);
        V.currentExplosion = ++V.currentExplosion >= E.explosionQuantity ? 0 : V.currentExplosion;
       }
       double shotToCameraSoundDistance = Math.sqrt(U.distance(this)) * .08;
-      V.VA.hitExplosive.play(U.random(V.VA.hitExplosive.clips.size()), shotToCameraSoundDistance);
-      V.VA.hitExplosive.play(U.random(V.VA.hitExplosive.clips.size()), shotToCameraSoundDistance);
-      V.VA.hitExplosive.play(U.random(V.VA.hitExplosive.clips.size()), shotToCameraSoundDistance);
+      V.VA.hitExplosive.play(Double.NaN, shotToCameraSoundDistance);
+      V.VA.hitExplosive.play(Double.NaN, shotToCameraSoundDistance);
+      V.VA.hitExplosive.play(Double.NaN, shotToCameraSoundDistance);
      }
     }
    }
@@ -182,8 +185,8 @@ public class Shot extends Core {
     double r = Math.max(0, 1 - (stage * .015625)),
     g = Math.max(0, 1 - (stage * .03125)),
     b = Math.max(0, 1 - (stage * .0625));
-    U.setDiffuseRGB((PhongMaterial) MV.getMaterial(), r, g, b);
-    U.setSpecularRGB((PhongMaterial) MV.getMaterial(), r, g, b);
+    U.Phong.setDiffuseRGB((PhongMaterial) MV.getMaterial(), r, g, b);
+    U.Phong.setSpecularRGB((PhongMaterial) MV.getMaterial(), r, g, b);
    }
    U.setTranslate(MV, this);
    if (special.type == Special.Type.flamethrower || special.type == Special.Type.forcefield || special.type == Special.Type.thewrath || special.type.name().contains(Special.Type.blaster.name())) {
@@ -196,9 +199,9 @@ public class Shot extends Core {
     double size = special.length + special.width;
     U.setTranslate(thrust, X + size * U.sin(XZ) * U.cos(YZ), Y + size * U.sin(YZ), Z - size * U.cos(XZ) * U.cos(YZ));
     U.randomRotate(thrust);
-    U.setDiffuseRGB((PhongMaterial) thrust.getMaterial(), 0, 0, 0);
-    U.setSpecularRGB((PhongMaterial) thrust.getMaterial(), 0, 0, 0);
-    ((PhongMaterial) thrust.getMaterial()).setSelfIlluminationMap(U.getImage("firelight" + U.random(3)));
+    U.Phong.setDiffuseRGB((PhongMaterial) thrust.getMaterial(), 0);
+    U.Phong.setSpecularRGB((PhongMaterial) thrust.getMaterial(), 0);
+    ((PhongMaterial) thrust.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.Images.fireLight + U.random(3)));
    }
   } else {
    MV.setVisible(false);

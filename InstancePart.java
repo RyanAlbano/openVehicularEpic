@@ -1,7 +1,8 @@
 package ve;
 
-import javafx.scene.paint.*;
-import javafx.scene.shape.*;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.MeshView;
+import javafx.scene.shape.TriangleMesh;
 import ve.utilities.Matrix4x3;
 import ve.utilities.U;
 
@@ -9,41 +10,36 @@ public class InstancePart extends Core {
 
  protected final TriangleMesh TM = new TriangleMesh();
  public MeshView MV;
- public final PhongMaterial PM = new PhongMaterial();
+ public PhongMaterial PM;
  public boolean visible;
- protected boolean light;
- protected boolean selfIlluminate;
- protected boolean blink;
- protected boolean controller;
- protected boolean base;
+ protected boolean light, selfIlluminate, blink, controller, base;
  protected long flickPolarity;
- protected final double[] RGB = new double[3];
  protected double renderRadius;
  protected double displaceX, displaceY, displaceZ;
  protected double size;
  public double fastCull = Double.NaN;
  protected Matrix4x3 matrix;
 
- enum FaceFunction {standard, conic, cylindric, squares, strip, triangles}
+ public enum FaceFunction {standard, conic, cylindric, squares, strip, triangles}
 
- protected void setDisplacement(double[] X, double[] Y, double[] Z, int vertexQuantity) {
-  double rangeNegativeX = X[0], rangePositiveX = X[0], rangeNegativeY = Y[0], rangePositiveY = Y[0], rangeNegativeZ = Z[0], rangePositiveZ = Z[0];
+ protected void setDisplacement(double[] inX, double[] inY, double[] inZ, int vertexQuantity) {
+  double rangeNegativeX = inX[0], rangePositiveX = inX[0], rangeNegativeY = inY[0], rangePositiveY = inY[0], rangeNegativeZ = inZ[0], rangePositiveZ = inZ[0];
   int n;
   for (n = vertexQuantity; --n > 0; ) {
-   rangeNegativeX = Math.min(rangeNegativeX, X[n]);
-   rangePositiveX = Math.max(rangePositiveX, X[n]);
-   rangeNegativeY = Math.min(rangeNegativeY, Y[n]);
-   rangePositiveY = Math.max(rangePositiveY, Y[n]);
-   rangeNegativeZ = Math.min(rangeNegativeZ, Z[n]);
-   rangePositiveZ = Math.max(rangePositiveZ, Z[n]);
+   rangeNegativeX = Math.min(rangeNegativeX, inX[n]);
+   rangePositiveX = Math.max(rangePositiveX, inX[n]);
+   rangeNegativeY = Math.min(rangeNegativeY, inY[n]);
+   rangePositiveY = Math.max(rangePositiveY, inY[n]);
+   rangeNegativeZ = Math.min(rangeNegativeZ, inZ[n]);
+   rangePositiveZ = Math.max(rangePositiveZ, inZ[n]);
   }
   displaceX = (rangeNegativeX + rangePositiveX) * .5;
   displaceY = (rangeNegativeY + rangePositiveY) * .5;
   displaceZ = (rangeNegativeZ + rangePositiveZ) * .5;
   for (n = vertexQuantity; --n >= 0; ) {
-   X[n] -= displaceX;
-   Y[n] -= displaceY;
-   Z[n] -= displaceZ;
+   inX[n] -= displaceX;
+   inY[n] -= displaceY;
+   inZ[n] -= displaceZ;
   }
  }
 

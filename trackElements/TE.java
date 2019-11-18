@@ -4,238 +4,324 @@ import javafx.scene.AmbientLight;
 import javafx.scene.Group;
 import javafx.scene.PointLight;
 import javafx.scene.SubScene;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
+import javafx.scene.shape.TriangleMesh;
 import ve.Camera;
 import ve.Network;
+import ve.Sound;
 import ve.VE;
 import ve.environment.E;
+import ve.environment.Volcano;
 import ve.trackElements.trackParts.TrackPart;
+import ve.utilities.SL;
 import ve.utilities.U;
+import ve.vehicles.Physics;
 import ve.vehicles.Vehicle;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-public enum TE {//<-TrackElements main Class
+public enum TE {//TrackElements
  ;
- public static final Sphere bonusBig = new Sphere(500);
- public static double bonusX, bonusY, bonusZ;
- public static int arrowTarget;
- public static MeshView arrow = new MeshView();
- public static final Group arrowGroup = new Group();
- public static Arrow arrowStatus = Arrow.racetrack;
- private static Arrow lastArrowStatus = Arrow.racetrack;
- public static SubScene arrowScene;
-
- public enum Arrow {racetrack, vehicles, locked}
-
  public static double instanceSize = 1;
  public static double[] instanceScale = {1, 1, 1};
  public static double randomX, randomY, randomZ;
- public static boolean fixPointsExist;
- public static long mapSelectX, mapSelectY, mapSelectZ;
+ public static long currentCheckpoint;
+ public static boolean lapCheckpoint;
+ private static boolean repairPointsExist;
  public static final List<TrackPart> trackParts = new ArrayList<>();
  public static final List<Point> points = new ArrayList<>();
  public static final List<Checkpoint> checkpoints = new ArrayList<>();
 
- public static class BonusBall extends Sphere {//<-Not worth extending Core here
-
-  double X, Y, Z, speedX, speedY, speedZ;
+ public enum MS {//MapSelect
+  ;
+  public static int point;
+  public static long X, Y, Z;
+  public static double timer;
  }
 
- public static final List<BonusBall> bonusBalls = new ArrayList<>();
-
- private static void runBonusBalls() {
-  for (BonusBall bonusBall : bonusBalls) {
-   bonusBall.speedY += U.randomPlusMinus(6.);
-   bonusBall.speedX += U.randomPlusMinus(6.);
-   bonusBall.speedZ += U.randomPlusMinus(6.);
-   bonusBall.speedX *= .99;
-   bonusBall.speedY *= .99;
-   bonusBall.speedZ *= .99;
-   bonusBall.X += bonusBall.speedX * VE.tick;
-   if (Math.abs(bonusBall.X) > VE.vehicles.get(VE.bonusHolder).collisionRadius * 2) {
-    bonusBall.speedX *= -1;
-    bonusBall.X *= .999;
-   }
-   bonusBall.Y += bonusBall.speedY * VE.tick;
-   if (Math.abs(bonusBall.Y) > VE.vehicles.get(VE.bonusHolder).collisionRadius * 2) {
-    bonusBall.speedY *= -1;
-    bonusBall.Y *= .999;
-   }
-   bonusBall.Z += bonusBall.speedZ * VE.tick;
-   if (Math.abs(bonusBall.Z) > VE.vehicles.get(VE.bonusHolder).collisionRadius * 2) {
-    bonusBall.speedZ *= -1;
-    bonusBall.Z *= .999;
-   }
-   if (U.getDepth(VE.vehicles.get(VE.bonusHolder).X + bonusBall.X, VE.vehicles.get(VE.bonusHolder).Y + bonusBall.Y, VE.vehicles.get(VE.bonusHolder).Z + bonusBall.Z) > 0) {
-    U.setTranslate(bonusBall, VE.vehicles.get(VE.bonusHolder).X + bonusBall.X, VE.vehicles.get(VE.bonusHolder).Y + bonusBall.Y, VE.vehicles.get(VE.bonusHolder).Z + bonusBall.Z);
-    bonusBall.setVisible(true);
-    U.setDiffuseRGB((PhongMaterial) bonusBall.getMaterial(), U.random(), U.random(), U.random());
-   } else {
-    bonusBall.setVisible(false);
-   }
-  }
+ public enum Models {
+  road, roadshort, roadturn, roadbendL, roadbendR, roadend, roadincline, offroad, offroadshort, offroadturn, offroadbump, offroadrocky, offroadend, offroadincline, mixroad,
+  checkpoint, repair,
+  ramp, rampcurved, ramptrapezoid, ramptriangle, rampwall, quarterpipe, pyramid, plateau,
+  offramp, offplateau, mound, pavedmound,//<-'mound' is needed!
+  floor, offfloor, wall, offwall, cube, offcube, spike, spikes, block, blocktower, border, beam, grid, tunnel, roadlift, speedgate, slowgate, antigravity,
+  tree0, tree1, tree2, treepalm, cactus0, cactus1, cactus2, rainbow, crescent//<-Rainbow, crescent, etc. are not really 'track elements' but good enough
  }
 
- public static void runBonus() {
-  if (VE.bonusHolder < 0) {
-   if (U.getDepth(bonusX, bonusY, bonusZ) > -bonusBig.getRadius()) {
-    U.setTranslate(bonusBig, bonusX, bonusY, bonusZ);
-    U.setDiffuseRGB((PhongMaterial) bonusBig.getMaterial(), U.random(), U.random(), U.random());
-    bonusBig.setVisible(true);
-   } else {
-    bonusBig.setVisible(false);
-   }
-   for (TE.BonusBall bonusBall : bonusBalls) {
-    bonusBall.setVisible(false);
-   }
-  } else {
-   bonusBig.setVisible(false);
-   bonusX = VE.vehicles.get(VE.bonusHolder).X;
-   bonusY = VE.vehicles.get(VE.bonusHolder).Y;
-   bonusZ = VE.vehicles.get(VE.bonusHolder).Z;
-   runBonusBalls();
+ public enum Arrow {
+  ;
+  public static final MeshView MV = new MeshView();
+  public static final Group group = new Group();
+  public static Status status = Status.racetrack;
+  private static Status lastStatus = Status.racetrack;
+  public static SubScene scene;
+  public static int target;
+
+  public enum Status {racetrack, vehicles, locked}
+
+  static {
+   TriangleMesh TM = new TriangleMesh();
+   TM.getTexCoords().setAll(0, 0);
+   float arrowWidth = .25f;
+   TM.getPoints().setAll(
+   0, 0, arrowWidth * 3,
+   0, -arrowWidth, -arrowWidth * 3,
+   -arrowWidth, 0, -arrowWidth * 3,
+   arrowWidth, 0, -arrowWidth * 3,
+   0, arrowWidth, -arrowWidth * 3);
+   TM.getFaces().setAll(
+   0, 0, 2, 0, 1, 0,
+   0, 0, 1, 0, 3, 0,
+   0, 0, 3, 0, 4, 0,
+   0, 0, 4, 0, 2, 0,
+   4, 0, 1, 0, 2, 0,
+   4, 0, 3, 0, 1, 0);
+   MV.setMesh(TM);
+   PhongMaterial PM = new PhongMaterial();
+   PM.setSpecularColor(Color.color(1, 1, 1));
+   U.setMaterialSecurely(MV, PM);
+   MV.setTranslateX(0);
+   MV.setTranslateY(-5);
+   MV.setTranslateZ(10);
   }
-  if (VE.matchStarted) {
-   if (Network.mode == Network.Mode.OFF) {
-    for (Vehicle vehicle : VE.vehicles) {
-     if (VE.bonusHolder < 0 && vehicle.damage <= vehicle.durability && !vehicle.phantomEngaged && U.distance(vehicle.X, bonusX, vehicle.Y, bonusY, vehicle.Z, bonusZ) < vehicle.collisionRadius + bonusBig.getRadius()) {
-      setBonusHolder(vehicle);
-     }
+
+  public static void addToScene() {
+   if (!group.getChildren().contains(MV)) {
+    group.getChildren().add(MV);
+   }
+   MV.setVisible(false);
+   PointLight backPL = new PointLight();
+   backPL.setTranslateX(0);
+   backPL.setTranslateY(MV.getTranslateY());
+   backPL.setTranslateZ(-Long.MAX_VALUE);
+   backPL.setColor(Color.color(1, 1, 1));
+   PointLight frontPL = new PointLight();
+   frontPL.setTranslateX(0);
+   frontPL.setTranslateY(MV.getTranslateY());
+   frontPL.setTranslateZ(Long.MAX_VALUE);
+   frontPL.setColor(Color.color(1, 1, 1));
+   group.getChildren().addAll(new AmbientLight(Color.color(.5, .5, .5)), backPL, frontPL);
+  }
+
+  public static void run() {
+   if (lastStatus != status) {
+    VE.Match.print = status == Arrow.Status.locked ? "Arrow now Locked on " + VE.playerNames[target] : "Arrow now pointing at " + (status == Arrow.Status.vehicles ? "Vehicles" : "Map");
+    VE.Match.messageWait = false;
+    VE.Match.printTimer = 50;
+    lastStatus = status;
+   }
+   Vehicle V = VE.vehicles.get(VE.vehiclePerspective);
+   double d, dY, targetX = V.X, targetY = V.Y, targetZ = V.Z;
+   if (status == Arrow.Status.racetrack) {
+    boolean hasSize = !points.isEmpty();
+    double nX = hasSize ? points.get(V.point).X : 0, nY = hasSize ? points.get(V.point).Y : 0, nZ = hasSize ? points.get(V.point).Z : 0;
+    d = (nX - V.X >= 0 ? 270 : 90) + U.arcTan((nZ - V.Z) / (nX - V.X));
+    dY = (nY - V.Y >= 0 ? 270 : 90) + U.arcTan(U.distance(nX, V.X, nZ, V.Z) / (nY - V.Y));
+    if (hasSize) {
+     targetX = points.get(V.point).X;
+     targetY = points.get(V.point).Y;
+     targetZ = points.get(V.point).Z;
     }
-    VE.bonusHolder = VE.bonusHolder > -1 && VE.vehicles.get(VE.bonusHolder).damage > VE.vehicles.get(VE.bonusHolder).durability ? -1 : VE.bonusHolder;
    } else {
-    if (Network.bonusHolder < 0 && VE.vehicles.get(VE.userPlayer).damage <= VE.vehicles.get(VE.userPlayer).durability && !VE.vehicles.get(VE.userPlayer).phantomEngaged && U.distance(VE.vehicles.get(VE.userPlayer).X, bonusX, VE.vehicles.get(VE.userPlayer).Y, bonusY, VE.vehicles.get(VE.userPlayer).Z, bonusZ) < VE.vehicles.get(VE.userPlayer).collisionRadius + bonusBig.getRadius()) {
-     Network.bonusHolder = VE.userPlayer;
-     if (Network.mode == Network.Mode.HOST) {
-      for (PrintWriter PW : Network.out) {
-       PW.println("BONUS0");
+    if (status != Arrow.Status.locked) {
+     double compareDistance = Double.POSITIVE_INFINITY;
+     for (Vehicle vehicle : VE.vehicles) {
+      if (vehicle.index != VE.vehiclePerspective && vehicle.isIntegral() && U.distance(V, vehicle) < compareDistance) {
+       target = vehicle.index;
+       compareDistance = U.distance(V, vehicle);
       }
-     } else {
-      Network.out.get(0).println("BONUS");
+     }
+     if (VE.vehiclePerspective == VE.userPlayerIndex && !U.sameTeam(VE.userPlayerIndex, target)) {
+      VE.vehicles.get(VE.userPlayerIndex).AI.target = target;//Calling 'userPlayer' more accurate then 'vehiclePerspective' here
      }
     }
-    int setHolder = Network.bonusHolder < 0 ? Network.bonusHolder : VE.bonusHolder;
-    if (setHolder > -1 && VE.vehicles.get(setHolder).damage > VE.vehicles.get(setHolder).durability) {
-     Network.bonusHolder = VE.bonusHolder = -1;
-     if (Network.mode == Network.Mode.HOST) {
-      for (PrintWriter PW : Network.out) {
-       PW.println("BonusOpen");
+    target = VE.vehiclesInMatch < 2 ? 0 : target;
+    Vehicle targetVehicle = VE.vehicles.get(target);
+    targetX = targetVehicle.X;
+    targetY = targetVehicle.Y;
+    targetZ = targetVehicle.Z;
+    double nameHeight = .15, B = targetVehicle.getDamage(true);
+    U.fillRGB(1, 1 - B, 0);
+    U.fillRectangle(.5, nameHeight, B * .1, .005);
+    if (status == Arrow.Status.locked) {
+     double C = VE.yinYang ? 1 : 0;
+     U.strokeRGB(C, C, C);
+     VE.graphicsContext.strokeLine((VE.width * .5) - 50, VE.height * nameHeight, (VE.width * .5) + 50, VE.height * nameHeight);
+    }
+    d = (targetVehicle.X - V.X >= 0 ? 270 : 90) + U.arcTan((targetVehicle.Z - V.Z) / (targetVehicle.X - V.X));
+    dY = (targetVehicle.Y - V.Y >= 0 ? 270 : 90) + U.arcTan(U.distance(targetVehicle.X, V.X, targetVehicle.Z, V.Z) / (targetVehicle.Y - V.Y));
+    U.fillRGB(E.skyRGB.invert());
+    U.text("[ " + VE.playerNames[target] + " ]", nameHeight);
+   }
+   double convertedUnits = VE.Options.units == .5364466667 ? .0175 : VE.Options.units == 1 / 3. ? .0574147 : 1, color = VE.yinYang ? 1 : 0;
+   U.fillRGB(color, color, color);
+   U.text("(" + Math.round(U.distance(V.X, targetX, V.Y, targetY, V.Z, targetZ) * convertedUnits) + ")", .175);
+   d += Camera.XZ;
+   while (d < -180) d += 360;
+   while (d > 180) d -= 360;
+   if (status != Arrow.Status.racetrack && (VE.vehiclesInMatch < 2 || target == VE.vehiclePerspective)) {
+    d = dY = 0;
+   }
+   U.rotate(MV, -dY, d);
+   if (status == Arrow.Status.racetrack || VE.vehiclesInMatch < 3) {
+    U.Phong.setDiffuseRGB((PhongMaterial) MV.getMaterial(), E.skyRGB.invert());
+   } else {
+    long[] RG = {0, 0};
+    if (VE.yinYang) {
+     RG[target < VE.vehiclesInMatch >> 1 ? 1 : 0] = 1;
+    }
+    U.Phong.setDiffuseRGB((PhongMaterial) MV.getMaterial(), RG[0], RG[1], 0);
+   }
+  }
+ }
+
+ public enum Bonus {
+  ;
+  public static final Sphere big = new Sphere(500);
+  public static double X, Y, Z;
+  public static final List<Ball> balls = new ArrayList<>();
+  public static Sound sound;
+
+  static {
+   U.setMaterialSecurely(big, new PhongMaterial());
+   for (int n = 0; n < 64; n++) {
+    balls.add(new TE.Bonus.Ball());
+    U.setMaterialSecurely(balls.get(n), new PhongMaterial());
+   }
+  }
+
+  public static class Ball extends Sphere {//<-Not worth extending Core here
+
+   double X, Y, Z, speedX, speedY, speedZ;
+
+   void run() {
+    speedY += U.randomPlusMinus(6.);
+    speedX += U.randomPlusMinus(6.);
+    speedZ += U.randomPlusMinus(6.);
+    speedX *= .99;
+    speedY *= .99;
+    speedZ *= .99;
+    X += speedX * VE.tick;
+    Vehicle vehicle = VE.vehicles.get(VE.bonusHolder);
+    if (Math.abs(X) > vehicle.collisionRadius() * 2) {
+     speedX *= -1;
+     X *= .999;
+    }
+    Y += speedY * VE.tick;
+    if (Math.abs(Y) > vehicle.collisionRadius() * 2) {
+     speedY *= -1;
+     Y *= .999;
+    }
+    Z += speedZ * VE.tick;
+    if (Math.abs(Z) > vehicle.collisionRadius() * 2) {
+     speedZ *= -1;
+     Z *= .999;
+    }
+    if (U.getDepth(vehicle.X + X, vehicle.Y + Y, vehicle.Z + Z) > 0) {
+     U.setTranslate(this, vehicle.X + X, vehicle.Y + Y, vehicle.Z + Z);
+     setVisible(true);
+     U.Phong.setDiffuseRGB((PhongMaterial) getMaterial(), U.random(), U.random(), U.random());
+    } else {
+     setVisible(false);
+    }
+   }
+  }
+
+  public static void run() {
+   if (VE.bonusHolder < 0) {
+    if (U.getDepth(X, Y, Z) > -big.getRadius()) {
+     U.setTranslate(big, X, Y, Z);
+     U.Phong.setDiffuseRGB((PhongMaterial) big.getMaterial(), U.random(), U.random(), U.random());
+     big.setVisible(true);
+    } else {
+     big.setVisible(false);
+    }
+    for (Bonus.Ball bonusBall : balls) {
+     bonusBall.setVisible(false);
+    }
+   } else {
+    big.setVisible(false);
+    X = VE.vehicles.get(VE.bonusHolder).X;
+    Y = VE.vehicles.get(VE.bonusHolder).Y;
+    Z = VE.vehicles.get(VE.bonusHolder).Z;
+    for (Bonus.Ball bonusBall : balls) {
+     bonusBall.run();
+    }
+   }
+   if (VE.Match.started) {
+    if (Network.mode == Network.Mode.OFF) {
+     for (Vehicle vehicle : VE.vehicles) {
+      if (VE.bonusHolder < 0 && vehicle.isIntegral() && !vehicle.phantomEngaged && U.distance(vehicle.X, X, vehicle.Y, Y, vehicle.Z, Z) < vehicle.collisionRadius() + big.getRadius()) {
+       setHolder(vehicle);
       }
-     } else {
-      Network.out.get(0).println("BonusOpen");
+     }
+     VE.bonusHolder = VE.bonusHolder > -1 && !VE.vehicles.get(VE.bonusHolder).isIntegral() ? -1 : VE.bonusHolder;
+    } else {
+     Vehicle V = VE.vehicles.get(VE.userPlayerIndex);
+     if (Network.bonusHolder < 0 && V.isIntegral() && !V.phantomEngaged && U.distance(V.X, X, V.Y, Y, V.Z, Z) < V.collisionRadius() + big.getRadius()) {
+      Network.bonusHolder = VE.userPlayerIndex;
+      if (Network.mode == Network.Mode.HOST) {
+       for (PrintWriter PW : Network.out) {
+        PW.println("BONUS0");
+       }
+      } else {
+       Network.out.get(0).println(SL.Network.bonus);
+      }
+     }
+     int setHolder = Network.bonusHolder < 0 ? Network.bonusHolder : VE.bonusHolder;
+     if (setHolder > -1 && !VE.vehicles.get(setHolder).isIntegral()) {
+      Network.bonusHolder = VE.bonusHolder = -1;
+      if (Network.mode == Network.Mode.HOST) {
+       for (PrintWriter PW : Network.out) {
+        PW.println(SL.Network.bonusOpen);
+       }
+      } else {
+       Network.out.get(0).println(SL.Network.bonusOpen);
+      }
+     }
+     if (VE.bonusHolder != Network.bonusHolder) {
+      VE.bonusHolder = Network.bonusHolder;
+      if (VE.bonusHolder > -1) {
+       setHolder(VE.vehicles.get(VE.bonusHolder));
+      }
      }
     }
-    if (VE.bonusHolder != Network.bonusHolder) {
-     VE.bonusHolder = Network.bonusHolder;
-     if (VE.bonusHolder > -1) {
-      setBonusHolder(VE.vehicles.get(VE.bonusHolder));
-     }
-    }
+   }
+  }
+
+  public static void setHolder(Vehicle vehicle) {
+   VE.bonusHolder = vehicle.index;
+   for (Bonus.Ball bonusBall : balls) {
+    bonusBall.setRadius(VE.vehicles.get(VE.bonusHolder).absoluteRadius * .02);
+    bonusBall.X = bonusBall.Y = bonusBall.Z = bonusBall.speedX = bonusBall.speedY = bonusBall.speedZ = 0;
+   }
+   if (VE.Options.headsUpDisplay) {
+    sound.playIfNotPlaying(0);
    }
   }
  }
 
- public static void setBonusHolder(Vehicle vehicle) {
-  VE.bonusHolder = vehicle.index;
-  for (TE.BonusBall bonusBall : bonusBalls) {
-   bonusBall.setRadius(VE.vehicles.get(VE.bonusHolder).absoluteRadius * .02);
-   bonusBall.X = bonusBall.Y = bonusBall.Z = bonusBall.speedX = bonusBall.speedY = bonusBall.speedZ = 0;
-  }
-  if (VE.headsUpDisplay) {
-   VE.bonus.playIfNotPlaying(0);
-  }
- }
+ public enum Paved {
+  ;
+  public static final double globalShade = .55;
+  public static final PhongMaterial universal = new PhongMaterial();
+  public static final Image[] lowResolution = new Image[2];
 
- public static void addArrow() {
-  if (!arrowGroup.getChildren().contains(arrow)) {
-   arrowGroup.getChildren().add(arrow);
-  }
-  arrow.setVisible(false);
-  PointLight backPL = new PointLight();
-  backPL.setTranslateX(0);
-  backPL.setTranslateY(arrow.getTranslateY());
-  backPL.setTranslateZ(-Long.MAX_VALUE);
-  backPL.setColor(Color.color(1, 1, 1));
-  PointLight frontPL = new PointLight();
-  frontPL.setTranslateX(0);
-  frontPL.setTranslateY(arrow.getTranslateY());
-  frontPL.setTranslateZ(Long.MAX_VALUE);
-  frontPL.setColor(Color.color(1, 1, 1));
-  arrowGroup.getChildren().addAll(new AmbientLight(Color.color(.5, .5, .5)), backPL, frontPL);
- }
-
- public static void runArrow() {
-  if (lastArrowStatus != arrowStatus) {
-   VE.print = arrowStatus == TE.Arrow.locked ? "Arrow now Locked on " + VE.playerNames[arrowTarget] : "Arrow now pointing at " + (arrowStatus == TE.Arrow.vehicles ? "Vehicles" : "Map");
-   VE.messageWait = false;
-   VE.printTimer = 50;
-   lastArrowStatus = arrowStatus;
-  }
-  Vehicle V = VE.vehicles.get(VE.vehiclePerspective);
-  double d, dY, targetX = V.X, targetY = V.Y, targetZ = V.Z;
-  if (arrowStatus == TE.Arrow.racetrack) {
-   boolean hasSize = !points.isEmpty();
-   double nX = hasSize ? points.get(V.point).X : 0, nY = hasSize ? points.get(V.point).Y : 0, nZ = hasSize ? points.get(V.point).Z : 0;
-   d = (nX - V.X >= 0 ? 270 : 90) + U.arcTan((nZ - V.Z) / (nX - V.X));
-   dY = (nY - V.Y >= 0 ? 270 : 90) + U.arcTan(U.distance(nX, V.X, nZ, V.Z) / (nY - V.Y));
-   if (hasSize) {
-    targetX = points.get(V.point).X;
-    targetY = points.get(V.point).Y;
-    targetZ = points.get(V.point).Z;
-   }
-  } else {
-   targetX = VE.vehicles.get(arrowTarget).X;
-   targetY = VE.vehicles.get(arrowTarget).Y;
-   targetZ = VE.vehicles.get(arrowTarget).Z;
-   if (arrowStatus != TE.Arrow.locked) {
-    double compareDistance = Double.POSITIVE_INFINITY;
-    for (Vehicle vehicle : VE.vehicles) {
-     if (vehicle.index != VE.vehiclePerspective && vehicle.destructionType < 1 && U.distance(V, vehicle) < compareDistance) {
-      arrowTarget = vehicle.index;
-      compareDistance = U.distance(V, vehicle);
-     }
-    }
-    VE.vehicles.get(VE.userPlayer).AI.target = VE.vehiclePerspective == VE.userPlayer ? arrowTarget : VE.vehicles.get(VE.userPlayer).AI.target;
-   }
-   arrowTarget = VE.vehiclesInMatch < 2 ? 0 : arrowTarget;
-   Vehicle targetVehicle = VE.vehicles.get(arrowTarget);
-   double nameHeight = .15, B = targetVehicle.damage / targetVehicle.durability;
-   U.fillRGB(1, 1 - B, 0);
-   U.fillRectangle(.5, nameHeight, B * .1, .005);
-   if (arrowStatus == TE.Arrow.locked) {
-    double C = VE.globalFlick ? 1 : 0;
-    U.strokeRGB(C, C, C);
-    VE.graphicsContext.strokeLine((VE.width * .5) - 50, VE.height * nameHeight, (VE.width * .5) + 50, VE.height * nameHeight);
-   }
-   d = (targetVehicle.X - V.X >= 0 ? 270 : 90) + U.arcTan((targetVehicle.Z - V.Z) / (targetVehicle.X - V.X));
-   dY = (targetVehicle.Y - V.Y >= 0 ? 270 : 90) + U.arcTan(U.distance(targetVehicle.X, V.X, targetVehicle.Z, V.Z) / (targetVehicle.Y - V.Y));
-   U.fillRGB(E.skyInverse);
-   U.text("[ " + VE.playerNames[arrowTarget] + " ]", nameHeight);
-  }
-  double convertedUnits = VE.units == .5364466667 ? .0175 : VE.units == 1 / 3. ? .0574147 : 1, color = VE.globalFlick ? 1 : 0;
-  U.fillRGB(color, color, color);
-  U.text("(" + Math.round(U.distance(V.X, targetX, V.Y, targetY, V.Z, targetZ) * convertedUnits) + ")", .175);
-  d += Camera.XZ;
-  while (d < -180) d += 360;
-  while (d > 180) d -= 360;
-  if (arrowStatus != TE.Arrow.racetrack && (VE.vehiclesInMatch < 2 || arrowTarget == VE.vehiclePerspective)) {
-   d = dY = 0;
-  }
-  U.rotate(arrow, -dY, d);
-  if (arrowStatus == TE.Arrow.racetrack || VE.vehiclesInMatch < 3) {
-   U.setDiffuseRGB((PhongMaterial) arrow.getMaterial(), E.skyInverse);
-  } else {
-   long[] RG = {0, 0};
-   if (VE.globalFlick) {
-    RG[arrowTarget < VE.vehiclesInMatch >> 1 ? 1 : 0] = 1;
-   }
-   U.setDiffuseRGB((PhongMaterial) arrow.getMaterial(), RG[0], RG[1], 0);
+  static {
+   universal.setDiffuseMap(U.Images.get(SL.Images.paved));
+   universal.setSpecularMap(U.Images.get(SL.Images.paved));
+   universal.setBumpMap(U.Images.getNormalMap(SL.Images.paved));
+   U.Phong.setDiffuseRGB(universal, globalShade);
+   U.Phong.setSpecularRGB(universal, E.Specular.Colors.standard);
+   universal.setSpecularPower(E.Specular.Powers.standard);
+   lowResolution[0] = U.Images.getLowResolution(U.Images.get(SL.Images.paved));
+   lowResolution[1] = U.Images.getLowResolution(U.Images.getNormalMap(SL.Images.paved));
   }
  }
 
@@ -249,8 +335,8 @@ public enum TE {//<-TrackElements main Class
   } catch (RuntimeException ignored) {
    rotation = 0;
   }
-  instanceScale[1] = VE.mapName.equals("Ghost City") && listNumber == getTrackPartIndex(VE.MapModels.cube.name()) && instanceSize == 10000 ? 1 + U.random(3.) : instanceScale[1];
-  if (VE.mapName.equals("Meteor Fields") && listNumber == getTrackPartIndex(VE.MapModels.ramp.name())) {
+  instanceScale[1] = VE.Map.name.equals(SL.MN.ghostCity) && listNumber == getTrackPartIndex(Models.cube.name()) && instanceSize == 10000 ? 1 + U.random(3.) : instanceScale[1];
+  if (VE.Map.name.equals("Meteor Fields") && listNumber == getTrackPartIndex(Models.ramp.name())) {
    if (rotation == 0) {
     X[0] = U.randomPlusMinus(2500.);
     Z[0] = 5000 + U.random(20000.);
@@ -262,17 +348,17 @@ public enum TE {//<-TrackElements main Class
    }
    rotation += U.random() < .5 ? 180 : 0;
   }
-  if ((listNumber == getTrackPartIndex(VE.MapModels.checkpoint.name()) || listNumber == getTrackPartIndex(VE.MapModels.fixpoint.name()))) {
-   if (VE.mapName.equals("Pyramid Paradise")) {
-    forceTrackPartOutsideExistingParts(s, X, Y, Z, VE.MapModels.pyramid.name());
-   } else if (U.listEquals(VE.mapName, "the Forest", "Volatile Sands")) {
+  if ((listNumber == getTrackPartIndex(Models.checkpoint.name()) || listNumber == getTrackPartIndex(Models.repair.name()))) {
+   if (VE.Map.name.equals("Pyramid Paradise")) {
+    forceTrackPartOutsideExistingParts(s, X, Y, Z, Models.pyramid.name());
+   } else if (U.equals(VE.Map.name, "the Forest", "Volatile Sands")) {
     forceTrackPartOutsideExistingParts(s, X, Y, Z, (String[]) null);
-   } else if (VE.mapName.equals("Military Base")) {
-    forceTrackPartOutsideExistingParts(s, X, Y, Z, VE.MapModels.cube.name(), VE.MapModels.ramptriangle.name());
+   } else if (VE.Map.name.equals("Military Base")) {
+    forceTrackPartOutsideExistingParts(s, X, Y, Z, Models.cube.name(), Models.ramptriangle.name());
    }
   }
-  if (listNumber == getTrackPartIndex(VE.MapModels.checkpoint.name())) {
-   if (VE.mapName.equals("Highlands")) {
+  if (listNumber == getTrackPartIndex(Models.checkpoint.name())) {
+   if (VE.Map.name.equals(SL.MN.highlands)) {
     if (U.random() < .5) {
      if (U.random() < .5) {
       X[0] += U.random() < .5 ? 100000 : -100000;
@@ -282,7 +368,7 @@ public enum TE {//<-TrackElements main Class
       Y[0] -= 25000;
      }
     }
-   } else if (VE.mapName.equals("Ghost City")) {
+   } else if (VE.Map.name.equals(SL.MN.ghostCity)) {
     if (U.random() < .5) {
      rotation = 0;
      Z[0] = U.randomPlusMinus(150000.);
@@ -311,12 +397,12 @@ public enum TE {//<-TrackElements main Class
      }
      Z[0] = randomPosition == 2 ? 150000 : Z[0];
     }
-   } else if (VE.mapName.equals("the Machine is Out of Control")) {
+   } else if (VE.Map.name.equals("the Machine is Out of Control")) {
     boolean inside = true;
     while (inside) {
      inside = Math.abs(X[0]) < 30000 && Math.abs(Z[0]) < 30000;
      for (TrackPart trackpart : trackParts) {
-      inside = (trackpart.modelNumber == getTrackPartIndex(VE.MapModels.pyramid.name()) || trackpart.modelNumber == getTrackPartIndex(VE.MapModels.cube.name()) || trackpart.modelNumber == getTrackPartIndex(VE.MapModels.ramptriangle.name())) &&
+      inside = (trackpart.modelNumber == getTrackPartIndex(Models.pyramid.name()) || trackpart.modelNumber == getTrackPartIndex(Models.cube.name()) || trackpart.modelNumber == getTrackPartIndex(Models.ramptriangle.name())) &&
       Math.abs(X[0] - trackpart.X) <= trackpart.renderRadius && Math.abs(Z[0] - trackpart.Z) <= trackpart.renderRadius || inside;
      }
      if (inside) {
@@ -325,32 +411,32 @@ public enum TE {//<-TrackElements main Class
       Y[0] = U.getValue(s, 3) + U.randomPlusMinus(randomY);
      }
     }
-   } else if (VE.mapName.equals("DoomsDay")) {
-    while (U.distance(X[0], 0, Z[0], 0) <= E.volcanoBottomRadius) {
+   } else if (VE.Map.name.equals("DoomsDay")) {
+    while (U.distance(X[0], 0, Z[0], 0) <= Volcano.radiusBottom) {
      X[0] = U.getValue(s, 1) + U.randomPlusMinus(randomX);
      Z[0] = U.getValue(s, 2) + U.randomPlusMinus(randomZ);
      Y[0] = U.getValue(s, 3) + U.randomPlusMinus(randomY);
     }
    }
   }
-  if (U.listEquals(U.getString(s, 0), VE.MapModels.mound.name(), VE.MapModels.pavedmound.name())) {
+  if (U.equals(U.getString(s, 0), Models.mound.name(), Models.pavedmound.name())) {
    try {
     trackParts.add(new TrackPart(X[0], Z[0], Y[0],
     U.getValue(s, 4) * instanceSize, U.getValue(s, 5) * instanceSize, U.getValue(s, 6) * instanceSize,
-    false, U.getString(s, 0).contains("paved"), true));
+    false, U.getString(s, 0).contains(SL.Images.paved), true));
    } catch (RuntimeException E) {
     trackParts.add(new TrackPart(X[0], Z[0], Y[0],
     U.getValue(s, 4) * U.random(instanceSize), U.getValue(s, 4) * U.random(instanceSize), U.getValue(s, 4) * U.random(instanceSize),
-    false, U.getString(s, 0).contains("paved"), true));
+    false, U.getString(s, 0).contains(SL.Images.paved), true));
    }
   } else {
    trackParts.add(new TrackPart(listNumber, X[0], Y[0], Z[0], rotation, instanceSize, instanceScale));
   }
-  if (listNumber == getTrackPartIndex(VE.MapModels.rainbow.name())) {
-   trackParts.get(trackParts.size() - 1).modelProperties += " rainbow ";
-  } else if (listNumber == getTrackPartIndex(VE.MapModels.crescent.name())) {
-   U.remove(E.sun);
-  } else if (listNumber == getTrackPartIndex(VE.MapModels.checkpoint.name())) {
+  if (listNumber == getTrackPartIndex(Models.rainbow.name())) {
+   trackParts.get(trackParts.size() - 1).rainbow = true;
+  } else if (listNumber == getTrackPartIndex(Models.crescent.name())) {
+   U.Nodes.remove(E.Sun.S);
+  } else if (listNumber == getTrackPartIndex(Models.checkpoint.name())) {
    points.add(new Point());
    points.get(points.size() - 1).X = X[0];
    points.get(points.size() - 1).Y = Y[0];
@@ -374,7 +460,7 @@ public enum TE {//<-TrackElements main Class
     points.get(points.size() - 1).type = Point.Type.mustPassIfClosest;
    }
   }
-  fixPointsExist = listNumber == getTrackPartIndex(VE.MapModels.fixpoint.name()) || fixPointsExist;
+  repairPointsExist = listNumber == getTrackPartIndex(Models.repair.name()) || repairPointsExist;
  }
 
  private static void forceTrackPartOutsideExistingParts(CharSequence source, double[] X, double[] Y, double[] Z, String... targets) {
@@ -399,17 +485,219 @@ public enum TE {//<-TrackElements main Class
 
  public static int getTrackPartIndex(String s) {
   try {
-   return VE.MapModels.valueOf(s).ordinal();
+   return Models.valueOf(s).ordinal();
   } catch (IllegalArgumentException E) {
    return -1;
   }
  }
 
  public static String getTrackPartName(int in) {
-  return VE.MapModels.values()[in].name();
+  return Models.values()[in].name();
+ }
+
+ public static void setVehicleMatchStartPlacement(Vehicle V) {
+  V.Y = V.XY = V.YZ = 0;
+  V.X = U.random(Math.min(50000., E.mapBounds.right)) + U.random(Math.max(-50000., E.mapBounds.left));
+  V.Z = U.random(Math.min(50000., E.mapBounds.forward)) + U.random(Math.max(-50000., E.mapBounds.backward));
+  V.XZ = !V.isFixed() && VE.Map.randomVehicleStartAngle ? U.randomPlusMinus(180.) : 0;//<-Fixed units ALWAYS face forward for less confusing placement
+  if (VE.Map.name.equals("Vicious Versus V3") && VE.vehiclesInMatch > 1) {
+   boolean green = V.index < VE.vehiclesInMatch >> 1;
+   if (green) {
+    V.Z = -10000;
+    V.XZ = 0;
+   } else {
+    V.Z = 10000;
+    V.XZ = 180;
+   }
+   if (VE.vehiclesInMatch < 3) {
+    V.X = 0;
+   } else {
+    V.X = (V.index - (green ? 0 : (VE.vehiclesInMatch * .5))) * 2000;
+    V.X -= 2000 * (VE.vehiclesInMatch * .5) * .5 - 1000;
+   }
+  } else if (VE.Map.name.equals("Moonlight")) {
+   if (V.damageDealt[U.random(4)] < 100 && !V.isFixed()) {
+    V.X *= V.X < 0 ? -1 : 1;
+    V.Z *= V.Z < 0 ? -1 : 1;
+   }
+  } else if (VE.Map.name.equals(SL.MN.testOfDamage)) {
+   if (V.damageDealt[U.random(4)] < 100 && !V.isFixed()) {
+    V.X = U.random(E.mapBounds.right);
+    V.Z = U.random(E.mapBounds.backward);
+   }
+  } else if (VE.Map.name.equals(SL.MN.vehicularFalls)) {
+   V.Y -= 100000;
+   if (!V.isFixed()) {
+    V.Z = U.random(-10000.) + U.random(30000.);
+    V.X = 0;
+   }
+  } else if (VE.Map.name.equals(SL.MN.highlands)) {
+   V.X = U.randomPlusMinus(100000);
+   V.Z = U.randomPlusMinus(100000);
+   V.Y = -175000;
+  } else if (VE.Map.name.equals(SL.MN.circleRaceXL)) {
+   V.Z += 320000;
+  } else if (VE.Map.name.equals("XY Land")) {
+   V.X = V.isFixed() ? V.X : U.random(23000.) - U.random(25000.);
+  } else if (VE.Map.name.equals(SL.MN.matrix2x3)) {
+   if (!V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.isFixed()) {
+    V.X = U.randomPlusMinus(14000.);
+    V.Z = -U.random(31000.);
+   }
+  } else if (VE.Map.name.equals("Cold Fury")) {
+   V.Y = -4000;
+  } else if (VE.Map.name.equals(SL.MN.tunnelOfDoom)) {
+   if (!V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.isFixed()) {
+    V.X = U.randomPlusMinus(700.);
+    V.Z = U.random(6000.) - U.random(10000.);
+   }
+  } else if (VE.Map.name.equals(SL.MN.everybodyEverything)) {
+   V.X = U.random() < .5 ? -2000 : 2000;
+   V.Z = U.randomPlusMinus(20000.);
+  } else if (VE.Map.name.equals("the Maze")) {
+   if (!V.isFixed()) {
+    V.X = V.Z = 0;
+   }
+  } else if (VE.Map.name.equals("Volcanic Prophecy")) {
+   V.X *= 2;
+   V.Z *= 2;
+  } else if (VE.Map.name.equals(SL.MN.speedway2000000)) {
+   boolean random = U.random() < .5;
+   V.XZ = random ? 180 : 0;
+   V.Z += random ? 1000000 : -1000000;
+  } else if (VE.Map.name.equals(SL.MN.ghostCity)) {
+   V.X *= 4;
+   V.Z *= 4;
+   if (!V.isFixed()) {
+    V.Y = -1000;
+    V.X = U.random() < .5 ? 2000 : -2000;
+   }
+  } else if (VE.Map.name.equals("Open Ocean")) {
+   V.X *= 4;
+   V.Z *= 4;
+   if (!V.isFixed()) {
+    V.X = U.random() < .5 ? 2000 : -2000;
+   }
+  } else if (VE.Map.name.equals(SL.MN.summitOfEpic)) {
+   V.X = !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.isFixed() ? 0 : V.X;
+   boolean random = U.random() < .5;
+   V.XZ = random ? 180 : 0;
+   V.Z = random ? 1050000 : -1050000;
+   V.Z += U.randomPlusMinus(25000.);
+  } else if (VE.Map.name.equals("Parallel Universe Portal")) {
+   V.Z = 0;
+  }
+  if (E.gravity == 0) {
+   if (VE.Map.name.equals("Outer Space V1")) {
+    V.X = U.randomPlusMinus(500.);
+    V.Z = U.random(2000.) - U.random(4000.);
+    if (V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name())) {
+     V.X = 0;
+     V.Z = 100500;
+    }
+    if (V.isFixed()) {
+     V.X = U.randomPlusMinus(50000.);
+     V.Z = U.randomPlusMinus(50000.);
+     V.Y = U.randomPlusMinus(50000.);
+    }
+   } else {
+    V.Y = U.randomPlusMinus(50000.);
+   }
+   if (VE.Map.name.equals("Outer Space V3")) {
+    V.Y = 0;
+    double[] setX = {0}, setZ = {50000};
+    U.rotate(setX, setZ, U.random(360.));
+    V.X = setX[0];
+    V.Z = setZ[0];
+   }
+  }
+  if (VE.Map.name.equals("Black Hole")) {
+   V.X = V.Y = V.Z = 0;
+  }
+  V.Y -= V.isFixed() ? 0 : V.clearanceY;
+ }
+
+ public static void runVehicleInteraction(Vehicle V, boolean replay) {
+  if (!points.isEmpty()) {
+   Point P = points.get(V.point);
+   if (P.type == Point.Type.mustPassAbsolute && V.P.mode != Physics.Mode.fly) {
+    V.point += U.distance(V, P) < 500 ? 1 : 0;
+   } else if (P.type != Point.Type.checkpoint &&
+   (U.distance(V.X, P.X, V.Z, P.Z) < 500 || (V.AI.skipStunts && P.type != Point.Type.mustPassIfClosest) || (!checkpoints.isEmpty() && !VE.Map.name.equals(SL.MN.devilsStairwell) && U.distance(V, checkpoints.get(V.checkpointsPassed)) <= U.distance(P, checkpoints.get(V.checkpointsPassed))))) {
+    V.point++;
+   }
+  }
+  if (!checkpoints.isEmpty() && !V.phantomEngaged) {
+   double checkSize = VE.Map.name.equals(SL.MN.circleRaceXL) ? V.P.speed : 0;
+   Checkpoint C = checkpoints.get(V.checkpointsPassed);
+   if ((C.type == Checkpoint.Type.passZ || C.type == Checkpoint.Type.passAny) &&
+   Math.abs(V.Z - C.Z) < (60 + checkSize) + Math.abs(V.P.netSpeedZ) * VE.tick && Math.abs(V.X - C.X) < 700 && Math.abs((V.Y - C.Y) + 350) < 450) {
+    V.checkpointsPassed++;
+    V.point++;
+    if (V.index == VE.vehiclePerspective) {
+     if (!VE.Match.messageWait) {
+      VE.Match.print = SL.TE.checkpoint;
+      VE.Match.printTimer = 10;
+     }
+     if (VE.Options.headsUpDisplay) {
+      VE.Sounds.checkpoint.play(0);
+     }
+    }
+    VE.Match.scoreCheckpoint[V.index < VE.vehiclesInMatch >> 1 ? 0 : 1] += replay ? 0 : 1;
+    if (V.checkpointsPassed >= checkpoints.size()) {
+     VE.Match.scoreLap[V.index < VE.vehiclesInMatch >> 1 ? 0 : 1] += replay ? 0 : 1;
+     V.checkpointsPassed = V.point = 0;
+    }
+   }
+   if ((C.type == Checkpoint.Type.passX || C.type == Checkpoint.Type.passAny) &&
+   Math.abs(V.X - C.X) < (60 + checkSize) + Math.abs(V.P.netSpeedX) * VE.tick && Math.abs(V.Z - C.Z) < 700 && Math.abs((V.Y - C.Y) + 350) < 450) {
+    V.checkpointsPassed++;
+    V.point++;
+    if (V.index == VE.vehiclePerspective) {
+     if (!VE.Match.messageWait) {
+      VE.Match.print = SL.TE.checkpoint;
+      VE.Match.printTimer = 10;
+     }
+     if (VE.Options.headsUpDisplay) {
+      VE.Sounds.checkpoint.play(0);
+     }
+    }
+    VE.Match.scoreCheckpoint[V.index < VE.vehiclesInMatch >> 1 ? 0 : 1] += replay ? 0 : 1;
+    if (V.checkpointsPassed >= checkpoints.size()) {
+     VE.Match.scoreLap[V.index < VE.vehiclesInMatch >> 1 ? 0 : 1] += replay ? 0 : 1;
+     V.checkpointsPassed = V.point = 0;
+    }
+   }
+   V.point = V.checkpointsPassed > 0 ? (int) U.clamp(checkpoints.get(V.checkpointsPassed - 1).location + 1, V.point, checkpoints.get(V.checkpointsPassed).location) : V.point;
+   if (V.index == VE.vehiclePerspective) {
+    currentCheckpoint = V.checkpointsPassed;
+    lapCheckpoint = V.checkpointsPassed >= checkpoints.size() - 1;
+   }
+  }
+  V.point = V.point >= points.size() || V.point < 0 ? 0 : V.point;
+ }
+
+ public static void runVehicleRepairPointInteraction(Vehicle V, boolean gamePlay) {
+  if (repairPointsExist && V.repairSpheres.get(U.random(V.repairSpheres.size())).stage <= 0 && !V.phantomEngaged) {
+   for (TrackPart part : trackParts) {
+    if (part.isRepairPoint) {
+     boolean sideways = isSidewaysXZ(part.XZ);
+     if (U.distance(sideways ? V.Z : V.X, sideways ? part.Z : part.X, V.Y, part.Y) <= 500 && Math.abs(sideways ? V.X - part.X : V.Z - part.Z) <= 200 + Math.abs(sideways ? V.P.netSpeedX : V.P.netSpeedZ) * VE.tick) {
+      V.repair(gamePlay);
+     }
+    }
+   }
+  }
  }
 
  public static boolean isSidewaysXZ(double angleXZ) {
   return Math.abs(U.cos(angleXZ)) < U.sin45;
+ }
+
+ public static void reset() {
+  trackParts.clear();
+  points.clear();
+  checkpoints.clear();
+  repairPointsExist = false;
  }
 }

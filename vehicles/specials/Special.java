@@ -1,27 +1,37 @@
-package ve.vehicles;
+package ve.vehicles.specials;
 
 import ve.Sound;
 import ve.VE;
 import ve.environment.E;
 import ve.utilities.U;
+import ve.vehicles.Vehicle;
 
 import java.util.*;
 
 public class Special {
 
- private final Vehicle V;
+ public final Vehicle V;
+ public EnergyBolt EB;
  public Type type = Type.none;
  private int currentShot;
- double randomPosition, randomAngle, timer, speed, diameter, damageDealt, pushPower, length, width;
- boolean homing;
+ public double randomPosition;
+ public double randomAngle;
+ public double timer;
+ public double speed;
+ public double diameter;
+ public double damageDealt;
+ public double pushPower;
+ double length;
+ double width;
+ public boolean homing;
  boolean hasThrust;
- boolean ricochets;
- boolean useSmallHits;
+ public boolean ricochets;
+ public boolean useSmallHits;
  public boolean fire;
- long AIAimPrecision = Long.MAX_VALUE;
+ public long AIAimPrecision = Long.MAX_VALUE;
  public final List<Shot> shots = new ArrayList<>();
  public final List<Port> ports = new ArrayList<>();
- Sound sound;
+ public Sound sound;
 
  public enum Type {
   none,
@@ -29,18 +39,18 @@ public class Special {
   shell, powershell, missile, bomb, flamethrower, mine,
   blaster, heavyblaster, forcefield,
   phantom, teleport,
-  particledisintegrator, spinner, thewrath
+  particledisintegrator, particlereintegrator, spinner, thewrath, energy
  }
 
- AimType aimType = AimType.normal;
+ public AimType aimType = AimType.normal;
 
- enum AimType {normal, ofVehicleTurret, auto}
+ public enum AimType {normal, ofVehicleTurret, auto}
 
- Special(Vehicle vehicle) {
+ public Special(Vehicle vehicle) {
   V = vehicle;
  }
 
- void load() {
+ public void load() {
   if (type == Type.gun) {
    speed = 3000;
    diameter = 25;
@@ -160,10 +170,10 @@ public class Special {
    length = width;
    V.hasShooting = true;
   } else if (type == Type.forcefield) {
-   diameter = V.collisionRadius * 2;
+   diameter = V.collisionRadius() * 2;
    damageDealt = 2500;
    pushPower = 2000;
-   width = V.collisionRadius * 2;
+   width = V.collisionRadius() * 2;
   } else if (type == Type.mine) {
    diameter = 500;
    damageDealt = 15000;
@@ -179,14 +189,16 @@ public class Special {
    AIAimPrecision = 10;
   }
   AIAimPrecision = homing ? Long.MAX_VALUE : AIAimPrecision;
-  if (type != Type.particledisintegrator && type != Type.spinner) {
+  if (type == Type.energy) {
+   EB = new EnergyBolt(V, this);
+  } else if (!type.name().contains("particle") && type != Type.spinner) {
    for (int n = E.shotQuantity; --n >= 0; ) {
     shots.add(new Shot(this));
    }
-  }
-  if (!type.name().contains(Type.blaster.name()) && type != Type.raygun && type != Type.forcefield && type != Type.mine && type != Type.thewrath) {
-   for (Port port : ports) {
-    port.spit = new Spit(this);
+   if (!type.name().contains(Type.blaster.name()) && type != Type.raygun && type != Type.forcefield && type != Type.mine && type != Type.thewrath) {
+    for (Port port : ports) {
+     port.spit = new Spit(this);
+    }
    }
   }
   if (useSmallHits) {
@@ -195,33 +207,37 @@ public class Special {
   if (ricochets) {
    V.VA.hitRicochet = new Sound("hitRicochet", Double.POSITIVE_INFINITY);
   }
-  V.wrathStuck = type == Type.thewrath ? new boolean[VE.vehiclesInMatch] : V.wrathStuck;
+  if (type == Type.thewrath) {
+   V.P.wrathStuck = new boolean[VE.vehiclesInMatch];
+  }
  }
 
- public void run(Vehicle V, boolean gamePlay) {
-  if (type != Type.particledisintegrator && type != Type.spinner && type != Type.phantom && type != Type.teleport) {
+ public void run(boolean gamePlay) {
+  if (type == Type.energy) {
+   EB.run(gamePlay);
+  } else if (!type.name().contains("particle") && type != Type.spinner && type != Type.phantom && type != Type.teleport) {
    if (gamePlay) {
     if (timer <= 0) {
      if (fire && !V.destroyed) {
       time();
-      shoot(V);
-      V.wrathEngaged = type == Type.thewrath;
-      if (V.wrathEngaged) {
+      shoot();
+      V.P.wrathEngaged = type == Type.thewrath;
+      if (V.P.wrathEngaged) {
        for (int n = VE.vehiclesInMatch; --n >= 0; ) {
-        V.wrathStuck[n] = false;
+        V.P.wrathStuck[n] = false;
        }
       }
      }
     } else {
      timer -= VE.tick;
     }
-    if (V.wrathEngaged) {
-     shoot(V);
+    if (V.P.wrathEngaged) {
+     shoot();
      V.thrusting = true;
-     speed = Math.min(speed + ((U.random() < .5 ? V.accelerationStages[0] : V.accelerationStages[1]) * 4 * VE.tick), V.topSpeeds[2]);
-     V.damage = Math.min(V.damage, V.durability);
+     V.P.speed = Math.min(V.P.speed + ((U.random() < .5 ? V.accelerationStages[0] : V.accelerationStages[1]) * 4 * VE.tick), V.topSpeeds[2]);
+     V.setDamage(Math.min(V.getDamage(false), V.durability));
      V.screenFlash = (.5 + U.random(.5)) / Math.max(Math.sqrt(V.distanceToCamera) * .015, 1);
-     V.wrathEngaged = !(timer < 850) && V.wrathEngaged;
+     V.P.wrathEngaged = !(timer < 850) && V.P.wrathEngaged;
     }
    }
    if (!V.destroyed && type == Type.flamethrower) {
@@ -240,7 +256,7 @@ public class Special {
   }
  }
 
- private void shoot(Vehicle V) {
+ private void shoot() {
   for (Port port : ports) {
    double[] shotX = {port.X}, shotY = {port.Y}, shotZ = {port.Z};
    U.rotate(shotX, shotY, V.XY);
@@ -255,13 +271,13 @@ public class Special {
    }
   }
   if (type == Type.phantom) {
-   sound.loop(V.VA.vehicleToCameraSoundDistance);
-  } else if ((type != Type.flamethrower || VE.globalFlick) && !V.wrathEngaged) {
-   sound.play(V.VA.vehicleToCameraSoundDistance * (type == Type.thewrath ? .5 : 1));
+   sound.loop(V.VA.distanceVehicleToCamera);
+  } else if ((type != Type.flamethrower || VE.yinYang) && !V.P.wrathEngaged) {
+   sound.play(V.VA.distanceVehicleToCamera * (type == Type.thewrath ? .5 : 1));
   }
  }
 
- void time() {
+ public void time() {
   timer =
   type == Type.gun ? 8 :
   type.name().contains(Type.machinegun.name()) ? 1 :
@@ -274,5 +290,6 @@ public class Special {
   type == Type.forcefield ? 20 :
   type == Type.thewrath ? 1000 :
   0;
+  timer /= V.energyMultiple;
  }
 }

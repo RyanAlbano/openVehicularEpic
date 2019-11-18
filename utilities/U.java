@@ -14,8 +14,10 @@ import javafx.scene.*;
 import javafx.scene.canvas.*;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.paint.*;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Shape3D;
 import javafx.scene.text.*;
 import javafx.scene.text.Font;
 import ve.*;
@@ -23,7 +25,7 @@ import ve.Camera;
 import ve.environment.E;
 import ve.vehicles.Vehicle;
 
-public enum U {//<-The UTILITY Class
+public enum U {//Utilities
  ;
 
  public static final String lineSeparator = System.lineSeparator();
@@ -34,17 +36,31 @@ public enum U {//<-The UTILITY Class
  public static final double minimumAccurateLayeredOpacity = .05;
  public static final long refreshRate = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode().getRefreshRate();
  public static final Dimension dimension = Toolkit.getDefaultToolkit().getScreenSize();
- private static final String imageFolder = "images", imageExtension = ".png";
- public static final String soundFolder = "sounds", soundExtension = ".au";
+ public static final String imageFolder = "images", modelFolder = "models", soundFolder = "sounds", soundExtension = ".au";
+ public static final String userSubmittedFolder = "User-Submitted";
+ private static final String imageExtension = ".png";
  public static final String JLayerStuff = "JLayerStuff";
  public static final Charset standardChars = StandardCharsets.UTF_8;
- private static final String imageLoadingException = "Image-loading exception: ";
- public static final String soundLoadingException = "Sound-loading exception: ";
+ private static final String imageLoadingException = "Image-loading Exception: ";
+ public static final String soundLoadingException = "Sound-loading Exception: ";
  public static final String modelLoadingError = "Model-Loading Error: ";
+ public static String debug = "Code executed to this location";
  private static final Canvas colorGetterCanvas = new Canvas(1, 1);
  private static final GraphicsContext colorGetter = colorGetterCanvas.getGraphicsContext2D();
  public static final DecimalFormat DF = new DecimalFormat("0.#E0");
  public static final Quaternion inert = new Quaternion();
+
+ public static String getString(CharSequence s, int index) {
+  try {
+   return regex.split(s)[index + 1];
+  } catch (RuntimeException e) {
+   return "";
+  }
+ }
+
+ public static double getValue(CharSequence s, int index) {
+  return Double.parseDouble(regex.split(s)[index + 1]);
+ }
 
  public static boolean sameVehicle(Vehicle V1, Vehicle V2) {
   return V1.index == V2.index;
@@ -55,7 +71,8 @@ public enum U {//<-The UTILITY Class
  }
 
  public static boolean sameTeam(long index1, long index2) {
-  return index1 < VE.vehiclesInMatch >> 1 == index2 < VE.vehiclesInMatch >> 1;
+  long halfOfPlayers = VE.vehiclesInMatch >> 1;
+  return index1 < halfOfPlayers == index2 < halfOfPlayers;
  }
 
  public static void text(String s, double Y) {
@@ -77,6 +94,15 @@ public enum U {//<-The UTILITY Class
   VE.graphicsContext.fillText(s, VE.width * X, VE.height * Y);
  }
 
+ public static void fillRGB(Color C) {
+  VE.graphicsContext.setFill(C);
+ }
+
+ public static void fillRGB(double shade) {
+  shade = clamp(shade);
+  VE.graphicsContext.setFill(Color.color(shade, shade, shade));
+ }
+
  public static void fillRGB(double R, double G, double B) {
   VE.graphicsContext.setFill(Color.color(clamp(R), clamp(G), clamp(B)));
  }
@@ -87,10 +113,6 @@ public enum U {//<-The UTILITY Class
 
  public static void fillRGB(GraphicsContext GC, double R, double G, double B, double transparency) {
   GC.setFill(Color.color(clamp(R), clamp(G), clamp(B), clamp(transparency)));
- }
-
- public static void fillRGB(Color C) {
-  VE.graphicsContext.setFill(C);
  }
 
  public static void strokeRGB(double R, double G, double B) {
@@ -118,11 +140,11 @@ public enum U {//<-The UTILITY Class
  public static FileInputStream getMapFile(int n) {
   File F = new File("maps" + File.separator + VE.maps.get(n));
   if (!F.exists()) {
-   F = new File("maps" + File.separator + "User-Submitted" + File.separator + VE.maps.get(n));
+   F = new File("maps" + File.separator + userSubmittedFolder + File.separator + VE.maps.get(n));
   }
   if (!F.exists()) {
    VE.map = 0;
-   F = new File("maps" + File.separator + "basic");
+   F = new File("maps" + File.separator + VE.maps.get(0));
   }
   try {
    return new FileInputStream(F);
@@ -131,162 +153,180 @@ public enum U {//<-The UTILITY Class
   }
  }
 
- public static void add(Node N) {
-  if (N != null && !VE.group.getChildren().contains(N)) {
-   VE.group.getChildren().add(N);
-  }
- }
+ public enum Nodes {
+  ;
 
- public static void add(Node... N) {
-  for (Node n : N) {
-   if (n != null && !VE.group.getChildren().contains(n)) {
-    VE.group.getChildren().add(n);
+  public static void add(Node... N) {
+   VE.denyExpensiveInGameCall();
+   for (Node n : N) {
+    if (n != null && !VE.group.getChildren().contains(n)) {
+     VE.group.getChildren().add(n);
+    }
+   }
+  }
+
+  public static void remove(Node... N) {
+   VE.denyExpensiveInGameCall();
+   for (Node n : N) {
+    if (n != null) {
+     VE.group.getChildren().remove(n);
+    }
+   }
+  }
+
+  public enum Light {
+   ;
+
+   public static void add(Node N) {//Find way to throw exception if node is not a light
+    if (N != null && !E.lights.getChildren().contains(N) && E.lightsAdded < 3) {
+     E.lights.getChildren().add(N);
+     E.lightsAdded++;
+    }
+   }
+
+   public static void remove(Node N) {
+    if (N != null) {
+     E.lights.getChildren().remove(N);
+    }
+   }
+
+   public static void setRGB(AmbientLight AL, double R, double G, double B) {
+    AL.setColor(Color.color(clamp(R), clamp(G), clamp(B)));
+   }
+
+   public static void setRGB(PointLight PL, double R, double G, double B) {
+    PL.setColor(Color.color(clamp(R), clamp(G), clamp(B)));
    }
   }
  }
 
- public static void remove(Node N) {
-  if (N != null) {
-   VE.group.getChildren().remove(N);
+ public static Color getColor(Color C) {
+  return Color.color(C.getRed(), C.getGreen(), C.getBlue());
+ }
+
+ public static Color getColor(double shade) {
+  return getColor(shade, shade, shade);
+ }
+
+ public static Color getColor(double R, double G, double B) {
+  return Color.color(clamp(R), clamp(G), clamp(B));
+ }
+
+ public enum Phong {
+  ;
+
+  public static void setDiffuseRGB(PhongMaterial PM, Color C) {
+   PM.setDiffuseColor(C);
   }
- }
 
- public static void remove(Node... N) {
-  for (Node n : N) {
-   if (n != null) {
-    VE.group.getChildren().remove(n);
-   }
+  public static void setDiffuseRGB(PhongMaterial PM, Color C, double transparency) {
+   setDiffuseRGB(PM, C.getRed(), C.getGreen(), C.getBlue(), transparency);
   }
- }
 
- public static void addLight(Node N) {
-  if (N != null && !E.lights.getChildren().contains(N) && E.lightsAdded < 3) {
-   E.lights.getChildren().add(N);
-   E.lightsAdded++;
+  public static void setDiffuseRGB(PhongMaterial PM, double shade) {
+   setDiffuseRGB(PM, shade, shade, shade);
   }
- }
 
- public static void removeLight(Node N) {
-  if (N != null) {
-   E.lights.getChildren().remove(N);
+  public static void setDiffuseRGB(PhongMaterial PM, double R, double G, double B) {
+   PM.setDiffuseColor(Color.color(clamp(R), clamp(G), clamp(B)));
   }
- }
 
- public static String getString(CharSequence s, int index) {
-  try {
-   return regex.split(s)[index + 1];
-  } catch (RuntimeException e) {
-   return "";
+  public static void setDiffuseRGB(PhongMaterial PM, double R, double G, double B, double transparency) {
+   PM.setDiffuseColor(Color.color(clamp(R), clamp(G), clamp(B), clamp(transparency)));
   }
- }
 
- public static double getValue(CharSequence s, int index) {
-  return Double.parseDouble(regex.split(s)[index + 1]);
- }
-
- public static double distance(double coordinate1, double otherCoordinate1, double coordinate2, double otherCoordinate2) {
-  return netValue(coordinate1 - otherCoordinate1, coordinate2 - otherCoordinate2);
- }
-
- public static double distance(Core C1, Core C2) {
-  return distance(C1.X, C2.X, C1.Y, C2.Y, C1.Z, C2.Z);
- }
-
- private static double distance(double x, double y, double z) {
-  return distance(x, Camera.X, y, Camera.Y, z, Camera.Z);
- }
-
- public static double distance(Core core) {
-  return distance(core.X, Camera.X, core.Y, Camera.Y, core.Z, Camera.Z);
- }
-
- public static double distance(double X1, double X2, double Y1, double Y2, double Z1, double Z2) {
-  return netValue(X1 - X2, Y1 - Y2, Z1 - Z2);
- }
-
- public static boolean outOfBounds(Core core, double tolerance) {
-  return outOfBounds(core.X, core.Y, core.Z, tolerance);
- }
-
- private static boolean outOfBounds(double x, double y, double z, double tolerance) {
-  double depth = E.groundLevel + (E.poolExists && distance(x, E.poolX, z, E.poolZ) < E.pool[0].getRadius() ? E.poolDepth : 0);
-  return y > depth || x > E.mapBounds.right + tolerance || x < E.mapBounds.left - tolerance || z > E.mapBounds.forward + tolerance || z < E.mapBounds.backward - tolerance || y < E.mapBounds.Y - tolerance;
- }
-
- public static void setDiffuseRGB(PhongMaterial PM, double shade) {
-  setDiffuseRGB(PM, shade, shade, shade);
- }
-
- public static void setDiffuseRGB(PhongMaterial PM, double R, double G, double B) {
-  PM.setDiffuseColor(Color.color(clamp(R), clamp(G), clamp(B)));
- }
-
- public static void setDiffuseRGB(PhongMaterial PM, Color C) {
-  PM.setDiffuseColor(C);
- }
-
- public static void setDiffuseRGB(PhongMaterial PM, double R, double G, double B, double transparency) {
-  PM.setDiffuseColor(Color.color(clamp(R), clamp(G), clamp(B), clamp(transparency)));
- }
-
- public static void setSpecularRGB(PhongMaterial PM, double shade) {
-  setSpecularRGB(PM, shade, shade, shade);
- }
-
- public static void setSpecularRGB(PhongMaterial PM, double R, double G, double B) {
-  PM.setSpecularColor(Color.color(clamp(R), clamp(G), clamp(B)));
- }
-
- public static void setSpecularRGB(PhongMaterial PM, double R, double G, double B, double transparency) {//<-Keep method in case we need it later
-  PM.setSpecularColor(Color.color(clamp(R), clamp(G), clamp(B), clamp(transparency)));
- }
-
- public static void setLightRGB(AmbientLight AL, double R, double G, double B) {
-  AL.setColor(Color.color(clamp(R), clamp(G), clamp(B)));
- }
-
- public static void setLightRGB(PointLight PL, double R, double G, double B) {
-  PL.setColor(Color.color(clamp(R), clamp(G), clamp(B)));
- }
-
- public static void setSelfIllumination(PhongMaterial PM, double R, double G, double B) {
-  colorGetter.setFill(Color.color(clamp(R), clamp(G), clamp(B)));
-  colorGetter.fillRect(0, 0, 1, 1);
-  PM.setSelfIlluminationMap(colorGetterCanvas.snapshot(null, null));
- }
-
- public static void loadImage(Map<? super String, ? super Image> M, String name) {
-  if (!M.containsKey(name)) {
-   try {
-    M.put(name, new Image(new FileInputStream(imageFolder + File.separator + name + imageExtension)));
-   } catch (FileNotFoundException E) {
-    System.out.println(imageLoadingException + E);
-   }
+  public static void setSpecularRGB(PhongMaterial PM, Color C) {
+   PM.setSpecularColor(C);
   }
+
+  public static void setSpecularRGB(PhongMaterial PM, double shade) {
+   setSpecularRGB(PM, shade, shade, shade);
+  }
+
+  public static void setSpecularRGB(PhongMaterial PM, double R, double G, double B) {
+   PM.setSpecularColor(Color.color(clamp(R), clamp(G), clamp(B)));
+  }
+
+  public static void setSpecularRGB(PhongMaterial PM, double R, double G, double B, double transparency) {//<-Keep method in case we need it later
+   PM.setSpecularColor(Color.color(clamp(R), clamp(G), clamp(B), clamp(transparency)));
+  }
+
+  public static void setSelfIllumination(PhongMaterial PM, Color C) {
+   setSelfIllumination(PM, C.getRed(), C.getGreen(), C.getBlue());
+  }
+
+  public static void setSelfIllumination(PhongMaterial PM, double R, double G, double B) {
+   colorGetter.setFill(Color.color(clamp(R), clamp(G), clamp(B)));
+   colorGetter.fillRect(0, 0, 1, 1);
+   PM.setSelfIlluminationMap(colorGetterCanvas.snapshot(null, null));
+  }
+  /*public static PhongMaterial copy(PhongMaterial in) {//In case it's needed again
+  PhongMaterial PM = new PhongMaterial();
+  PM.setDiffuseColor(in.getDiffuseColor());
+  PM.setDiffuseMap(in.getDiffuseMap());
+  PM.setSpecularColor(in.getSpecularColor());
+  PM.setSpecularPower(in.getSpecularPower());
+  PM.setSpecularMap(in.getSpecularMap());
+  PM.setBumpMap(in.getBumpMap());
+  return PM;
+ }*/
  }
 
- public static void loadImage(Map<? super String, ? super Image> M, String name, double quantity) {
-  for (int n = 0; n < quantity; n++) {
-   try {
-    loadImage(M, name + n);
-   } catch (RuntimeException E) {
-    if (quantity < Double.POSITIVE_INFINITY) {
+ public enum Images {
+  ;
+
+  public static void load(Map<? super String, ? super Image> M, String name) {
+   if (!M.containsKey(name)) {
+    try {
+     M.put(name, new Image(new FileInputStream(imageFolder + File.separator + name + imageExtension)));
+    } catch (FileNotFoundException E) {
      System.out.println(imageLoadingException + E);
     }
-    break;
    }
+  }
+
+  public static void load(Map<? super String, ? super Image> M, String name, double quantity) {
+   for (int n = 0; n < quantity; n++) {
+    try {
+     load(M, name + n);
+    } catch (RuntimeException E) {
+     if (quantity < Double.POSITIVE_INFINITY) {
+      System.out.println(imageLoadingException + E);
+     }
+     break;
+    }
+   }
+  }
+
+  public static Image get(String name) {
+   return VE.images.getOrDefault(name, null);
+  }
+
+  public static Image getNormalMap(String name) {
+   return VE.Options.normalMapping ? get(name + "N") : null;
+  }
+
+  public static Image getLowResolution(Image I) {
+   VE.denyExpensiveInGameCall();
+   if (I != null) {
+    ImageView IV = new ImageView(I);
+    IV.setScaleX(Math.min(500 / I.getWidth(), 1));//*Don't exceed the original size!
+    IV.setScaleY(Math.min(500 / I.getHeight(), 1));//*
+    return IV.snapshot(null, null);
+   }
+   return null;
   }
  }
 
- public static Image getImage(String name) {
-  return VE.images.getOrDefault(name, null);
+ public static void setMaterialSecurely(Shape3D shape3D, PhongMaterial PM) {
+  if (PM == null) {
+   throw new IllegalStateException("Blocked attempt at setting from a null PhongMaterial");
+  } else {
+   shape3D.setMaterial(PM);
+  }
  }
 
- public static Image getImageNormal(String name) {
-  return VE.normalMapping ? getImage(name + "N") : null;
- }
-
- public static boolean listEquals(String in, String... prefixes) {
+ public static boolean equals(String in, String... prefixes) {
   for (String s : prefixes) {
    if (in.equals(s)) {
     return true;
@@ -325,7 +365,7 @@ public enum U {//<-The UTILITY Class
   }
  }
 
- static List<Double> arrayToList(double[] source) {//<-Keep method in case we need it later
+ static List<Double> arrayToList(double[] source) {//<-Keep in case it's needed later
   List<Double> d = new ArrayList<>();
   for (double v : source) {
    d.add(v);
@@ -344,11 +384,17 @@ public enum U {//<-The UTILITY Class
  }
 
  public static int random(int intIn) {
-  return intIn > 0 ? ThreadLocalRandom.current().nextInt(intIn) : intIn;
+  return
+  intIn > 0 ? ThreadLocalRandom.current().nextInt(intIn) :
+  intIn < 0 ? -ThreadLocalRandom.current().nextInt(-intIn) :
+  0;
  }
 
  public static long random(long longIn) {
-  return longIn > 0 ? ThreadLocalRandom.current().nextLong(longIn) : longIn;
+  return
+  longIn > 0 ? ThreadLocalRandom.current().nextLong(longIn) :
+  longIn < 0 ? ThreadLocalRandom.current().nextLong(-longIn) :
+  0;
  }
 
  public static double random(double doubleIn) {
@@ -462,6 +508,35 @@ public enum U {//<-The UTILITY Class
   return Math.sqrt(v1 * v1 + v2 * v2 + v3 * v3);
  }
 
+ public static double distance(double coordinate1, double otherCoordinate1, double coordinate2, double otherCoordinate2) {
+  return netValue(coordinate1 - otherCoordinate1, coordinate2 - otherCoordinate2);
+ }
+
+ public static double distance(Core C1, Core C2) {
+  return distance(C1.X, C2.X, C1.Y, C2.Y, C1.Z, C2.Z);
+ }
+
+ private static double distance(double x, double y, double z) {
+  return distance(x, Camera.X, y, Camera.Y, z, Camera.Z);
+ }
+
+ public static double distance(Core core) {
+  return distance(core.X, Camera.X, core.Y, Camera.Y, core.Z, Camera.Z);
+ }
+
+ public static double distance(double X1, double X2, double Y1, double Y2, double Z1, double Z2) {
+  return netValue(X1 - X2, Y1 - Y2, Z1 - Z2);
+ }
+
+ public static boolean outOfBounds(Core core, double tolerance) {
+  return outOfBounds(core.X, core.Y, core.Z, tolerance);
+ }
+
+ private static boolean outOfBounds(double x, double y, double z, double tolerance) {
+  double depth = E.Ground.level + (E.Pool.exists && distance(x, E.Pool.X, z, E.Pool.Z) < E.Pool.C[0].getRadius() ? E.Pool.depth : 0);
+  return y > depth || x > E.mapBounds.right + tolerance || x < E.mapBounds.left - tolerance || z > E.mapBounds.forward + tolerance || z < E.mapBounds.backward - tolerance || y < E.mapBounds.Y - tolerance;
+ }
+
  public static void setTranslate(Node N, Core core) {
   setTranslate(N, core.X, core.Y, core.Z);
  }
@@ -499,7 +574,7 @@ public enum U {//<-The UTILITY Class
  }
 
  public static boolean render(double X, double Y, double Z, double depthTolerance) {
-  return (getDepth(X, Y, Z) > depthTolerance);
+  return E.renderType == E.RenderType.ALL || (getDepth(X, Y, Z) > depthTolerance);
  }
 
  public static boolean renderWithLOD(Core core) {
@@ -511,14 +586,18 @@ public enum U {//<-The UTILITY Class
  }
 
  private static boolean renderWithLOD(double X, double Y, double Z, double absoluteRadius, double depthTolerance) {
-  return (getDepth(X, Y, Z) > depthTolerance && absoluteRadius * E.renderLevel >= distance(X, Y, Z) * Camera.zoom);
+  return E.renderType == E.RenderType.ALL || (getDepth(X, Y, Z) > depthTolerance && absoluteRadius * E.renderLevel >= distance(X, Y, Z) * Camera.zoom);
  }
 
- public static void getFPS() {
+ public static void setFPS() {
   double time = System.currentTimeMillis();
   FPS = StrictMath.pow(Math.min(1000 / (time - FPSTime), refreshRate), 1.005);//<-Flat algorithm not as accurate
   averageFPS += (FPS - averageFPS) * .03125;
   FPSTime = time;
+ }
+
+ public static boolean maxedFPS(boolean useAverage) {
+  return (useAverage ? averageFPS : FPS) > 59;//<-'59's more reliable
  }
 
  /*public static void cache(Node N) {

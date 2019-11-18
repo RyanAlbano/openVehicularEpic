@@ -1,9 +1,12 @@
 package ve.trackElements.trackParts;
 
+import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 import javafx.scene.transform.*;
 import ve.*;
 import ve.environment.E;
+import ve.trackElements.TE;
 import ve.utilities.*;
 
 public class TrackPartPart extends InstancePart {
@@ -11,24 +14,21 @@ public class TrackPartPart extends InstancePart {
  private final TrackPart TP;
  Rotate rotateXZ;
  private final boolean checkpoint, checkpointWord, lapWord;
- final boolean tree;
 
- public TrackPartPart(TrackPart i, double[] i_X, double[] i_Y, double[] i_Z, int vertexQuantity, double[] i_RGB, String type, String textureType) {
+ public TrackPartPart(TrackPart i, double[] i_X, double[] i_Y, double[] i_Z, int vertexQuantity, Color i_RGB, String type, String textureType) {
   TP = i;
   TP.vertexQuantity += vertexQuantity;
   int n;
-  textureType = type.contains(" noTexture ") ? "" : TP.modelProperties.contains(" mapTerrain ") ? E.terrain.trim() : textureType;
   double[] storeX = new double[vertexQuantity];
   double[] storeY = new double[vertexQuantity];
   double[] storeZ = new double[vertexQuantity];
   light = type.contains(" light ");
-  selfIlluminate = type.contains(" selfIlluminate ");
   blink = type.contains(" blink ");
   checkpointWord = type.contains(" checkpointWord ");
   lapWord = type.contains(" lapWord ");
   checkpoint = checkpointWord || lapWord;
+  selfIlluminate = type.contains(" selfIlluminate ") || checkpoint;
   base = type.contains(" base ");
-  tree = TP.modelProperties.contains(" tree ");
   controller = type.contains(" controller ");
   for (n = vertexQuantity; --n >= 0; ) {
    storeX[n] = i_X[n];
@@ -47,9 +47,9 @@ public class TrackPartPart extends InstancePart {
    coordinates[(n * 3) + 2] = (float) storeZ[n];
   }
   TM.getPoints().setAll(coordinates);
-  coordinates = U.random() < .5 ? new float[]{0, 1, 1, 1, 1, 0, 0, 0} : new float[]{0, 0, 1, 0, 1, 1, 0, 1};
+  float[] textureCoordinates = U.random() < .5 ? E.textureCoordinateBase0 : E.textureCoordinateBase1;
   for (n = 0; n < vertexQuantity / (double) 3; n++) {
-   TM.getTexCoords().addAll(coordinates);
+   TM.getTexCoords().addAll(textureCoordinates);//<-'addAll'--NOT 'setAll'
   }
   if (type.contains(" triangles ")) {
    setTriangles(vertexQuantity);
@@ -74,49 +74,7 @@ public class TrackPartPart extends InstancePart {
   MV = new MeshView(TM);
   MV.setDrawMode(type.contains(" line ") ? DrawMode.LINE : DrawMode.FILL);
   MV.setCullFace(CullFace.BACK);
-  if (type.contains(" theRandomColor ")) {
-   RGB[0] = TP.theRandomColor[0];
-   RGB[1] = TP.theRandomColor[1];
-   RGB[2] = TP.theRandomColor[2];
-  } else {
-   RGB[0] = i_RGB[0];
-   RGB[1] = i_RGB[1];
-   RGB[2] = i_RGB[2];
-  }
-  if (tree && (RGB[0] > 0 || RGB[1] > 0 || RGB[2] > 0)) {
-   while (RGB[0] < 1 && RGB[1] < 1 && RGB[2] < 1) {
-    RGB[0] *= 1.01;
-    RGB[1] *= 1.01;
-    RGB[2] *= 1.01;
-   }
-  }
-  double[] storeRGB = {RGB[0], RGB[1], RGB[2]};
-  for (n = 3; --n >= 0; ) {
-   RGB[n] = type.contains(" reflect ") ? E.skyRGB[n] : RGB[n];
-   RGB[n] = light && (type.contains(" reflect ") || (storeRGB[0] == storeRGB[1] && storeRGB[1] == storeRGB[2])) ? 1 : RGB[n];
-   RGB[n] = TP.modelProperties.contains(" mapTerrain ") ? E.terrainRGB[n] : RGB[n];
-   RGB[n] = blink ? 0 : RGB[n];
-  }
-  U.setDiffuseRGB(PM, RGB[0], RGB[1], RGB[2]);
-  if (tree) {
-   U.setSelfIllumination(PM, RGB[0] * .25, RGB[1] * .25, RGB[2] * .25);
-  }
-  if (type.contains(" noSpecular ") || blink) {
-   U.setSpecularRGB(PM, 0, 0, 0);
-  } else if (type.contains(" shiny ")) {
-   U.setSpecularRGB(PM, 1, 1, 1);
-   PM.setSpecularPower(E.SpecularPowers.shiny);
-  } else {
-   U.setSpecularRGB(PM, .5, .5, .5);
-   PM.setSpecularPower(TP.modelProperties.contains(" mapTerrain ") ? E.SpecularPowers.dull : E.SpecularPowers.standard);
-  }
-  if (checkpoint || selfIlluminate) {
-   U.setSelfIllumination(PM, RGB[0], RGB[1], RGB[2]);
-  }
-  MV.setMaterial(PM);
-  PM.setDiffuseMap(U.getImage(textureType));
-  PM.setSpecularMap(U.getImage(textureType));
-  PM.setBumpMap(U.getImageNormal(textureType));
+  setPhong(type, type.contains(" noTexture ") ? "" : textureType, i_RGB);
   if (VE.status != VE.Status.vehicleViewer) {
    fastCull = type.contains(" fastCullB ") ? 0 : fastCull;
    fastCull = type.contains(" fastCullF ") ? 2 : fastCull;
@@ -131,11 +89,59 @@ public class TrackPartPart extends InstancePart {
   }
  }
 
- void processAsVehiclePart() {
-  if ((E.renderType.name().contains(E.RenderType.fullDistance.name()) || size * E.renderLevel >= TP.distanceToCamera * Camera.zoom) &&
-  ((E.renderType == E.RenderType.fullDistanceALL || !(flickPolarity == 1 && TP.flicker) && !(flickPolarity == 2 && !TP.flicker)))) {
+ private void setPhong(String type, String textureType, Color i_RGB) {//Don't bother moving to super
+  if (TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.terrain && !type.contains(" noTexture ")) {
+   U.setMaterialSecurely(MV, E.Terrain.universal);
+  } else if (TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.paved && !type.contains(" noTexture ")) {
+   U.setMaterialSecurely(MV, TE.Paved.universal);
+  } else {
+   Color RGB = type.contains(" theRandomColor ") ? TP.theRandomColor : i_RGB;
+   if (TP.tree && (RGB.getRed() > 0 || RGB.getGreen() > 0 || RGB.getBlue() > 0)) {
+    while (RGB.getRed() < 1 && RGB.getGreen() < 1 && RGB.getBlue() < 1) {
+     RGB = U.getColor(RGB.getRed() * 1.01, RGB.getGreen() * 1.01, RGB.getBlue() * 1.01);
+    }
+   }
+   Color storeRGB = RGB;
+   if (type.contains(" reflect ")) {
+    RGB = U.getColor(E.skyRGB);
+   }
+   if (light && (type.contains(" reflect ") || (storeRGB.getRed() == storeRGB.getGreen() && storeRGB.getGreen() == storeRGB.getBlue()))) {
+    RGB = U.getColor(1, 1, 1);
+   }
+   RGB =
+   TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.terrain ? U.getColor(E.Terrain.RGB) :
+   TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.paved ? U.getColor(TE.Paved.globalShade, TE.Paved.globalShade, TE.Paved.globalShade) :
+   RGB;//<-Still needed!
+   if (blink) {
+    RGB = U.getColor(0, 0, 0);
+   }
+   PM = new PhongMaterial();
+   U.Phong.setDiffuseRGB(PM, RGB);
+   if (TP.tree) {
+    U.Phong.setSelfIllumination(PM, RGB.getRed() * .25, RGB.getGreen() * .25, RGB.getBlue() * .25);
+   }
+   if (type.contains(" noSpecular ") || blink) {
+    U.Phong.setSpecularRGB(PM, 0);
+   } else {
+    boolean shiny = type.contains(" shiny ");
+    U.Phong.setSpecularRGB(PM, shiny ? E.Specular.Colors.shiny : E.Specular.Colors.standard);
+    PM.setSpecularPower(shiny ? E.Specular.Powers.shiny : E.Specular.Powers.standard);
+   }
+   if (selfIlluminate) {
+    U.Phong.setSelfIllumination(PM, RGB);
+   }
+   PM.setDiffuseMap(U.Images.get(textureType));
+   PM.setSpecularMap(U.Images.get(textureType));
+   PM.setBumpMap(U.Images.getNormalMap(textureType));
+   U.setMaterialSecurely(MV, PM);
+  }
+ }
+
+ void runAsVehiclePart(boolean renderALL) {
+  if (renderALL || ((E.renderType == E.RenderType.fullDistance || size * E.renderLevel >= TP.distanceToCamera * Camera.zoom) &&
+  !(flickPolarity == 1 && TP.flicker) && !(flickPolarity == 2 && !TP.flicker))) {
    boolean render = true;
-   if (!Double.isNaN(fastCull) && E.renderType != E.RenderType.fullDistanceALL) {
+   if (!Double.isNaN(fastCull) && !renderALL) {
     long shiftedAxis = Math.round(fastCull);
     if (TP.XZ > 45 && TP.XZ < 135) {
      shiftedAxis = --shiftedAxis < -1 ? 2 : shiftedAxis;
@@ -152,7 +158,7 @@ public class TrackPartPart extends InstancePart {
     render = shiftedAxis == 2 ? Camera.Z >= TP.Z : shiftedAxis < 0 ? Camera.X >= TP.X : shiftedAxis > 0 ? Camera.X <= TP.X : Camera.Z <= TP.Z;
    }
    if (render) {
-    double[] placementX = {displaceX + (controller ? TP.driverViewX * VE.driverSeat : 0)};
+    double[] placementX = {displaceX + (controller ? TP.driverViewX * VE.Options.driverSeat : 0)};
     double[] placementY = {displaceY};
     double[] placementZ = {displaceZ};
     if (TP.vehicleModel && !base) {
@@ -165,24 +171,23 @@ public class TrackPartPart extends InstancePart {
      U.rotate(placementY, placementZ, TP.YZ);
     }
     U.rotate(placementX, placementZ, TP.XZ);
-    if (E.renderType.name().contains(E.RenderType.fullDistance.name()) || U.getDepth(TP.X + placementX[0], TP.Y + placementY[0], TP.Z + placementZ[0]) > -renderRadius) {
+    if (renderALL || U.getDepth(TP.X + placementX[0], TP.Y + placementY[0], TP.Z + placementZ[0]) > -renderRadius) {
      U.setTranslate(MV, TP.X + placementX[0], TP.Y + placementY[0], TP.Z + placementZ[0]);
      visible = true;
      if (blink) {
-      PM.setSelfIlluminationMap(U.getImage("blink" + U.random(3)));
+      PM.setSelfIlluminationMap(U.Images.get(SL.Instance.blink + U.random(3)));
      }
     }
    }
   }
  }
 
- void processAsTrackPart() {
-  if ((E.renderType.name().contains(E.RenderType.fullDistance.name()) || size * E.renderLevel >= TP.distanceToCamera * Camera.zoom) &&
-  (E.renderType == E.RenderType.fullDistanceALL || ((!checkpoint || TP.checkpointNumber == VE.currentCheckpoint) && !(checkpointWord && VE.lapCheckpoint) &&
-  !(lapWord && !VE.lapCheckpoint) &&
-  !(flickPolarity == 1 && VE.globalFlick) && !(flickPolarity == 2 && !VE.globalFlick)))) {
+ void runAsTrackPart(boolean renderALL) {
+  if (renderALL || ((E.renderType == E.RenderType.fullDistance || size * E.renderLevel >= TP.distanceToCamera * Camera.zoom) &&
+  ((!checkpoint || TP.checkpointNumber == TE.currentCheckpoint) && !(checkpointWord && TE.lapCheckpoint) && !(lapWord && !TE.lapCheckpoint) &&
+  !(flickPolarity == 1 && VE.yinYang) && !(flickPolarity == 2 && !VE.yinYang)))) {
    boolean render = true;
-   if (!Double.isNaN(fastCull) && E.renderType != E.RenderType.fullDistanceALL) {
+   if (!Double.isNaN(fastCull) && !renderALL) {
     if (fastCull == 0) {
      render = Camera.Z <= TP.Z;
     } else if (fastCull == 2) {
@@ -193,17 +198,17 @@ public class TrackPartPart extends InstancePart {
      render = Camera.X <= TP.X;
     }
    }
-   if (E.renderType.name().contains(E.RenderType.fullDistance.name()) || render && U.getDepth(TP) > -renderRadius) {
+   if (renderALL || (render && U.getDepth(TP) > -renderRadius)) {
     if (blink) {
-     PM.setSelfIlluminationMap(U.getImage("blink" + U.random(3)));
+     PM.setSelfIlluminationMap(U.Images.get(SL.Instance.blink + U.random(3)));
     }
-    if (TP.isFixpoint) {
+    if (TP.isRepairPoint) {
      U.rotate(MV, TP.XY, TP.YZ, 0);
     }
     if (checkpoint) {
      rotateXZ.setAngle(-TP.XZ + (TP.checkpointSignRotation ? 180 : 0));
      if (lapWord) {
-      PM.setSelfIlluminationMap(VE.globalFlick ? U.getImage("white") : null);
+      PM.setSelfIlluminationMap(VE.yinYang ? U.Images.get(SL.Images.white) : null);
      }
     }
     U.setTranslate(MV, TP);

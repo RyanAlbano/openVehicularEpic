@@ -5,6 +5,7 @@ import javafx.scene.shape.*;
 
 import ve.Core;
 import ve.VE;
+import ve.utilities.SL;
 import ve.utilities.U;
 
 class ExplosionPart extends Core {
@@ -29,11 +30,11 @@ class ExplosionPart extends Core {
   MV = new MeshView(TM);
   MV.setCullFace(CullFace.NONE);
   PhongMaterial PM = new PhongMaterial();
-  U.setDiffuseRGB(PM, 0, 0, 0);
-  U.setSpecularRGB(PM, 0, 0, 0);
-  PM.setSelfIlluminationMap(U.getImage("white"));
-  MV.setMaterial(PM);
-  U.add(MV);
+  U.Phong.setDiffuseRGB(PM, 0);
+  U.Phong.setSpecularRGB(PM, 0);
+  PM.setSelfIlluminationMap(U.Images.get(SL.Images.white));
+  U.setMaterialSecurely(MV, PM);
+  U.Nodes.add(MV);
   MV.setVisible(false);
  }
 

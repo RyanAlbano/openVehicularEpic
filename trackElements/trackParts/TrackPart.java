@@ -10,22 +10,28 @@ import org.fxyz3d.shapes.primitives.FrustumMesh;
 import org.fxyz3d.shapes.Torus;
 import ve.*;
 import ve.environment.E;
+import ve.environment.Tornado;
 import ve.trackElements.TE;
 import ve.utilities.*;
 
 public class TrackPart extends Instance {
-
  public final Collection<TrackPartPart> parts = new ArrayList<>();
  private Sphere foliageSphere;
- private Torus fixTorus;
+ private Torus repairTorus;
  boolean vehicleModel;
- public boolean isFixpoint;
+ public boolean isRepairPoint;
  public boolean wraps;
+ boolean tree;
+ public boolean rainbow;
  boolean checkpointSignRotation;
  public long checkpointNumber = -1;
+ private double netSpeedX, netSpeedY, netSpeedZ;
  private boolean renderAlways;
  public final List<TrackPlane> trackPlanes = new ArrayList<>();
  public FrustumMesh mound;
+ UniversalPhongMaterialUsage universalPhongMaterialUsage;
+
+ enum UniversalPhongMaterialUsage {none, terrain, paved}
 
  static class RoadRock extends Core {
   final Sphere S;
@@ -37,7 +43,7 @@ public class TrackPart extends Instance {
 
  private List<RoadRock> roadRocks;
 
- private final List<Cylinder> fixShocks = new ArrayList<>();
+ private final List<Cylinder> repairShocks = new ArrayList<>();
 
  public TrackPart(int model, double sourceX, double sourceY, double sourceZ, double angle) {
   this(model, sourceX, sourceY, sourceZ, angle, false, 1, new double[]{1, 1, 1});
@@ -56,28 +62,27 @@ public class TrackPart extends Instance {
   vehicleModel = isVehicleModel;
   if (model >= 0 || vehicleModel) {
    modelName = vehicleModel ? VE.vehicleModels.get(modelNumber) : TE.getTrackPartName(modelNumber);
-   if (modelName.equals(VE.MapModels.checkpoint.name())) {//<-Checkpoint sign may glitch otherwise
+   if (modelName.equals(TE.Models.checkpoint.name())) {//<-Checkpoint sign may glitch otherwise
     while (angle >= 90) angle -= 180;
     while (angle <= -90) angle += 180;//Will always end up at '90' rather then '-90'
    }
-   instanceSize = inSize;
+   double[] instanceScale = {1, 1, 1};
    instanceScale[0] = inScale[0];
    instanceScale[1] = inScale[1];
    instanceScale[2] = inScale[2];
    double treeRandomXZ = U.randomPlusMinus(180.);
-   theRandomColor[0] = U.random();
-   theRandomColor[1] = U.random();
-   theRandomColor[2] = U.random();
+   theRandomColor = U.getColor(U.random(), U.random(), U.random());
    int wheelCount = 0;
-   boolean onModelPart = false, onTrackPlane = false, addWheel = false;
+   boolean onModelPart = false, onTrackPlane = false, addWheel = false, rocky = false;
    List<Double> xx = new ArrayList<>(), yy = new ArrayList<>(), zz = new ArrayList<>();
-   double[] translate = new double[3], RGB = {0, 0, 0};
+   double[] translate = new double[3];
+   Color RGB = U.getColor(0);
    StringBuilder type = new StringBuilder(), wheelType = new StringBuilder(), rimType = new StringBuilder();
    String textureType = "", wheelTextureType = "", s = "";
    try (BufferedReader BR = new BufferedReader(new InputStreamReader(getFile(modelName), U.standardChars))) {
     for (String s1; (s1 = BR.readLine()) != null; ) {
      s = s1.trim();
-     if (s.startsWith("<>") && (!s.contains("aerialOnly") || sourceY != 0)) {
+     if (s.startsWith("<>") && (!s.contains(SL.Instance.aerialOnly) || sourceY != 0)) {
       onModelPart = true;
       addWheel = false;
       xx.clear();
@@ -106,18 +111,18 @@ public class TrackPart extends Instance {
       }
       if (String.valueOf(type).contains(" foliage ")) {
        foliageSphere = new Sphere(125, 9);
-      } else if (!xx.isEmpty() && !String.valueOf(type).contains(" thrust")) {
+      } else if (!xx.isEmpty() && !String.valueOf(type).contains(" thrust ")) {
        parts.add(new TrackPartPart(this, U.listToArray(xx), U.listToArray(yy), U.listToArray(zz), xx.size(), RGB, String.valueOf(type), textureType));
        xx.clear();
       }
       onModelPart = false;
      }
-     getLoadColor(s, RGB);
+     RGB = getLoadColor(s, RGB);
      if (onModelPart) {
       if (s.startsWith("(")) {
-       xx.add((U.getValue(s, 0) * modelSize * instanceSize * modelScale[0] * instanceScale[0]) + translate[0]);
-       yy.add((U.getValue(s, 1) * modelSize * instanceSize * modelScale[1] * instanceScale[1]) + translate[1]);
-       zz.add((U.getValue(s, 2) * modelSize * instanceSize * modelScale[2] * instanceScale[2]) + translate[2]);
+       xx.add((U.getValue(s, 0) * modelSize * inSize * modelScale[0] * instanceScale[0]) + translate[0]);
+       yy.add((U.getValue(s, 1) * modelSize * inSize * modelScale[1] * instanceScale[1]) + translate[1]);
+       zz.add((U.getValue(s, 2) * modelSize * inSize * modelScale[2] * instanceScale[2]) + translate[2]);
        if (!String.valueOf(type).contains(" thrust ")) {
         int size = xx.size() - 1;
         addSizes(xx.get(size), yy.get(size), zz.get(size));
@@ -129,95 +134,75 @@ public class TrackPart extends Instance {
        if (s.startsWith("lit")) {
         type.append(" light ").append(s.endsWith("fire") ? " fire " : "");
        }
-       type.append(s.startsWith("reflect") ? " reflect " : "");
-       type.append(s.startsWith("thrustWhite") ? " thrustWhite " : s.startsWith("thrustBlue") ? " thrustBlue " : s.startsWith("thrust") ? " thrust " : "");
-       type.append(s.startsWith("selfIlluminate") ? " selfIlluminate " : "");
-       type.append(s.startsWith("blink") ? " blink " : "");
-       type.append(s.startsWith("noSpecular") ? " noSpecular " : s.startsWith("shiny") ? " shiny " : "");
-       type.append(s.startsWith("noTexture") ? " noTexture " : "");
-       type.append(s.startsWith("flick1") ? " flick1 " : s.startsWith("flick2") ? " flick2 " : "");
+       append(type, s, false, "thrust",/*<-thrust is here only to forward the property so that the part is NOT loaded*/
+       SL.Instance.reflect, SL.Instance.blink, "line", SL.Instance.selfIlluminate, SL.Instance.noSpecular, SL.Instance.shiny, SL.Instance.noTexture, SL.Instance.flick1, SL.Instance.flick2, "onlyAerial", "foliage",
+       InstancePart.FaceFunction.conic.name(),
+       InstancePart.FaceFunction.cylindric.name(),
+       InstancePart.FaceFunction.strip.name(),
+       InstancePart.FaceFunction.squares.name(),
+       InstancePart.FaceFunction.triangles.name(),
+       "base");
        type.append(s.startsWith("checkpointWord") ? " checkpointWord " : "");
        type.append(s.startsWith("lapWord") ? " lapWord " : "");
-       if (s.startsWith("controller")) {
+       if (s.startsWith(SL.Instance.controller)) {
         type.append(" controller ").append(s.contains("XY") ? " controllerXY " : s.contains("XZ") ? " controllerXZ " : "");
        } else if (s.startsWith("wheel")) {
         type.append(" wheel ");
         addWheel = s.startsWith("wheelPoint") || addWheel;
        }
-       type.append(s.startsWith("foliage") ? " foliage " : "");
-       type.append(s.startsWith("line") ? " line " : "");
-       type.append(s.startsWith("onlyAerial") ? " onlyAerial " : "");
-       type.append(s.startsWith("conic") ? " conic " : "");
-       type.append(s.startsWith("cylindric") ? " cylindric " : "");
-       type.append(s.startsWith("strip") ? " strip " : "");
-       type.append(s.startsWith("squares") ? " squares " : "");
-       type.append(s.startsWith("triangles") ? " triangles " : "");
-       type.append(s.startsWith("base") ? " base " : "");
       }
       computeTrackPlane(s, xx, yy, zz, RGB);
      }
-     driverViewX = s.startsWith("driverViewX(") ? Math.abs(U.getValue(s, 0) * modelSize * instanceSize) + translate[0] : driverViewX;
+     driverViewX = s.startsWith("driverViewX(") ? Math.abs(U.getValue(s, 0) * modelSize * inSize) + translate[0] : driverViewX;
      turretBaseY = s.startsWith("baseY(") ? U.getValue(s, 0) : turretBaseY;
      wraps = s.startsWith("scenery") || wraps;
-     modelProperties += s.startsWith("tree") ? " tree " : "";
-     if (s.startsWith("fixpoint")) {
-      isFixpoint = true;
-      fixTorus = new Torus();
-      setFixpoint(true);
-      PhongMaterial PM = new PhongMaterial();
-      U.setDiffuseRGB(PM, E.terrainRGB[0], E.terrainRGB[1], E.terrainRGB[2]);
-      PM.setDiffuseMap(U.getImage(E.terrain.trim()));
-      PM.setSpecularMap(U.getImage(E.terrain.trim()));
-      PM.setBumpMap(U.getImageNormal(E.terrain.trim()));
-      fixTorus.setMaterial(PM);
-      U.add(fixTorus);
-      fixTorus.setRotationAxis(Rotate.Y_AXIS);
-      fixTorus.setRotate(angle);
+     tree = s.startsWith("tree") || tree;
+     if (s.startsWith(TE.Models.repair.name())) {
+      isRepairPoint = true;
+      repairTorus = new Torus();
+      setRepairTorusDetail(true);
+      repairTorus.setMaterial(E.Terrain.universal);//<-Can't set this securely!
+      U.Nodes.add(repairTorus);
+      repairTorus.setRotationAxis(Rotate.Y_AXIS);
+      repairTorus.setRotate(angle);
      }
-     modelProperties += s.startsWith("mapTerrain") ? " mapTerrain " : "";
-     modelProperties += s.startsWith("rocky") ? " rocky " : "";
-     getSizeScaleTranslate(s, translate);
+     rocky = s.startsWith("rocky") || rocky;
+     universalPhongMaterialUsage =
+     s.startsWith("mapTerrain") ? UniversalPhongMaterialUsage.terrain :
+     s.startsWith("universalPaved") ? UniversalPhongMaterialUsage.paved :
+     universalPhongMaterialUsage;
+     getSizeScaleTranslate(s, translate, inSize, instanceScale);
      if (s.startsWith("wheelColor(")) {
-      if (s.contains("reflect")) {
+      if (s.contains(SL.Instance.reflect)) {
        wheelType.append(" reflect ");
       } else {
        try {
-        wheelRGB[0] = U.getValue(s, 0);
-        wheelRGB[1] = U.getValue(s, 1);
-        wheelRGB[2] = U.getValue(s, 2);
+        wheelRGB = U.getColor(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
        } catch (RuntimeException e) {
-        if (s.contains("theRandomColor")) {
-         wheelRGB[0] = theRandomColor[0];
-         wheelRGB[1] = theRandomColor[1];
-         wheelRGB[2] = theRandomColor[2];
+        if (s.contains(SL.Instance.theRandomColor)) {
+         wheelRGB = theRandomColor;
          wheelType.append(" theRandomColor ");
         } else {
-         wheelRGB[0] = wheelRGB[1] = wheelRGB[2] = U.getValue(s, 0);
+         wheelRGB = U.getColor(U.getValue(s, 0));
         }
        }
       }
-      wheelType.append(s.contains("noSpecular") ? " noSpecular " : s.contains("shiny") ? " shiny " : "");
+      append(wheelType, s, true, SL.Instance.noSpecular, SL.Instance.shiny);
      } else if (s.startsWith("rims(")) {
       rimType.setLength(0);
-      rimRadius = U.getValue(s, 0) * modelSize * instanceSize;
-      rimDepth = Math.max(rimRadius * .0625, U.getValue(s, 1) * modelSize * instanceSize);
+      rimRadius = U.getValue(s, 0) * modelSize * inSize;
+      rimDepth = Math.max(rimRadius * .0625, U.getValue(s, 1) * modelSize * inSize);
       try {
-       rimRGB[0] = U.getValue(s, 2);
-       rimRGB[1] = U.getValue(s, 3);
-       rimRGB[2] = U.getValue(s, 4);
+       rimRGB = U.getColor(U.getValue(s, 2), U.getValue(s, 3), U.getValue(s, 4));
       } catch (RuntimeException e) {
-       if (s.contains("theRandomColor")) {
-        rimRGB[0] = theRandomColor[0];
-        rimRGB[1] = theRandomColor[1];
-        rimRGB[2] = theRandomColor[2];
+       if (s.contains(SL.Instance.theRandomColor)) {
+        rimRGB = theRandomColor;
         rimType.append(" theRandomColor ");
        } else {
-        rimRGB[0] = rimRGB[1] = rimRGB[2] = U.getValue(s, 2);
+        rimRGB = U.getColor(U.getValue(s, 2));
        }
       }
-      rimType.append(s.contains("reflect") ? " reflect " : "");
-      rimType.append(s.contains("noSpecular") ? " noSpecular " : s.contains("shiny") ? " shiny " : "");
-      rimType.append(s.contains("sport") ? " sport " : "");
+      append(rimType, s, true, SL.Instance.reflect, SL.Instance.noSpecular, SL.Instance.shiny, SL.Instance.sport);
      }
      wheelType.append(s.startsWith("landingGearWheels") ? " landingGear " : "");
      wheelTextureType = s.startsWith("wheelTexture(") ? U.getString(s, 0) : wheelTextureType;//<-Using 'append' would mess this up if found more than once in file
@@ -226,14 +211,15 @@ public class TrackPart extends Instance {
       String side = U.getValue(s, 0) > 0 ? " R " : U.getValue(s, 0) < 0 ? " L " : U.random() < .5 ? " R " : " L ";
       loadWheel(null, this, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2), U.getValue(s, 3), U.getValue(s, 4), wheelType + side, String.valueOf(rimType), wheelTextureType, s.contains("steers"), s.contains("hide"));
       wheelCount++;
-     } else if (s.startsWith("<t>") && (!s.contains("aerialOnly") || sourceY != 0)) {
+     } else if (s.startsWith("<t>") && (!s.contains(SL.Instance.aerialOnly) || sourceY != 0)) {
       trackPlanes.add((new TrackPlane()));
       onTrackPlane = true;
-      if (modelProperties.contains(" mapTerrain ")) {
-       trackPlanes.get(trackPlanes.size() - 1).RGB[0] = E.groundRGB[0];
-       trackPlanes.get(trackPlanes.size() - 1).RGB[1] = E.groundRGB[1];
-       trackPlanes.get(trackPlanes.size() - 1).RGB[2] = E.groundRGB[2];
-       trackPlanes.get(trackPlanes.size() - 1).type += E.terrain;
+      if (universalPhongMaterialUsage == UniversalPhongMaterialUsage.terrain) {
+       trackPlanes.get(trackPlanes.size() - 1).RGB = E.Ground.RGB;
+       trackPlanes.get(trackPlanes.size() - 1).type += E.Terrain.terrain;
+      } else if (universalPhongMaterialUsage == UniversalPhongMaterialUsage.paved) {
+       trackPlanes.get(trackPlanes.size() - 1).RGB = U.getColor(TE.Paved.globalShade);
+       trackPlanes.get(trackPlanes.size() - 1).type += " paved ";
       }
       trackPlanes.get(trackPlanes.size() - 1).damage = 1;
      } else if (s.startsWith(">t<")) {
@@ -243,14 +229,12 @@ public class TrackPart extends Instance {
       int index = trackPlanes.size() - 1;
       if (s.startsWith("RGB")) {
        try {
-        trackPlanes.get(index).RGB[0] = U.getValue(s, 0);
-        trackPlanes.get(index).RGB[1] = U.getValue(s, 1);
-        trackPlanes.get(index).RGB[2] = U.getValue(s, 2);
+        trackPlanes.get(index).RGB = U.getColor(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
        } catch (RuntimeException E) {
-        trackPlanes.get(index).RGB[0] = trackPlanes.get(index).RGB[1] = trackPlanes.get(index).RGB[2] = U.getValue(s, 0);
+        trackPlanes.get(index).RGB = U.getColor(U.getValue(s, 0));
        }
       } else if (s.startsWith("pavedColor")) {
-       trackPlanes.get(index).RGB[0] = trackPlanes.get(index).RGB[1] = trackPlanes.get(index).RGB[2] = E.pavedRGB;
+       trackPlanes.get(index).RGB = U.getColor(TE.Paved.globalShade);
       } else if (s.startsWith("wall")) {
        trackPlanes.get(index).wall =
        s.contains("F") ? TrackPlane.Wall.front :
@@ -261,13 +245,13 @@ public class TrackPart extends Instance {
       }
       trackPlanes.get(index).XY = s.startsWith("XY(") ? U.getValue(s, 0) : trackPlanes.get(index).XY;
       trackPlanes.get(index).YZ = s.startsWith("YZ(") ? U.getValue(s, 0) : trackPlanes.get(index).YZ;
-      trackPlanes.get(index).radiusX = s.startsWith("spanX(") ? U.getValue(s, 0) * modelSize * instanceSize * instanceScale[0] : trackPlanes.get(index).radiusX;
-      trackPlanes.get(index).radiusZ = s.startsWith("spanZ(") ? U.getValue(s, 0) * modelSize * instanceSize * instanceScale[2] : trackPlanes.get(index).radiusZ;
-      trackPlanes.get(index).radiusY = s.startsWith("spanY(") ? U.getValue(s, 0) * modelSize * instanceSize * instanceScale[1] : trackPlanes.get(index).radiusY;
+      trackPlanes.get(index).radiusX = s.startsWith("spanX(") ? U.getValue(s, 0) * modelSize * inSize * instanceScale[0] : trackPlanes.get(index).radiusX;
+      trackPlanes.get(index).radiusZ = s.startsWith("spanZ(") ? U.getValue(s, 0) * modelSize * inSize * instanceScale[2] : trackPlanes.get(index).radiusZ;
+      trackPlanes.get(index).radiusY = s.startsWith("spanY(") ? U.getValue(s, 0) * modelSize * inSize * instanceScale[1] : trackPlanes.get(index).radiusY;
       trackPlanes.get(index).radiusY = trackPlanes.get(index).radiusY < 0 ? Double.POSITIVE_INFINITY : trackPlanes.get(index).radiusY;
-      trackPlanes.get(index).X = s.startsWith("X(") ? U.getValue(s, 0) * modelSize * instanceSize * instanceScale[0] : trackPlanes.get(index).X;
-      trackPlanes.get(index).Y = s.startsWith("Y(") ? U.getValue(s, 0) * modelSize * instanceSize * instanceScale[1] : trackPlanes.get(index).Y;
-      trackPlanes.get(index).Z = s.startsWith("Z(") ? U.getValue(s, 0) * modelSize * instanceSize * instanceScale[2] : trackPlanes.get(index).Z;
+      trackPlanes.get(index).X = s.startsWith("X(") ? U.getValue(s, 0) * modelSize * inSize * instanceScale[0] : trackPlanes.get(index).X;
+      trackPlanes.get(index).Y = s.startsWith("Y(") ? U.getValue(s, 0) * modelSize * inSize * instanceScale[1] : trackPlanes.get(index).Y;
+      trackPlanes.get(index).Z = s.startsWith("Z(") ? U.getValue(s, 0) * modelSize * inSize * instanceScale[2] : trackPlanes.get(index).Z;
       trackPlanes.get(index).type += s.startsWith("type(") ? " " + U.getString(s, 0) + " " : "";
       trackPlanes.get(index).damage = s.startsWith("damage(") ? U.getValue(s, 0) : trackPlanes.get(index).damage;
      }
@@ -284,7 +268,6 @@ public class TrackPart extends Instance {
    maxMinusZ[1] /= vertexQuantity;
    maxPlusZ[1] /= vertexQuantity;
    absoluteRadius = Math.abs(maxMinusX[0]) + Math.abs(maxPlusX[0]) + Math.abs(maxMinusY[0]) + Math.abs(maxPlusY[0]) + Math.abs(maxMinusZ[0]) + Math.abs(maxPlusZ[0]) + Math.abs(maxMinusX[1]) + Math.abs(maxPlusX[1]) + Math.abs(maxMinusY[1]) + Math.abs(maxPlusY[1]) + Math.abs(maxMinusZ[1]) + Math.abs(maxPlusZ[1]);
-   collisionRadius = absoluteRadius * .3;
    X = sourceX;
    Y = sourceY;
    Z = sourceZ;
@@ -311,19 +294,19 @@ public class TrackPart extends Instance {
      part.rotateXZ = new Rotate();
      part.MV.getTransforms().add(part.rotateXZ);
      part.rotateXZ.setAxis(Rotate.Y_AXIS);
-     part.rotateXZ.setAngle(part.tree ? treeRandomXZ : -XZ);
+     part.rotateXZ.setAngle(tree ? treeRandomXZ : -XZ);
     }
-    U.add(part.MV);
+    U.Nodes.add(part.MV);
    }
    if (foliageSphere != null) {
     PhongMaterial PM = new PhongMaterial();
-    PM.setDiffuseMap(U.getImage("foliage"));
-    PM.setBumpMap(U.getImageNormal("foliage"));
-    U.setSelfIllumination(PM, .125, .125, .125);
-    U.setDiffuseRGB(PM, 1, 1, 1);
-    U.setSpecularRGB(PM, 0, 0, 0);
-    foliageSphere.setMaterial(PM);
-    U.add(foliageSphere);
+    PM.setDiffuseMap(U.Images.get("foliage"));
+    PM.setBumpMap(U.Images.getNormalMap("foliage"));
+    U.Phong.setSelfIllumination(PM, .125, .125, .125);
+    U.Phong.setDiffuseRGB(PM, 1);
+    U.Phong.setSpecularRGB(PM, 0);
+    U.setMaterialSecurely(foliageSphere, PM);
+    U.Nodes.add(foliageSphere);
    }
    for (TrackPlane trackPlane : trackPlanes) {
     if (Math.abs(XZ) > 135) {
@@ -366,7 +349,7 @@ public class TrackPart extends Instance {
      }
     }
    }
-   if (modelProperties.contains(" rocky ")) {
+   if (rocky) {
     roadRocks = new ArrayList<>();
     for (int n = 50; --n >= 0; ) {
      RoadRock rock = new RoadRock();
@@ -378,23 +361,23 @@ public class TrackPart extends Instance {
      rock.Y = Y;
      rock.Z = Z + U.randomPlusMinus(Math.max(850, 3000 * Math.abs(U.cos(XZ))));
      PhongMaterial PM = new PhongMaterial();
-     rock.S.setMaterial(PM);
-     PM.setDiffuseMap(U.getImage("rock"));
-     PM.setSpecularMap(U.getImage("rock"));
-     PM.setBumpMap(U.getImageNormal("rock"));
-     U.add(rock.S);
+     U.setMaterialSecurely(rock.S, PM);
+     PM.setDiffuseMap(U.Images.get("rock"));
+     PM.setSpecularMap(U.Images.get("rock"));
+     PM.setBumpMap(U.Images.getNormalMap("rock"));
+     U.Nodes.add(rock.S);
      roadRocks.add(rock);
     }
    }
-   if (isFixpoint) {
+   if (isRepairPoint) {
     PhongMaterial PM = new PhongMaterial();
-    U.setSpecularRGB(PM, 0, 0, 0);
-    PM.setSelfIlluminationMap(U.getImage("white"));
+    U.Phong.setSpecularRGB(PM, 0);
+    PM.setSelfIlluminationMap(U.Images.get(SL.Images.white));
     for (int n = 0; n < 8; n++) {
-     fixShocks.add(new Cylinder(Math.round(U.random(5.)) + 1, 1100, 4));
-     fixShocks.get(n).setMaterial(PM);
-     U.add(fixShocks.get(n));
-     fixShocks.get(n).setVisible(false);
+     repairShocks.add(new Cylinder(Math.round(U.random(5.)) + 1, 1100, 4));
+     U.setMaterialSecurely(repairShocks.get(n), PM);
+     U.Nodes.add(repairShocks.get(n));
+     repairShocks.get(n).setVisible(false);
     }
    }
    Quaternion baseXZ = new Quaternion(0, U.sin(XZ * .5), 0, U.cos(XZ * .5)),
@@ -411,44 +394,28 @@ public class TrackPart extends Instance {
   while (majorRadius > 0 && minorRadius > majorRadius) {
    minorRadius *= .5;
   }
-  mound = new FrustumMesh(majorRadius, minorRadius, height, 0);
+  mound = new FrustumMesh(majorRadius, minorRadius, height, wraps ? 0 : 1);
   X = x;
   Z = z;
   Y = y;
   this.wraps = wraps;
   this.renderAlways = renderAlways;
   renderRadius = Math.max(mound.getMajorRadius(), Math.max(mound.getMinorRadius(), mound.getHeight()));
-  PhongMaterial PM = new PhongMaterial();
-  if (paved) {
-   U.setDiffuseRGB(PM, E.pavedRGB);
-   U.setSpecularRGB(PM, E.pavedRGB);
-   PM.setSpecularPower(E.SpecularPowers.standard);
-  } else {
-   U.setDiffuseRGB(PM, E.terrainRGB[0], E.terrainRGB[1], E.terrainRGB[2]);
-   U.setSpecularRGB(PM, E.terrainRGB[0], E.terrainRGB[1], E.terrainRGB[2]);
-   PM.setSpecularPower(E.SpecularPowers.dull);
-  }
-  String s = paved ? "paved" : E.terrain.trim();
-  PM.setDiffuseMap(U.getImage(s));
-  PM.setSpecularMap(U.getImage(s));
-  PM.setBumpMap(U.getImageNormal(s));
-  mound.setMaterial(PM);
-  U.add(mound);
+  U.setMaterialSecurely(mound, paved ? TE.Paved.universal : E.Terrain.universal);
+  U.Nodes.add(mound);
   U.rotate(mound, 0, U.random(360.));//<-For visual variation
  }
 
- private void computeTrackPlane(String s, List<Double> xx, List<Double> yy, List<Double> zz, double[] RGB) {//Keep as a void?
+ private void computeTrackPlane(String s, List<Double> xx, List<Double> yy, List<Double> zz, Color RGB) {//Keep as a void?
   if (s.startsWith("track(")) {
    trackPlanes.add((new TrackPlane()));
-   int index = trackPlanes.size() - 1;
-   if (modelProperties.contains(" mapTerrain ")) {
-    trackPlanes.get(index).RGB[0] = E.groundRGB[0];
-    trackPlanes.get(index).RGB[1] = E.groundRGB[1];
-    trackPlanes.get(index).RGB[2] = E.groundRGB[2];
+   TrackPlane TP = trackPlanes.get(trackPlanes.size() - 1);
+   if (universalPhongMaterialUsage == UniversalPhongMaterialUsage.paved) {
+    TP.RGB = U.getColor(TE.Paved.globalShade);
+   } else if (universalPhongMaterialUsage == UniversalPhongMaterialUsage.terrain) {
+    TP.RGB = E.Ground.RGB;
    } else {
-    trackPlanes.get(index).RGB[0] = RGB[0];
-    trackPlanes.get(index).RGB[1] = RGB[1];
-    trackPlanes.get(index).RGB[2] = RGB[2];
+    TP.RGB = RGB;
    }
    double averageX = xx.get(0), averageY = yy.get(0), averageZ = zz.get(0),
    rangeNegativeX = xx.get(0), rangePositiveX = xx.get(0),
@@ -465,44 +432,43 @@ public class TrackPart extends Instance {
     rangeNegativeZ = Math.min(rangeNegativeZ, zz.get(n1));
     rangePositiveZ = Math.max(rangePositiveZ, zz.get(n1));
    }
-   trackPlanes.get(index).X = averageX / xx.size();
-   trackPlanes.get(index).Y = averageY / yy.size();
-   trackPlanes.get(index).Z = averageZ / zz.size();
-   trackPlanes.get(index).radiusX = Math.abs(rangeNegativeX - rangePositiveX) * .5;
-   trackPlanes.get(index).radiusY = Math.abs(rangeNegativeY - rangePositiveY) * .5;
-   trackPlanes.get(index).radiusZ = Math.abs(rangeNegativeZ - rangePositiveZ) * .5;
-   trackPlanes.get(index).YZ = s.contains("getYZ") ? U.arcTan(trackPlanes.get(index).radiusY / trackPlanes.get(index).radiusZ) * (s.contains("-getYZ") ? 1 : -1) : trackPlanes.get(index).YZ;
-   trackPlanes.get(index).XY = s.contains("getXY") ? U.arcTan(trackPlanes.get(index).radiusY / trackPlanes.get(index).radiusX) * (s.contains("-getXY") ? 1 : -1) : trackPlanes.get(index).XY;
-   trackPlanes.get(index).wall =
+   TP.X = averageX / xx.size();
+   TP.Y = averageY / yy.size();
+   TP.Z = averageZ / zz.size();
+   TP.radiusX = Math.abs(rangeNegativeX - rangePositiveX) * .5;
+   TP.radiusY = Math.abs(rangeNegativeY - rangePositiveY) * .5;
+   TP.radiusZ = Math.abs(rangeNegativeZ - rangePositiveZ) * .5;
+   TP.YZ = s.contains("getYZ") ? U.arcTan(TP.radiusY / TP.radiusZ) * (s.contains("-getYZ") ? 1 : -1) : TP.YZ;
+   TP.XY = s.contains("getXY") ? U.arcTan(TP.radiusY / TP.radiusX) * (s.contains("-getXY") ? 1 : -1) : TP.XY;
+   TP.wall =
    s.contains("wallF") ? TrackPlane.Wall.front :
    s.contains("wallB") ? TrackPlane.Wall.back :
    s.contains("wallR") ? TrackPlane.Wall.right :
    s.contains("wallL") ? TrackPlane.Wall.left :
-   trackPlanes.get(index).wall;
-   trackPlanes.get(index).damage = 1;
+   TP.wall;
+   TP.damage = 1;
    if (s.contains("useLargerRadius")) {
     if (s.contains("getYZ")) {
-     double largerRadius = Math.max(trackPlanes.get(index).radiusY, trackPlanes.get(index).radiusZ);
-     trackPlanes.get(index).radiusY = trackPlanes.get(index).radiusZ = largerRadius;
+     double largerRadius = Math.max(TP.radiusY, TP.radiusZ);
+     TP.radiusY = TP.radiusZ = largerRadius;
     }
     if (s.contains("getXY")) {
-     double largerRadius = Math.max(trackPlanes.get(index).radiusX, trackPlanes.get(index).radiusY);
-     trackPlanes.get(index).radiusX = trackPlanes.get(index).radiusY = largerRadius;
+     double largerRadius = Math.max(TP.radiusX, TP.radiusY);
+     TP.radiusX = TP.radiusY = largerRadius;
     }
    }
-   trackPlanes.get(index).addSpeed = true;
+   TP.addSpeed = true;
    try {
-    trackPlanes.get(trackPlanes.size() - 1).type = " " + U.getString(s, 0) + " ";
-    trackPlanes.get(trackPlanes.size() - 1).damage = U.getValue(s, 1);
+    TP.type = " " + U.getString(s, 0) + " ";
+    TP.damage = U.getValue(s, 1);
    } catch (RuntimeException ignored) {
    }
   }
  }
 
- public void runGraphics() {
+ public void runGraphics(boolean renderALL) {
   distanceToCamera = U.distance(this);
-  boolean showFoliageSphere = false, nullSphere = foliageSphere == null;
-  if (modelProperties.contains("rainbow")) {
+  if (rainbow) {
    for (TrackPartPart part : parts) {
     U.setTranslate(part.MV, Camera.X + X, Camera.Y + Y, Camera.Z + Z);
     part.MV.setVisible(true);
@@ -510,6 +476,10 @@ public class TrackPart extends Instance {
   } else {
    if (wraps) {
     boolean setSlope = false;
+    if (VE.Map.name.equals(SL.MN.speedway2000000) && Math.abs(X) < 2000) {//<-No trees/dirt on the speedway!
+     X += U.random() < .5 ? 2000 : -2000;
+     setSlope = true;
+    }
     if (Math.abs(X - Camera.X) > 40000) {
      while (X > Camera.X + 40000) X -= 80000;
      while (X < Camera.X - 40000) X += 80000;
@@ -534,50 +504,51 @@ public class TrackPart extends Instance {
      mound.setVisible(false);
     }
    }
-   if (isFixpoint) {
-    if (!E.tornadoParts.isEmpty() && E.tornadoMovesFixpoints) {
+   if (isRepairPoint) {
+    if (!Tornado.parts.isEmpty() && Tornado.movesRepairPoints) {
      netSpeedX *= .995;
      netSpeedY *= .995;
      netSpeedZ *= .995;
-     netSpeedX += X < E.tornadoParts.get(0).X ? U.random(125.) : X > E.tornadoParts.get(0).X ? -U.random(125.) : 0;
-     netSpeedZ += Z < E.tornadoParts.get(0).Z ? U.random(125.) : Z > E.tornadoParts.get(0).Z ? -U.random(125.) : 0;
+     netSpeedX += X < Tornado.parts.get(0).X ? U.random(125.) : X > Tornado.parts.get(0).X ? -U.random(125.) : 0;
+     netSpeedZ += Z < Tornado.parts.get(0).Z ? U.random(125.) : Z > Tornado.parts.get(0).Z ? -U.random(125.) : 0;
      netSpeedY += Y < 0 ? U.random(125.) : 0;
-     netSpeedY -= Y > E.tornadoParts.get(E.tornadoParts.size() - 1).Y ? U.random(125.) : 0;
+     netSpeedY -= Y > Tornado.parts.get(Tornado.parts.size() - 1).Y ? U.random(125.) : 0;
      X += netSpeedX;
      Z += netSpeedZ;
      Y = Math.min(0, Y + netSpeedY);
     }
     double depth = U.getDepth(this);
-    if (depth > -fixTorus.getRadius()) {
-     setFixpoint(false);
-     U.setTranslate(fixTorus, this);
-     fixTorus.setVisible(true);
+    if (depth > -repairTorus.getRadius()) {
+     setRepairTorusDetail(false);
+     U.setTranslate(repairTorus, this);
+     repairTorus.setVisible(true);
     } else {
-     fixTorus.setVisible(false);
+     repairTorus.setVisible(false);
     }
-    manageFixShocks(depth);
+    runRepairShocks(depth);
    }
+   boolean showFoliageSphere = false, liveSphere = foliageSphere != null;
    if (U.getDepth(this) > -renderRadius) {
-    if (checkpointNumber >= 0 && checkpointNumber == VE.currentCheckpoint) {
+    if (checkpointNumber >= 0 && checkpointNumber == TE.currentCheckpoint) {
      boolean sideways = TE.isSidewaysXZ(XZ);
      checkpointSignRotation = sideways ? (XZ > 0 ? Camera.X < X : Camera.X > X) : Camera.Z > Z;//If checkpoint, XZ is never > Math.abs(90)
     }
     if (vehicleModel) {
      for (TrackPartPart part : parts) {
-      part.processAsVehiclePart();
+      part.runAsVehiclePart(renderALL);
      }
     } else {
      for (TrackPartPart part : parts) {
-      part.processAsTrackPart();
+      part.runAsTrackPart(renderALL);
      }
     }
     showFoliageSphere = true;
-    if (!nullSphere) {
+    if (liveSphere) {
      foliageSphere.setCullFace(U.getDepth(X, Y - 425, Z) > foliageSphere.getRadius() ? CullFace.BACK : CullFace.NONE);
      U.setTranslate(foliageSphere, X, Y - 425, Z);
     }
    }
-   if (!nullSphere) {
+   if (liveSphere) {
     foliageSphere.setVisible(showFoliageSphere);
    }
    for (TrackPartPart part : parts) {
@@ -597,30 +568,30 @@ public class TrackPart extends Instance {
   }
  }
 
- private void manageFixShocks(double depth) {
-  double radius = fixTorus.getRadius();
-  for (Cylinder fixShock : fixShocks) {
+ private void runRepairShocks(double depth) {
+  double radius = repairTorus.getRadius();
+  for (Cylinder shock : repairShocks) {
    if (depth > -radius) {
-    U.rotate(fixShock, U.random(360.), TE.isSidewaysXZ(XZ) ? 0 : 90);//<-Reversed for some reason
-    U.setTranslate(fixShock, this);
-    fixShock.setVisible(true);
+    U.rotate(shock, U.random(360.), TE.isSidewaysXZ(XZ) ? 0 : 90);//<-Reversed for some reason
+    U.setTranslate(shock, this);
+    shock.setVisible(true);
    } else {
-    fixShock.setVisible(false);
+    shock.setVisible(false);
    }
   }
  }
 
- private void setFixpoint(boolean firstLoad) {
+ private void setRepairTorusDetail(boolean firstLoad) {
   if (U.averageFPS < 30) {
-   fixTorus.setRadius(700);
-   fixTorus.setTubeRadius(125);
-   fixTorus.setRadiusDivisions(4);
-   fixTorus.setTubeDivisions(4);
-  } else if (U.averageFPS >= 60 || firstLoad) {
-   fixTorus.setRadius(650);
-   fixTorus.setTubeRadius(100);
-   fixTorus.setRadiusDivisions(64);
-   fixTorus.setTubeDivisions(64);
+   repairTorus.setRadius(700);
+   repairTorus.setTubeRadius(125);
+   repairTorus.setRadiusDivisions(4);
+   repairTorus.setTubeDivisions(4);
+  } else if (U.maxedFPS(true) || firstLoad) {
+   repairTorus.setRadius(650);
+   repairTorus.setTubeRadius(100);
+   repairTorus.setRadiusDivisions(64);
+   repairTorus.setTubeDivisions(64);
   }
  }
 }

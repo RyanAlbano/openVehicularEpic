@@ -19,25 +19,27 @@ class Chip extends Core {
   VP = vp;
   absoluteRadius = .1 * VP.absoluteRadius;
   TriangleMesh chipMesh = new TriangleMesh();
-  chipMesh.getPoints().setAll(//<-Do it here as well so it works correctly
+  setPoints(chipMesh);//<-Do it here as well so mesh loads properly
+  chipMesh.getTexCoords().addAll(U.random() < .5 ? E.textureCoordinateBase0 : E.textureCoordinateBase1);
+  chipMesh.getFaces().addAll(0, 0, 1, 1, 2, 2);
+  chipMesh.getFaces().addAll(2, 2, 1, 1, 0, 0);
+  MV = new MeshView(chipMesh);
+  MV.setCullFace(CullFace.BACK);
+  U.setMaterialSecurely(MV, VP.PM);
+  U.Nodes.add(MV);
+  MV.setVisible(false);
+ }
+
+ private void setPoints(TriangleMesh TM) {
+  TM.getPoints().setAll(
   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius));
-  chipMesh.getTexCoords().setAll(0, 0);
-  chipMesh.getFaces().setAll(0, 0, 1, 0, 2, 0);
-  MV = new MeshView(chipMesh);
-  MV.setCullFace(CullFace.NONE);
-  MV.setMaterial(VP.PM);
-  U.add(MV);
-  MV.setVisible(false);
  }
 
  void deploy(Vehicle V, double throwPower) {
   if (stage <= 0 && U.random() < .5) {
-   ((TriangleMesh) MV.getMesh()).getPoints().setAll(
-   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
-   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
-   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius));
+   setPoints((TriangleMesh) MV.getMesh());
    X = Y = Z = gravitySpeed = 0;
    XZ = V.XZ;
    XY = V.XY;
@@ -54,7 +56,7 @@ class Chip extends Core {
 
  public void run(Vehicle V, boolean gamePlay) {
   if (stage > 0) {
-   if (Y + VP.Y > V.localVehicleGround || (stage += gamePlay ? U.random(VE.tick) : 0) > 10) {
+   if (Y + VP.Y > V.P.localVehicleGround || (stage += gamePlay ? U.random(VE.tick) : 0) > 10) {
     stage = 0;
     MV.setVisible(false);
    } else {
@@ -65,11 +67,11 @@ class Chip extends Core {
      X += speedX * VE.tick;
      Z += speedZ * VE.tick;
      gravitySpeed += E.gravity * VE.tick;
-     Y += speedY * VE.tick + (V.mode.name().startsWith(Vehicle.Mode.drive.name()) ? gravitySpeed * VE.tick : 0);
+     Y += speedY * VE.tick + (V.P.mode.name().startsWith(Physics.Mode.drive.name()) ? gravitySpeed * VE.tick : 0);
     }
     if (VP.MV.isVisible() && U.render(X + VP.X, Y + VP.Y, Z + VP.Z)) {
      U.setTranslate(MV, X + VP.X, Y + VP.Y, Z + VP.Z);
-     U.rotate(MV,this);
+     U.rotate(MV, this);
      MV.setVisible(true);
     } else {
      MV.setVisible(false);

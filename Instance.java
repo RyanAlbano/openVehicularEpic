@@ -2,7 +2,8 @@ package ve;
 
 import java.io.*;
 
-import ve.environment.E;
+import javafx.scene.paint.Color;
+import ve.trackElements.TE;
 import ve.trackElements.trackParts.TrackPart;
 import ve.trackElements.trackParts.TrackPartPart;
 import ve.utilities.*;
@@ -15,10 +16,8 @@ public class Instance extends Core {
  public double distanceToCamera;
  public double renderRadius;
  public double boundsX, boundsY, boundsZ;
- public double collisionRadius;
- protected double modelSize = 1, instanceSize = 1;
- protected final double[] modelScale = {1, 1, 1};
- protected final double[] instanceScale = {1, 1, 1};
+ public double modelSize = 1;
+ public final double[] modelScale = {1, 1, 1};
  protected final double[] maxPlusX = new double[2];
  protected final double[] maxMinusX = new double[2];
  protected final double[] maxPlusY = new double[2];
@@ -30,23 +29,20 @@ public class Instance extends Core {
  public double turretBaseY;
  public double driverViewX;
  protected double rimRadius, rimDepth;
- public double netSpeedX, netSpeedY, netSpeedZ;
- protected final double[] wheelRGB = {.1875, .1875, .1875};
- protected final double[] rimRGB = new double[3];
- public final double[] theRandomColor = new double[3];
+ protected Color wheelRGB = U.getColor(.1875), rimRGB = U.getColor(0);
+ public Color theRandomColor = U.getColor(0);
  public boolean flicker = U.random() < .5;
  public int modelNumber;
- public String modelProperties = "";
  public String modelName = "";
  public Quaternion rotation;
 
  protected static FileInputStream getFile(String file) {
-  File F = new File("models" + File.separator + file);
+  File F = new File(U.modelFolder + File.separator + file);
   if (!F.exists()) {
-   F = new File("models" + File.separator + "User-Submitted" + File.separator + file);
+   F = new File(U.modelFolder + File.separator + U.userSubmittedFolder + File.separator + file);
   }
   if (!F.exists()) {
-   F = new File("models" + File.separator + "basic");
+   F = new File(U.modelFolder + File.separator + "basic");
   }
   try {
    return new FileInputStream(F);
@@ -55,31 +51,37 @@ public class Instance extends Core {
   }
  }
 
- protected void getLoadColor(String s, double[] RGB) {
-  if (U.startsWith(s, "RGB(", "><RGB(")) {
-   try {
-    RGB[0] = U.getValue(s, 0);
-    RGB[1] = U.getValue(s, 1);
-    RGB[2] = U.getValue(s, 2);
-   } catch (RuntimeException E) {
-    RGB[0] = RGB[1] = RGB[2] = U.getValue(s, 0);
+ protected static void append(StringBuilder SB, String s, boolean useContains, String... prefixes) {
+  for (String s1 : prefixes) {
+   if (useContains ? s.contains(s1) : s.startsWith(s1)) {
+    SB.append(" ").append(s1).append(" ");
    }
-  } else if (s.contains("theRandomColor")) {
-   try {
-    RGB[0] = theRandomColor[0] * U.getValue(s, 0);
-    RGB[1] = theRandomColor[1] * U.getValue(s, 0);
-    RGB[2] = theRandomColor[2] * U.getValue(s, 0);
-   } catch (RuntimeException E) {
-    RGB[0] = theRandomColor[0];
-    RGB[1] = theRandomColor[1];
-    RGB[2] = theRandomColor[2];
-   }
-  } else if (s.startsWith("pavedColor")) {
-   RGB[0] = RGB[1] = RGB[2] = E.pavedRGB;
   }
  }
 
- protected void getSizeScaleTranslate(String s, double[] translate) {
+ protected Color getLoadColor(String s, Color RGB) {
+  if (U.startsWith(s, "RGB(", "><RGB(")) {
+   try {
+    RGB = U.getColor(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
+   } catch (RuntimeException E) {
+    RGB = U.getColor(U.getValue(s, 0));
+   }
+  } else if (s.contains(SL.Instance.theRandomColor)) {
+   try {
+    RGB = U.getColor(
+    theRandomColor.getRed() * U.getValue(s, 0),
+    theRandomColor.getGreen() * U.getValue(s, 0),
+    theRandomColor.getBlue() * U.getValue(s, 0));
+   } catch (RuntimeException E) {
+    RGB = theRandomColor;
+   }
+  } else if (s.startsWith("pavedColor")) {
+   RGB = U.getColor(TE.Paved.globalShade);
+  }
+  return RGB;//<-Value may pass through unchanged
+ }
+
+ protected void getSizeScaleTranslate(String s, double[] translate, double sizeIn, double[] scaleIn) {
   modelSize = s.startsWith("size(") ? U.getValue(s, 0) : modelSize;
   if (s.startsWith("scale(")) {
    try {
@@ -91,9 +93,9 @@ public class Instance extends Core {
    }
   } else if (s.startsWith("translate(")) {
    try {
-    translate[0] = U.getValue(s, 0) * modelSize * instanceSize * modelScale[0] * instanceScale[0];
-    translate[1] = U.getValue(s, 1) * modelSize * instanceSize * modelScale[1] * instanceScale[1];
-    translate[2] = U.getValue(s, 2) * modelSize * instanceSize * modelScale[2] * instanceScale[2];
+    translate[0] = U.getValue(s, 0) * modelSize * modelScale[0] * sizeIn * scaleIn[0];
+    translate[1] = U.getValue(s, 1) * modelSize * modelScale[1] * sizeIn * scaleIn[1];
+    translate[2] = U.getValue(s, 2) * modelSize * modelScale[2] * sizeIn * scaleIn[2];
    } catch (RuntimeException e) {
     translate[0] = translate[1] = translate[2] = U.getValue(s, 0);
    }
@@ -119,7 +121,17 @@ public class Instance extends Core {
   maxPlusZ[1] += zz > 0 ? zz : 0;
  }
 
- protected void loadWheel(Vehicle V, TrackPart TP, double sourceX, double sourceY, double sourceZ, double i_wheelThickness, double i_wheelRadius, String type, String m_rimType, String textureType, boolean i_steers, boolean hide) {
+ /*public void setPhongToUniversalTerrain(PhongMaterial PM) {
+  PM.setDiffuseColor(E.Terrain.universal.getDiffuseColor());
+  PM.setDiffuseMap(E.Terrain.universal.getDiffuseMap());
+  PM.setSpecularColor(E.Terrain.universal.getSpecularColor());
+  PM.setSpecularPower(E.Terrain.universal.getSpecularPower());
+  PM.setSpecularMap(E.Terrain.universal.getSpecularMap());
+  PM.setBumpMap(E.Terrain.universal.getBumpMap());
+  PM.setSelfIlluminationMap(E.Terrain.universal.getSelfIlluminationMap());
+ }*/
+
+ protected void loadWheel(Vehicle V, TrackPart TP, double sourceX, double sourceY, double sourceZ, double i_wheelThickness, double i_wheelRadius, String type, String rimType, String textureType, boolean i_steers, boolean hide) {
   boolean vehicle = V != null;
   sourceX *= modelSize * modelScale[0];
   sourceY *= modelSize * modelScale[1];
@@ -211,7 +223,7 @@ public class Instance extends Core {
     if (i_wheelThickness != 0) {
      x0[0] += i_wheelThickness < 0 ? rimDepth : -rimDepth;
     }
-    if (m_rimType.contains(" sport ")) {
+    if (rimType.contains(" sport ")) {
      double smallRimRadius = rimRadius * .125;
      for (n = x0.length; --n > 0; ) {
       x0[n] = sourceX - i_wheelThickness;
@@ -256,9 +268,9 @@ public class Instance extends Core {
      z0[15] = sourceZ - smallRimRadius * U.sin(36);
      y0[16] = sourceY + rimRadius * U.cos(5);
      if (vehicle) {
-      V.parts.add(new VehiclePart(V, x0, y0, z0, 17, rimRGB, type + m_rimType + " wheel sportRimFaces " + steers, textureType));
+      V.parts.add(new VehiclePart(V, x0, y0, z0, 17, rimRGB, type + rimType + " wheel sportRimFaces " + steers, textureType));
      } else {//Sport rim
-      TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 17, rimRGB, type + m_rimType + " wheel sportRimFaces " + steers, textureType));
+      TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 17, rimRGB, type + rimType + " wheel sportRimFaces " + steers, textureType));
      }
      for (n = x0.length; --n >= 0; ) {
       x0[n] = sourceX - (n < 48 ? i_wheelThickness : -i_wheelThickness);
@@ -366,9 +378,9 @@ public class Instance extends Core {
       y0[n + 48] = y0[n];
      }
      if (vehicle) {
-      V.parts.add(new VehiclePart(V, x0, y0, z0, 96, rimRGB, type + m_rimType + " wheel wheelRingFaces " + steers, textureType));
+      V.parts.add(new VehiclePart(V, x0, y0, z0, 96, rimRGB, type + rimType + " wheel wheelRingFaces " + steers, textureType));
      } else {//Sport rim rings
-      TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 96, rimRGB, type + m_rimType + " wheel wheelRingFaces " + steers, textureType));
+      TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 96, rimRGB, type + rimType + " wheel wheelRingFaces " + steers, textureType));
      }
     } else {
      double hexagonAngle1 = 0.86602540378443864676372317075294, hexagonAngle2 = .5;
@@ -385,9 +397,9 @@ public class Instance extends Core {
       x0[7] -= i_wheelThickness < 0 ? rimDepth : -rimDepth;
      }
      if (vehicle) {
-      V.parts.add(new VehiclePart(V, x0, y0, z0, 8, rimRGB, type + m_rimType + " wheel rimFaces " + steers, textureType));
+      V.parts.add(new VehiclePart(V, x0, y0, z0, 8, rimRGB, type + rimType + " wheel rimFaces " + steers, textureType));
      } else {//Normal rim
-      TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 8, rimRGB, type + m_rimType + " wheel rimFaces " + steers, textureType));
+      TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 8, rimRGB, type + rimType + " wheel rimFaces " + steers, textureType));
      }
     }
    }

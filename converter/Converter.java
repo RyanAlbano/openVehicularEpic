@@ -10,6 +10,7 @@ import ve.utilities.U;
 class Converter {
 
  static boolean axisSwap;
+ static final String triangulationError = ".OBJ must be fully Triangulated";
 
  static void saveFile(File file, CharSequence content) {
   try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File("ConvertedFiles" + File.separator + file.getName().replace(".obj", "")), U.standardChars))) {
@@ -70,7 +71,7 @@ class Converter {
     double y = vertices.get(n2).Y * (invertY ? -1 : 1), z = vertices.get(n2).Z * (invertZ ? -1 : 1);
     s2.append("(").append(vertices.get(n2).X * (invertX ? -1 : 1)).append(",").append(axisSwap ? z : y).append(",").append(axisSwap ? y : z).append(U.lineSeparator);
     if (n1 >= 3) {
-     throw new IllegalStateException();
+     throw new IllegalStateException(triangulationError);
     }
    }
    SB.append(s2);

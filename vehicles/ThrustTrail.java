@@ -4,6 +4,7 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
 import ve.Core;
 import ve.VE;
+import ve.utilities.SL;
 import ve.utilities.U;
 
 class ThrustTrail extends Core {
@@ -17,13 +18,13 @@ class ThrustTrail extends Core {
   B = new Box(1, 1, 1);
   PhongMaterial PM = new PhongMaterial();
   if (VP.thrust == VehiclePart.Thrust.blue) {
-   U.setDiffuseRGB(PM, 0, 0, 0);
-   U.setSpecularRGB(PM, 0, 0, 0);
+   U.Phong.setDiffuseRGB(PM, 0);
+   U.Phong.setSpecularRGB(PM, 0);
   } else {
-   U.setSpecularRGB(PM, 1, 1, 1);
-   PM.setSelfIlluminationMap(U.getImage(VP.thrust == VehiclePart.Thrust.fire ? "firelight2" : "white"));//<-Blue thrust selfIllumination set in real-time
+   U.Phong.setSpecularRGB(PM, 1);
+   PM.setSelfIlluminationMap(U.Images.get(VP.thrust == VehiclePart.Thrust.fire ? "firelight2" : SL.Images.white));//<-Blue thrust selfIllumination set in real-time
   }
-  B.setMaterial(PM);
+  U.setMaterialSecurely(B, PM);
   B.setVisible(false);
  }
 
@@ -51,17 +52,17 @@ class ThrustTrail extends Core {
     Z += speedZ * VE.tick;
     if (thrusted) {
      double amount = Math.min(vehicle.topSpeeds[1], 300);
-     X += amount * U.sin(vehicle.XZ) * vehicle.polarity * VE.tick;
-     Z -= amount * U.cos(vehicle.XZ) * vehicle.polarity * VE.tick;
+     X += amount * U.sin(vehicle.XZ) * vehicle.P.polarity * VE.tick;
+     Z -= amount * U.cos(vehicle.XZ) * vehicle.P.polarity * VE.tick;
      Y += amount * U.sin(vehicle.YZ) * VE.tick;
     }
     if (U.renderWithLOD(this)) {
      U.setTranslate(B, this);
      U.randomRotate(B);
      if (VP.thrust == VehiclePart.Thrust.blue) {
-      ((PhongMaterial) B.getMaterial()).setSelfIlluminationMap(U.getImage("blueJet" + U.random(3)));
+      ((PhongMaterial) B.getMaterial()).setSelfIlluminationMap(U.Images.get("blueJet" + U.random(3)));
      } else {
-      U.setDiffuseRGB((PhongMaterial) B.getMaterial(), 1 - (.05 * stage / Math.sqrt(VE.tick)), 1 - (.1 * stage / Math.sqrt(VE.tick)), 0);
+      U.Phong.setDiffuseRGB((PhongMaterial) B.getMaterial(), 1 - (.05 * stage / Math.sqrt(VE.tick)), 1 - (.1 * stage / Math.sqrt(VE.tick)), 0);
      }
      B.setVisible(true);
     } else {

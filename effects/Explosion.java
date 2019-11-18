@@ -7,6 +7,7 @@ import java.util.*;
 
 import ve.*;
 import ve.environment.E;
+import ve.utilities.SL;
 import ve.utilities.U;
 import ve.vehicles.*;
 
@@ -36,10 +37,10 @@ public class Explosion extends Core {
   MV = new MeshView(TM);
   MV.setCullFace(CullFace.NONE);
   PhongMaterial PM = new PhongMaterial();
-  U.setDiffuseRGB(PM, 0, 0, 0);
-  U.setSpecularRGB(PM, 0, 0, 0);
-  MV.setMaterial(PM);
-  U.add(MV);
+  U.Phong.setDiffuseRGB(PM, 0);
+  U.Phong.setSpecularRGB(PM, 0);
+  U.setMaterialSecurely(MV, PM);
+  U.Nodes.add(MV);
   MV.setVisible(false);
   doneDamaging = new boolean[VE.vehiclesInMatch];
   for (int n = E.explosionQuantity; --n >= 0; ) {
@@ -79,7 +80,7 @@ public class Explosion extends Core {
     if (U.render(this, -absoluteRadius)) {
      U.setTranslate(MV, this);
      U.randomRotate(MV);
-     ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(U.getImage("firelight" + U.random(3)));
+     ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.Images.fireLight + U.random(3)));
      MV.setVisible(true);
     } else {
      MV.setVisible(false);
