@@ -5,7 +5,6 @@ import javafx.scene.Group;
 import javafx.scene.PointLight;
 import javafx.scene.SubScene;
 import javafx.scene.image.Image;
-import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
@@ -84,7 +83,7 @@ public enum TE {//TrackElements
    4, 0, 3, 0, 1, 0);
    MV.setMesh(TM);
    PhongMaterial PM = new PhongMaterial();
-   PM.setSpecularColor(Color.color(1, 1, 1));
+   U.Phong.setSpecularRGB(PM, 1);
    U.setMaterialSecurely(MV, PM);
    MV.setTranslateX(0);
    MV.setTranslateY(-5);
@@ -100,18 +99,18 @@ public enum TE {//TrackElements
    backPL.setTranslateX(0);
    backPL.setTranslateY(MV.getTranslateY());
    backPL.setTranslateZ(-Long.MAX_VALUE);
-   backPL.setColor(Color.color(1, 1, 1));
+   backPL.setColor(U.getColor(1));
    PointLight frontPL = new PointLight();
    frontPL.setTranslateX(0);
    frontPL.setTranslateY(MV.getTranslateY());
    frontPL.setTranslateZ(Long.MAX_VALUE);
-   frontPL.setColor(Color.color(1, 1, 1));
-   group.getChildren().addAll(new AmbientLight(Color.color(.5, .5, .5)), backPL, frontPL);
+   frontPL.setColor(U.getColor(1));
+   group.getChildren().addAll(new AmbientLight(U.getColor(.5)), backPL, frontPL);
   }
 
   public static void run() {
    if (lastStatus != status) {
-    VE.Match.print = status == Arrow.Status.locked ? "Arrow now Locked on " + VE.playerNames[target] : "Arrow now pointing at " + (status == Arrow.Status.vehicles ? "Vehicles" : "Map");
+    VE.Match.print = status == Arrow.Status.locked ? "Arrow now Locked on " + VE.playerNames[target] : "Arrow now pointing at " + (status == Arrow.Status.vehicles ? "Vehicles" : SL.Map);
     VE.Match.messageWait = false;
     VE.Match.printTimer = 50;
     lastStatus = status;
@@ -138,7 +137,7 @@ public enum TE {//TrackElements
       }
      }
      if (VE.vehiclePerspective == VE.userPlayerIndex && !U.sameTeam(VE.userPlayerIndex, target)) {
-      VE.vehicles.get(VE.userPlayerIndex).AI.target = target;//Calling 'userPlayer' more accurate then 'vehiclePerspective' here
+      VE.vehicles.get(VE.userPlayerIndex).AI.target = target;//Calling 'userPlayer' more accurate than 'vehiclePerspective' here
      }
     }
     target = VE.vehiclesInMatch < 2 ? 0 : target;
@@ -155,13 +154,12 @@ public enum TE {//TrackElements
      VE.graphicsContext.strokeLine((VE.width * .5) - 50, VE.height * nameHeight, (VE.width * .5) + 50, VE.height * nameHeight);
     }
     d = (targetVehicle.X - V.X >= 0 ? 270 : 90) + U.arcTan((targetVehicle.Z - V.Z) / (targetVehicle.X - V.X));
-    dY = (targetVehicle.Y - V.Y >= 0 ? 270 : 90) + U.arcTan(U.distance(targetVehicle.X, V.X, targetVehicle.Z, V.Z) / (targetVehicle.Y - V.Y));
+    dY = (targetVehicle.Y - V.Y >= 0 ? 270 : 90) + U.arcTan(U.distanceXZ(targetVehicle, V) / (targetVehicle.Y - V.Y));
     U.fillRGB(E.skyRGB.invert());
     U.text("[ " + VE.playerNames[target] + " ]", nameHeight);
    }
-   double convertedUnits = VE.Options.units == .5364466667 ? .0175 : VE.Options.units == 1 / 3. ? .0574147 : 1, color = VE.yinYang ? 1 : 0;
-   U.fillRGB(color, color, color);
-   U.text("(" + Math.round(U.distance(V.X, targetX, V.Y, targetY, V.Z, targetZ) * convertedUnits) + ")", .175);
+   U.fillRGB(VE.yinYang ? 1 : 0);
+   U.text("(" + Math.round(VE.UI.getUnitDistance(U.distance(V.X, targetX, V.Y, targetY, V.Z, targetZ))) + ")", .175);
    d += Camera.XZ;
    while (d < -180) d += 360;
    while (d > 180) d -= 360;
@@ -209,17 +207,18 @@ public enum TE {//TrackElements
     speedZ *= .99;
     X += speedX * VE.tick;
     Vehicle vehicle = VE.vehicles.get(VE.bonusHolder);
-    if (Math.abs(X) > vehicle.collisionRadius() * 2) {
+    double driftTolerance = vehicle.absoluteRadius * .6;
+    if (Math.abs(X) > driftTolerance) {
      speedX *= -1;
      X *= .999;
     }
     Y += speedY * VE.tick;
-    if (Math.abs(Y) > vehicle.collisionRadius() * 2) {
+    if (Math.abs(Y) > driftTolerance) {
      speedY *= -1;
      Y *= .999;
     }
     Z += speedZ * VE.tick;
-    if (Math.abs(Z) > vehicle.collisionRadius() * 2) {
+    if (Math.abs(Z) > driftTolerance) {
      speedZ *= -1;
      Z *= .999;
     }
@@ -257,21 +256,21 @@ public enum TE {//TrackElements
    if (VE.Match.started) {
     if (Network.mode == Network.Mode.OFF) {
      for (Vehicle vehicle : VE.vehicles) {
-      if (VE.bonusHolder < 0 && vehicle.isIntegral() && !vehicle.phantomEngaged && U.distance(vehicle.X, X, vehicle.Y, Y, vehicle.Z, Z) < vehicle.collisionRadius() + big.getRadius()) {
+      if (VE.bonusHolder < 0 && vehicle.isIntegral() && !vehicle.phantomEngaged && U.distance(vehicle.X, X, vehicle.Y, Y, vehicle.Z, Z) < vehicle.collisionRadius + big.getRadius()) {
        setHolder(vehicle);
       }
      }
      VE.bonusHolder = VE.bonusHolder > -1 && !VE.vehicles.get(VE.bonusHolder).isIntegral() ? -1 : VE.bonusHolder;
     } else {
      Vehicle V = VE.vehicles.get(VE.userPlayerIndex);
-     if (Network.bonusHolder < 0 && V.isIntegral() && !V.phantomEngaged && U.distance(V.X, X, V.Y, Y, V.Z, Z) < V.collisionRadius() + big.getRadius()) {
+     if (Network.bonusHolder < 0 && V.isIntegral() && !V.phantomEngaged && U.distance(V.X, X, V.Y, Y, V.Z, Z) < V.collisionRadius + big.getRadius()) {
       Network.bonusHolder = VE.userPlayerIndex;
       if (Network.mode == Network.Mode.HOST) {
        for (PrintWriter PW : Network.out) {
         PW.println("BONUS0");
        }
       } else {
-       Network.out.get(0).println(SL.Network.bonus);
+       Network.out.get(0).println(SL.BONUS);
       }
      }
      int setHolder = Network.bonusHolder < 0 ? Network.bonusHolder : VE.bonusHolder;
@@ -279,10 +278,10 @@ public enum TE {//TrackElements
       Network.bonusHolder = VE.bonusHolder = -1;
       if (Network.mode == Network.Mode.HOST) {
        for (PrintWriter PW : Network.out) {
-        PW.println(SL.Network.bonusOpen);
+        PW.println(SL.BonusOpen);
        }
       } else {
-       Network.out.get(0).println(SL.Network.bonusOpen);
+       Network.out.get(0).println(SL.BonusOpen);
       }
      }
      if (VE.bonusHolder != Network.bonusHolder) {
@@ -314,14 +313,14 @@ public enum TE {//TrackElements
   public static final Image[] lowResolution = new Image[2];
 
   static {
-   universal.setDiffuseMap(U.Images.get(SL.Images.paved));
-   universal.setSpecularMap(U.Images.get(SL.Images.paved));
-   universal.setBumpMap(U.Images.getNormalMap(SL.Images.paved));
+   universal.setDiffuseMap(U.Images.get(SL.paved));
+   universal.setSpecularMap(U.Images.get(SL.paved));
+   universal.setBumpMap(U.Images.getNormalMap(SL.paved));
    U.Phong.setDiffuseRGB(universal, globalShade);
    U.Phong.setSpecularRGB(universal, E.Specular.Colors.standard);
    universal.setSpecularPower(E.Specular.Powers.standard);
-   lowResolution[0] = U.Images.getLowResolution(U.Images.get(SL.Images.paved));
-   lowResolution[1] = U.Images.getLowResolution(U.Images.getNormalMap(SL.Images.paved));
+   lowResolution[0] = U.Images.getLowResolution(U.Images.get(SL.paved));
+   lowResolution[1] = U.Images.getLowResolution(U.Images.getNormalMap(SL.paved));
   }
  }
 
@@ -415,7 +414,6 @@ public enum TE {//TrackElements
     while (U.distance(X[0], 0, Z[0], 0) <= Volcano.radiusBottom) {
      X[0] = U.getValue(s, 1) + U.randomPlusMinus(randomX);
      Z[0] = U.getValue(s, 2) + U.randomPlusMinus(randomZ);
-     Y[0] = U.getValue(s, 3) + U.randomPlusMinus(randomY);
     }
    }
   }
@@ -423,11 +421,11 @@ public enum TE {//TrackElements
    try {
     trackParts.add(new TrackPart(X[0], Z[0], Y[0],
     U.getValue(s, 4) * instanceSize, U.getValue(s, 5) * instanceSize, U.getValue(s, 6) * instanceSize,
-    false, U.getString(s, 0).contains(SL.Images.paved), true));
+    false, U.getString(s, 0).contains(SL.paved), true));
    } catch (RuntimeException E) {
     trackParts.add(new TrackPart(X[0], Z[0], Y[0],
     U.getValue(s, 4) * U.random(instanceSize), U.getValue(s, 4) * U.random(instanceSize), U.getValue(s, 4) * U.random(instanceSize),
-    false, U.getString(s, 0).contains(SL.Images.paved), true));
+    false, U.getString(s, 0).contains(SL.paved), true));
    }
   } else {
    trackParts.add(new TrackPart(listNumber, X[0], Y[0], Z[0], rotation, instanceSize, instanceScale));
@@ -516,12 +514,12 @@ public enum TE {//TrackElements
     V.X -= 2000 * (VE.vehiclesInMatch * .5) * .5 - 1000;
    }
   } else if (VE.Map.name.equals("Moonlight")) {
-   if (V.damageDealt[U.random(4)] < 100 && !V.isFixed()) {
+   if (V.damageDealt < 100 && !V.isFixed()) {
     V.X *= V.X < 0 ? -1 : 1;
     V.Z *= V.Z < 0 ? -1 : 1;
    }
   } else if (VE.Map.name.equals(SL.MN.testOfDamage)) {
-   if (V.damageDealt[U.random(4)] < 100 && !V.isFixed()) {
+   if (V.damageDealt < 100 && !V.isFixed()) {
     V.X = U.random(E.mapBounds.right);
     V.Z = U.random(E.mapBounds.backward);
    }
@@ -537,7 +535,7 @@ public enum TE {//TrackElements
    V.Y = -175000;
   } else if (VE.Map.name.equals(SL.MN.circleRaceXL)) {
    V.Z += 320000;
-  } else if (VE.Map.name.equals("XY Land")) {
+  } else if (VE.Map.name.equals(SL.MN.XYLand)) {
    V.X = V.isFixed() ? V.X : U.random(23000.) - U.random(25000.);
   } else if (VE.Map.name.equals(SL.MN.matrix2x3)) {
    if (!V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.isFixed()) {
@@ -554,7 +552,7 @@ public enum TE {//TrackElements
   } else if (VE.Map.name.equals(SL.MN.everybodyEverything)) {
    V.X = U.random() < .5 ? -2000 : 2000;
    V.Z = U.randomPlusMinus(20000.);
-  } else if (VE.Map.name.equals("the Maze")) {
+  } else if (VE.Map.name.equals(SL.MN.theMaze)) {
    if (!V.isFixed()) {
     V.X = V.Z = 0;
    }
@@ -623,7 +621,7 @@ public enum TE {//TrackElements
    if (P.type == Point.Type.mustPassAbsolute && V.P.mode != Physics.Mode.fly) {
     V.point += U.distance(V, P) < 500 ? 1 : 0;
    } else if (P.type != Point.Type.checkpoint &&
-   (U.distance(V.X, P.X, V.Z, P.Z) < 500 || (V.AI.skipStunts && P.type != Point.Type.mustPassIfClosest) || (!checkpoints.isEmpty() && !VE.Map.name.equals(SL.MN.devilsStairwell) && U.distance(V, checkpoints.get(V.checkpointsPassed)) <= U.distance(P, checkpoints.get(V.checkpointsPassed))))) {
+   (U.distanceXZ(V, P) < 500 || (V.AI.skipStunts && P.type != Point.Type.mustPassIfClosest) || (!checkpoints.isEmpty() && !VE.Map.name.equals(SL.MN.devilsStairwell) && U.distance(V, checkpoints.get(V.checkpointsPassed)) <= U.distance(P, checkpoints.get(V.checkpointsPassed))))) {
     V.point++;
    }
   }
@@ -631,12 +629,12 @@ public enum TE {//TrackElements
    double checkSize = VE.Map.name.equals(SL.MN.circleRaceXL) ? V.P.speed : 0;
    Checkpoint C = checkpoints.get(V.checkpointsPassed);
    if ((C.type == Checkpoint.Type.passZ || C.type == Checkpoint.Type.passAny) &&
-   Math.abs(V.Z - C.Z) < (60 + checkSize) + Math.abs(V.P.netSpeedZ) * VE.tick && Math.abs(V.X - C.X) < 700 && Math.abs((V.Y - C.Y) + 350) < 450) {
+   Math.abs(V.Z - C.Z) < (60 + checkSize) + Math.abs(V.P.speedZ) * VE.tick && Math.abs(V.X - C.X) < 700 && Math.abs((V.Y - C.Y) + 350) < 450) {
     V.checkpointsPassed++;
     V.point++;
     if (V.index == VE.vehiclePerspective) {
      if (!VE.Match.messageWait) {
-      VE.Match.print = SL.TE.checkpoint;
+      VE.Match.print = SL.Checkpoint;
       VE.Match.printTimer = 10;
      }
      if (VE.Options.headsUpDisplay) {
@@ -650,12 +648,12 @@ public enum TE {//TrackElements
     }
    }
    if ((C.type == Checkpoint.Type.passX || C.type == Checkpoint.Type.passAny) &&
-   Math.abs(V.X - C.X) < (60 + checkSize) + Math.abs(V.P.netSpeedX) * VE.tick && Math.abs(V.Z - C.Z) < 700 && Math.abs((V.Y - C.Y) + 350) < 450) {
+   Math.abs(V.X - C.X) < (60 + checkSize) + Math.abs(V.P.speedX) * VE.tick && Math.abs(V.Z - C.Z) < 700 && Math.abs((V.Y - C.Y) + 350) < 450) {
     V.checkpointsPassed++;
     V.point++;
     if (V.index == VE.vehiclePerspective) {
      if (!VE.Match.messageWait) {
-      VE.Match.print = SL.TE.checkpoint;
+      VE.Match.print = SL.Checkpoint;
       VE.Match.printTimer = 10;
      }
      if (VE.Options.headsUpDisplay) {
@@ -682,7 +680,7 @@ public enum TE {//TrackElements
    for (TrackPart part : trackParts) {
     if (part.isRepairPoint) {
      boolean sideways = isSidewaysXZ(part.XZ);
-     if (U.distance(sideways ? V.Z : V.X, sideways ? part.Z : part.X, V.Y, part.Y) <= 500 && Math.abs(sideways ? V.X - part.X : V.Z - part.Z) <= 200 + Math.abs(sideways ? V.P.netSpeedX : V.P.netSpeedZ) * VE.tick) {
+     if (U.distance(sideways ? V.Z : V.X, sideways ? part.Z : part.X, V.Y, part.Y) <= 500 && Math.abs(sideways ? V.X - part.X : V.Z - part.Z) <= 200 + Math.abs(sideways ? V.P.speedX : V.P.speedZ) * VE.tick) {
       V.repair(gamePlay);
      }
     }

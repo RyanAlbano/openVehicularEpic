@@ -4,6 +4,7 @@ import javafx.scene.shape.*;
 import ve.Core;
 import ve.VE;
 import ve.environment.E;
+import ve.utilities.SL;
 import ve.utilities.U;
 
 class Chip extends Core {
@@ -19,7 +20,7 @@ class Chip extends Core {
   VP = vp;
   absoluteRadius = .1 * VP.absoluteRadius;
   TriangleMesh chipMesh = new TriangleMesh();
-  setPoints(chipMesh);//<-Do it here as well so mesh loads properly
+  setPoints(chipMesh);//<-Call it here as well so mesh loads properly
   chipMesh.getTexCoords().addAll(U.random() < .5 ? E.textureCoordinateBase0 : E.textureCoordinateBase1);
   chipMesh.getFaces().addAll(0, 0, 1, 1, 2, 2);
   chipMesh.getFaces().addAll(2, 2, 1, 1, 0, 0);
@@ -44,9 +45,9 @@ class Chip extends Core {
    XZ = V.XZ;
    XY = V.XY;
    YZ = V.YZ;
-   speedX = throwPower * U.randomPlusMinus(6.);
-   speedY = throwPower * U.randomPlusMinus(6.);
-   speedZ = throwPower * U.randomPlusMinus(6.);
+   speedX = throwPower * (U.random() < .5 ? 1 : -1);
+   speedY = throwPower * (U.random() < .5 ? 1 : -1);
+   speedZ = throwPower * (U.random() < .5 ? 1 : -1);
    speedXY = U.randomPlusMinus(80.);
    speedXZ = U.randomPlusMinus(80.);
    speedYZ = U.randomPlusMinus(80.);
@@ -56,7 +57,7 @@ class Chip extends Core {
 
  public void run(Vehicle V, boolean gamePlay) {
   if (stage > 0) {
-   if (Y + VP.Y > V.P.localVehicleGround || (stage += gamePlay ? U.random(VE.tick) : 0) > 10) {
+   if (Y + VP.Y > V.P.localGround || (stage += gamePlay ? U.random(VE.tick) : 0) > 10) {
     stage = 0;
     MV.setVisible(false);
    } else {
@@ -67,7 +68,7 @@ class Chip extends Core {
      X += speedX * VE.tick;
      Z += speedZ * VE.tick;
      gravitySpeed += E.gravity * VE.tick;
-     Y += speedY * VE.tick + (V.P.mode.name().startsWith(Physics.Mode.drive.name()) ? gravitySpeed * VE.tick : 0);
+     Y += speedY * VE.tick + (V.P.mode.name().startsWith(SL.drive) ? gravitySpeed * VE.tick : 0);
     }
     if (VP.MV.isVisible() && U.render(X + VP.X, Y + VP.Y, Z + VP.Z)) {
      U.setTranslate(MV, X + VP.X, Y + VP.Y, Z + VP.Z);

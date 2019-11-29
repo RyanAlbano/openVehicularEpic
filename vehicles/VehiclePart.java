@@ -62,40 +62,38 @@ public class VehiclePart extends InstancePart {
   V = inV;
   V.vertexQuantity += vertexQuantity;
   int n;
-  textureType = type.contains(" noTexture ") ? "" : textureType;
+  textureType = type.contains(SL.Thicks.noTexture) ? "" : textureType;
   this.pivotX = pivotX;
   this.pivotY = pivotY;
   this.pivotZ = pivotZ;
   double[] storeX = new double[vertexQuantity], storeY = new double[vertexQuantity], storeZ = new double[vertexQuantity];
-  light = type.contains(" light ");
-  selfIlluminate = type.contains(" selfIlluminate ");
-  fireLight = type.contains(" fire ") && VE.Map.defaultVehicleLightBrightness > 0;
+  light = type.contains(SL.Thicks.light);
+  selfIlluminate = type.contains(SL.Thicks.selfIlluminate);
+  fireLight = type.contains(SL.Thicks.fire) && VE.Map.defaultVehicleLightBrightness > 0;
   pointLight = light || fireLight ? new PointLight() : null;
-  thrust = type.contains(" thrustWhite ") ? Thrust.white : type.contains(" thrustBlue ") ? Thrust.blue : type.contains(" thrust ") ? Thrust.fire : null;
-  blink = type.contains(" blink ");
+  thrust = type.contains(SL.Thicks.thrustWhite) ? Thrust.white : type.contains(SL.Thicks.thrustBlue) ? Thrust.blue : type.contains(SL.Thicks.thrust) ? Thrust.fire : null;
+  blink = type.contains(SL.Thicks.blink);
   exterior = type.contains(" exterior ") && VE.status != VE.Status.vehicleViewer;
-  landingGear = type.contains(" landingGear ");
+  landingGear = type.contains(SL.Thicks.landingGear);
   spinner = type.contains(" spinner ");
-  wheel = type.contains(" wheel ");
-  base = type.contains(" base ");
+  wheel = type.contains(SL.Thicks.wheel);
+  base = type.contains(SL.Thicks.base);
   noDeformation = type.contains(" noCrush ");
-  shake = V.realVehicle && (type.contains(" shake ") || (V.engine == Vehicle.Engine.hotrod && !U.contains(type, " driver ", " wheel ")));
-  vehicleTurretBarrel = type.contains(" turretBarrel ");
-  vehicleTurret = type.contains(" turret ") || vehicleTurretBarrel;
-  controller = type.contains(" controller ");
-  steer += type.contains(" steerXY ") ? " XY " : "";
-  steer += type.contains(" steerYZ ") ? " YZ " : "";
-  steer += type.contains(" steerXZ ") ? " XZ " : "";
-  steer += type.contains(" steerFromXZ ") ? " fromXZ " : "";
-  steer += type.contains(" steerFromYZ ") ? " fromYZ " : "";
+  shake = V.realVehicle && (type.contains(" shake ") || (V.engine == Vehicle.Engine.hotrod && !U.contains(type, " driver ", SL.Thicks.wheel)));
+  vehicleTurretBarrel = type.contains(SL.Thicks.turretBarrel);
+  vehicleTurret = type.contains(SL.Thicks.turret) || vehicleTurretBarrel;
+  controller = type.contains(SL.Thicks.controller);
+  steer += type.contains(SL.Thicks.steerXY) ? SL.Thicks.XY : "";
+  steer += type.contains(SL.Thicks.steerYZ) ? SL.Thicks.YZ : "";
+  steer += type.contains(SL.Thicks.steerXZ) ? SL.Thicks.XZ : "";
+  steer += type.contains(SL.Thicks.steerFromXZ) ? SL.Thicks.fromXZ : "";
+  steer += type.contains(SL.Thicks.steerFromYZ) ? SL.Thicks.fromYZ : "";
   steerAngleMultiply = V.steerAngleMultiply;
   side = type.contains(" R ") ? 1 : type.contains(" L ") ? -1 : 0;
-  double[] maxPlusX = new double[2];
-  double[] maxMinusX = new double[2];
-  double[] maxPlusY = new double[2];
-  double[] maxMinusY = new double[2];
-  double[] maxPlusZ = new double[2];
-  double[] maxMinusZ = new double[2];
+  double[]
+  maxPlusX = new double[2], maxMinusX = new double[2],
+  maxPlusY = new double[2], maxMinusY = new double[2],
+  maxPlusZ = new double[2], maxMinusZ = new double[2];
   for (n = vertexQuantity; --n >= 0; ) {
    storeX[n] = i_X[n];
    storeY[n] = i_Y[n];
@@ -153,53 +151,53 @@ public class VehiclePart extends InstancePart {
   TM.getPoints().setAll(coordinates);
   float[] textureCoordinates = U.random() < .5 ? E.textureCoordinateBase0 : E.textureCoordinateBase1;
   for (n = 0; n < vertexQuantity / (double) 3; n++) {
-   TM.getTexCoords().addAll(textureCoordinates);//<-'addAll'--NOT 'setAll'
+   TM.getTexCoords().addAll(textureCoordinates);//<-'addAll' and NOT 'setAll'
   }
-  if (type.contains(" triangles ")) {
+  if (type.contains(SL.Thicks.triangles)) {
    setTriangles(vertexQuantity);
-  } else if (type.contains(" conic ")) {
+  } else if (type.contains(SL.Thicks.conic)) {
    setConic(V, vertexQuantity);
    thrustPoint = thrust != null && thrust != Thrust.white ? new double[]{TM.getPoints().get(0), TM.getPoints().get(1), TM.getPoints().get(2)} : thrustPoint;
-  } else if (type.contains(" strip ")) {
+  } else if (type.contains(SL.Thicks.strip)) {
    setStrip(V, vertexQuantity);
-  } else if (type.contains(" squares ")) {
+  } else if (type.contains(SL.Thicks.squares)) {
    setSquares(V, vertexQuantity);
-  } else if (type.contains(" cylindric ")) {
+  } else if (type.contains(SL.Thicks.cylindric)) {
    setCylindric(V, vertexQuantity);
-  } else if (type.contains(" rimFaces ")) {
+  } else if (type.contains(SL.Thicks.rimFaces)) {
    setConic(V, 7);
-  } else if (type.contains(" sportRimFaces ")) {
+  } else if (type.contains(SL.Thicks.sportRimFaces)) {
    setConic(V, 16);
-  } else if (type.contains(" wheelRingFaces ")) {
+  } else if (type.contains(SL.Thicks.wheelRingFaces)) {
    setCylindric(V, 48);
    setWheelRingFaces();
   } else {
-   setFaces(V, type.contains(" wheelFaces ") ? 24 : vertexQuantity);
+   setFaces(V, type.contains(SL.Thicks.wheelFaces) ? 24 : vertexQuantity);
   }
   MV = new MeshView(TM);
-  defaultDrawMode = type.contains(" line ") ? DrawMode.LINE : DrawMode.FILL;
+  defaultDrawMode = type.contains(SL.Thicks.line) ? DrawMode.LINE : DrawMode.FILL;
   MV.setDrawMode(defaultDrawMode);
   MV.setCullFace(CullFace.BACK);
   PM = new PhongMaterial();
-  RGB = type.contains(" theRandomColor ") ? V.theRandomColor : i_RGB;
+  RGB = type.contains(SL.Thicks.theRandomColor) ? V.theRandomColor : i_RGB;
   Color storeRGB = RGB;
-  if (type.contains(" reflect ")) {
+  if (type.contains(SL.Thicks.reflect)) {
    RGB = U.getColor(E.skyRGB);
   }
-  if (light && (type.contains(" reflect ") || (storeRGB.getRed() == storeRGB.getGreen() && storeRGB.getGreen() == storeRGB.getBlue()))) {
-   RGB = U.getColor(1, 1, 1);
+  if (light && (type.contains(SL.Thicks.reflect) || (storeRGB.getRed() == storeRGB.getGreen() && storeRGB.getGreen() == storeRGB.getBlue()))) {
+   RGB = U.getColor(1);
   }
   if (blink || thrust != null) {
-   RGB = U.getColor(0, 0, 0);
+   RGB = U.getColor(0);
   }
   U.Phong.setDiffuseRGB(PM, RGB);
   if (light) {
    setBrightness();
   }
-  if (type.contains(" noSpecular ") || blink || thrust != null) {
+  if (type.contains(SL.Thicks.noSpecular) || blink || thrust != null) {
    U.Phong.setSpecularRGB(PM, 0);
   } else {
-   boolean shiny = type.contains(" shiny ");
+   boolean shiny = type.contains(SL.Thicks.shiny);
    U.Phong.setSpecularRGB(PM, shiny ? E.Specular.Colors.shiny : E.Specular.Colors.standard);
    PM.setSpecularPower(shiny ? E.Specular.Powers.shiny : E.Specular.Powers.standard);
   }
@@ -210,17 +208,17 @@ public class VehiclePart extends InstancePart {
   PM.setDiffuseMap(U.Images.get(textureType));
   PM.setSpecularMap(U.Images.get(textureType));
   PM.setBumpMap(U.Images.getNormalMap(textureType));
-  if (V.realVehicle && thrust == null) {//<-Instantiate after setting PM--will this help get correct Chip texture properties?
+  if (V.realVehicle && thrust == null) {
    chip = new Chip(this);
    flame = new Flame(this);
   }
   if (VE.status != VE.Status.vehicleViewer) {
-   fastCull = type.contains(" fastCullB ") ? 0 : fastCull;
-   fastCull = type.contains(" fastCullF ") ? 2 : fastCull;
-   fastCull = type.contains(" fastCullR ") ? -1 : fastCull;
-   fastCull = type.contains(" fastCullL ") ? 1 : fastCull;
+   fastCull = type.contains(SL.Thicks.fastCullB) ? 0 : fastCull;
+   fastCull = type.contains(SL.Thicks.fastCullF) ? 2 : fastCull;
+   fastCull = type.contains(SL.Thicks.fastCullR) ? -1 : fastCull;
+   fastCull = type.contains(SL.Thicks.fastCullL) ? 1 : fastCull;
   }
-  flickPolarity = type.contains(" flick1 ") ? 1 : type.contains(" flick2 ") ? 2 : flickPolarity;
+  flickPolarity = type.contains(SL.Thicks.flick1) ? 1 : type.contains(SL.Thicks.flick2) ? 2 : flickPolarity;
   setRenderSizeRequirement(storeX, storeY, storeZ, vertexQuantity, light || blink || thrust != null || VE.vehiclesInMatch < 3);
   MV.setVisible(false);
   damage = new Rotate();
@@ -250,31 +248,29 @@ public class VehiclePart extends InstancePart {
     explodeStage = ExplodeStage.thrown;
    }
    damage.setAngle(explodeAngleSpeed * V.P.explodeStage);
-   double explodeX = explodeSpeedX * V.P.explodeStage;
-   double explodeZ = explodeSpeedZ * V.P.explodeStage;
    double explodeY = explodeSpeedY * V.P.explodeStage;
-   if (explodeY + V.Y > V.P.localVehicleGround) {//<-Same value check as assigned below--just expressed more intuitively
-    explodeY = V.P.localVehicleGround - V.Y;
+   if (explodeY + V.Y > V.P.localGround) {//<-Same value check as assigned below--just expressed more intuitively
+    explodeY = V.P.localGround - V.Y;
    }
-   placementX[0] += explodeX;
+   placementX[0] += explodeSpeedX * V.P.explodeStage;
    placementY[0] += explodeY;
-   placementZ[0] += explodeZ;
+   placementZ[0] += explodeSpeedZ * V.P.explodeStage;
   } else if (shake && !V.destroyed) {
    placementX[0] += V.absoluteRadius * U.randomPlusMinus(.001);
    placementY[0] += V.absoluteRadius * U.randomPlusMinus(.001);
    placementZ[0] += V.absoluteRadius * U.randomPlusMinus(.001);
   }
-  if (nullPhysics || !V.P.inWrath) {//<-Here, 'nullPhysics' is only called to prevent nullPointer in Physics
+  if (nullPhysics || !V.P.inWrath) {//<-'nullPhysics' is only called to prevent nullPointer from null Physics
    if (!nullPhysics && (pivotZ != 0 || pivotX != 0 || (!controller && V.VT != null))) {//<-May need to be further amended later so things don't rotate unintentionally
-    if (steer.contains(" YZ ") || vehicleTurretBarrel) {
+    if (steer.contains(SL.Thicks.YZ) || vehicleTurretBarrel) {
      U.rotateWithPivot(placementZ, placementY,
      vehicleTurretBarrel ? V.VT.pivotY + pivotY : (pivotZ + displaceZ), vehicleTurretBarrel ? V.VT.pivotZ + pivotZ : (pivotY + displaceY),
-     vehicleTurretBarrel ? V.VT.YZ : ((steer.contains(" fromYZ ") ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply));
+     vehicleTurretBarrel ? V.VT.YZ : ((steer.contains(SL.Thicks.fromYZ) ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply));
     }
-    if (steer.contains(" XZ ") || vehicleTurret) {
+    if (steer.contains(SL.Thicks.XZ) || vehicleTurret) {
      U.rotateWithPivot(placementX, placementZ,
      pivotX + (vehicleTurret ? 0 : displaceX), vehicleTurret ? V.VT.pivotZ : (pivotZ + displaceZ),
-     vehicleTurret ? V.VT.XZ : ((steer.contains(" fromYZ ") && !steer.contains(" fromXZ ") ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply));
+     vehicleTurret ? V.VT.XZ : ((steer.contains(SL.Thicks.fromYZ) && !steer.contains(SL.Thicks.fromXZ) ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply));
     }
    }
    if (V.XY != 0) {
@@ -285,7 +281,7 @@ public class VehiclePart extends InstancePart {
    }
    U.rotate(placementX, placementZ, V.XZ);
    X = V.X + placementX[0];
-   Y = V.Y + placementY[0] + (wheelShockAbsorbAssign >= 0 ? V.wheels.get(wheelShockAbsorbAssign).vibrate : 0);
+   Y = V.Y + placementY[0] + (wheelShockAbsorbAssign >= 0 ? V.wheels.get(wheelShockAbsorbAssign).vibrateY : 0);
    Z = V.Z + placementZ[0];
   }
  }
@@ -315,16 +311,16 @@ public class VehiclePart extends InstancePart {
    if (render) {
     if (!base) {
      if (!nullPhysics) {
-      if (steer.contains(" XY ")) {
-       steerXY.setXY((steer.contains(" fromYZ ") ? V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply);
+      if (steer.contains(SL.Thicks.XY)) {
+       steerXY.setXY((steer.contains(SL.Thicks.fromYZ) ? V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply);
       }
       if (wheel) {
        steerYZ.setYZ(side > 0 ? V.P.wheelSpin[0] : side < 0 ? V.P.wheelSpin[1] : 0);
-      } else if (steer.contains(" YZ ")) {
-       steerYZ.setYZ((steer.contains(" fromYZ ") ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply);//<-Master script
+      } else if (steer.contains(SL.Thicks.YZ)) {
+       steerYZ.setYZ((steer.contains(SL.Thicks.fromYZ) ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply);//<-Master script
       }
-      if (steer.contains(" XZ ")) {
-       steerXZ.setXZ((steer.contains(" fromYZ ") && !steer.contains(" fromXZ ") ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply);//<-Master script
+      if (steer.contains(SL.Thicks.XZ)) {
+       steerXZ.setXZ((steer.contains(SL.Thicks.fromYZ) && !steer.contains(SL.Thicks.fromXZ) ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply);//<-Master script
       } else if (vehicleTurret) {//<-May fail if the vehicle is never assigned a vehicle turret
        steerXZ.setXZ(V.VT.XZ);
        if (vehicleTurretBarrel) {
@@ -356,7 +352,7 @@ public class VehiclePart extends InstancePart {
     }
     if (U.render(this, -renderRadius)) {
      if (thrust != null) {
-      PM.setSelfIlluminationMap(U.Images.get(thrust == Thrust.white ? SL.Images.white : ((thrust == Thrust.blue ? "blueJet" : SL.Images.fireLight) + U.random(3))));
+      PM.setSelfIlluminationMap(U.Images.get(thrust == Thrust.white ? SL.white : ((thrust == Thrust.blue ? SL.blueJet : SL.firelight) + U.random(3))));
       if (thrustPoint != null) {
        double thrustShift = V.absoluteRadius * .02;
        for (int n = 3; --n >= 0; ) {
@@ -367,7 +363,7 @@ public class VehiclePart extends InstancePart {
      U.setTranslate(MV, this);
      visible = true;
      if (blink) {
-      PM.setSelfIlluminationMap(V.destroyed ? null : U.Images.get(SL.Instance.blink + U.random(3)));
+      PM.setSelfIlluminationMap(V.destroyed ? null : U.Images.get(SL.blink + U.random(3)));
      }
     }
    }

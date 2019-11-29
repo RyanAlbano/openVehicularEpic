@@ -5,6 +5,7 @@ import javafx.scene.shape.Cylinder;
 import ve.Core;
 import ve.VE;
 import ve.environment.*;
+import ve.utilities.SL;
 import ve.utilities.U;
 import ve.vehicles.*;
 
@@ -20,19 +21,20 @@ public class Dust extends Core {
   PhongMaterial PM = new PhongMaterial();
   U.Phong.setSpecularRGB(PM, 0);
   U.setMaterialSecurely(C, PM);
-  U.Nodes.add(C);
+  U.Phong.setDiffuseRGB(PM, E.Ground.RGB, .5);
+  U.Nodes.add(C);//<-Leave here--creation times are determined in respective classes
  }
 
- public void deploy(Vehicle vehicle, Wheel wheel, double dustSpeed, double speedDifference) {
-  X = vehicle.X + (dustSpeed > 0 ? U.randomPlusMinus(vehicle.collisionRadius()) : 0);
-  Z = vehicle.Z + (dustSpeed > 0 ? U.randomPlusMinus(vehicle.collisionRadius()) : 0);
-  Y = vehicle.Y + vehicle.clearanceY;
+ public void deploy(Vehicle vehicle, double dustSpeed, double speedDifference) {
+  X = vehicle.X + (dustSpeed > 0 ? U.randomPlusMinus(vehicle.absoluteRadius * .3) : 0);
+  Z = vehicle.Z + (dustSpeed > 0 ? U.randomPlusMinus(vehicle.absoluteRadius * .3) : 0);
+  Y = Math.min(vehicle.Y + vehicle.clearanceY, vehicle.P.localGround);//<-So that dust won't deploy underground during a hard ground hit
   speedX = speedZ = vehicle.P.flipped ? 0 : speedDifference;
-  double presence = vehicle.P.terrainProperties.contains(" hard ") ? 1 : 2;
+  double presence = vehicle.P.terrainProperties.contains(SL.Thicks.hard) ? 1 : 2;
   absoluteRadius = .05 * vehicle.absoluteRadius * Math.sqrt(U.random()) * presence;
   duration = 2 * presence;
   U.setScale(C, absoluteRadius);
-  U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), wheel.terrainRGB, .5);
+  U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), vehicle.terrainRGB, .5);
   stage = Double.MIN_VALUE;
  }
 
@@ -42,7 +44,6 @@ public class Dust extends Core {
   absoluteRadius = .5 * boulder.S.getRadius() * Math.sqrt(U.random());
   duration = 4 + U.random(4.);
   U.setScale(C, absoluteRadius);
-  U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), E.Ground.RGB, .5);
   stage = Double.MIN_VALUE;
  }
 

@@ -30,9 +30,9 @@ class Flame extends MeshView {
  void run(Vehicle vehicle) {
   if (!vehicle.onFire) {
    setVisible(false);
-  } else if (U.random() < .5 && VP.MV.isVisible()) {//<-Good enough
+  } else if (U.random() < .5 && VP.MV.isVisible()) {
    U.setTranslate(this, VP);
-   ((PhongMaterial) getMaterial()).setSelfIlluminationMap(U.Images.get(SL.Images.fireLight + U.random(3)));
+   ((PhongMaterial) getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
    U.randomRotate(this);
    setVisible(true);
   } else {

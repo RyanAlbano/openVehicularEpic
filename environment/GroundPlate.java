@@ -5,6 +5,7 @@ import javafx.scene.shape.Cylinder;
 import javafx.scene.transform.Rotate;
 import ve.Camera;
 import ve.VE;
+import ve.utilities.SL;
 import ve.utilities.U;
 
 import java.util.ArrayList;
@@ -15,7 +16,7 @@ enum GroundPlate {
  public static final List<Instance> instances = new ArrayList<>();
 
  static void load(String terrain) {
-  if (E.Ground.level <= 0 && !terrain.contains(" snow ")) {
+  if (E.Ground.level <= 0 && !terrain.contains(SL.Thicks.snow)) {
    for (int n = 0; n < 419; n++) {//<-'419' is the minimum needed to have groundPlates cover the entire ground surface with NO gaps, before duplicates get removed
     instances.add(new Instance(VE.Map.name.equals("Epic Trip") ? 1500 : 1732.0508075688772935274463415059));
    }
@@ -35,7 +36,7 @@ enum GroundPlate {
     U.setMaterialSecurely(groundPlate, E.Terrain.universal);
     groundPlate.clampXZ();
     groundPlate.setRotationAxis(Rotate.Y_AXIS);
-    groundPlate.setRotate(-30 + (60 * U.random(6)));//<-Hex-rotation basis can't be random double!
+    groundPlate.setRotate(-30 + (60 * U.random(6)));//<-INT random for hex-rotation!
     U.Nodes.add(groundPlate);
    }
    for (int n = 0; n < instances.size(); n++) {//<-Do NOT use forEach--ConcurrentModificationException will occur!

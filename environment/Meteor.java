@@ -12,7 +12,6 @@ import ve.utilities.SL;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
 import ve.vehicles.VehiclePart;
-import ve.vehicles.Wheel;
 
 public enum Meteor {
  ;
@@ -21,10 +20,10 @@ public enum Meteor {
 
  public static void load(String s) {
   if (s.startsWith("meteors(")) {
+   globalSpeed = U.getValue(s, 2);//<-Must come FIRST!
    for (int n = 0; n < U.getValue(s, 0); n++) {
     instances.add(new Instance(U.getValue(s, 1)));
    }
-   globalSpeed = U.getValue(s, 2);
   }
  }
 
@@ -35,21 +34,17 @@ public enum Meteor {
  }
 
  public static void vehicleInteract(Vehicle V) {
-  for (Meteor.Instance meteor : instances) {
-   Meteor.Instance.Part MP = meteor.parts.get(0);
+  for (Instance meteor : instances) {
+   Instance.Part MP = meteor.parts.get(0);
    double vehicleMeteorDistance = U.distance(V, MP);
-   if (vehicleMeteorDistance < (V.collisionRadius() + MP.S.getRadius()) * 4) {
+   if (vehicleMeteorDistance < (V.collisionRadius + MP.S.getRadius()) * 4) {
     V.addDamage(V.durability * .5);
-    for (Wheel wheel : V.wheels) {
-     wheel.speedX += U.randomPlusMinus(globalSpeed * .5);
-     wheel.speedZ += U.randomPlusMinus(globalSpeed * .5);
-    }
-    if (vehicleMeteorDistance < V.collisionRadius() + MP.S.getRadius() * 2) {
+    V.P.speedX += U.randomPlusMinus(globalSpeed * .5);
+    V.P.speedZ += U.randomPlusMinus(globalSpeed * .5);
+    if (vehicleMeteorDistance < V.collisionRadius + MP.S.getRadius() * 2) {
      V.setDamage(V.damageCeiling());
-     for (Wheel wheel : V.wheels) {
-      wheel.speedX += U.randomPlusMinus(globalSpeed * .5);
-      wheel.speedZ += U.randomPlusMinus(globalSpeed * .5);
-     }
+     V.P.speedX += U.randomPlusMinus(globalSpeed * .5);
+     V.P.speedZ += U.randomPlusMinus(globalSpeed * .5);
     }
     for (VehiclePart part : V.parts) {
      part.deform();
@@ -62,7 +57,7 @@ public enum Meteor {
 
  public static class Instance {
 
-  double speedX, speedZ;
+  double speedX, speedY = globalSpeed, speedZ;
   final List<Part> parts = new ArrayList<>();
   public final Sound sound;
 
@@ -72,7 +67,7 @@ public enum Meteor {
     parts.add(new Part(inSize - size));
     size += inSize / 11.;
    }
-   sound = new Sound("meteor" + U.random(2));//<-using lists--NO double
+   sound = new Sound(SL.meteor + U.random(3));//<-using lists--NO double
   }
 
   void run(boolean update) {
@@ -80,13 +75,16 @@ public enum Meteor {
    boolean deploy = false;
    if (update) {
     parts.get(0).X += speedX * VE.tick;
-    parts.get(0).Y += globalSpeed * VE.tick;
+    parts.get(0).Y += speedY * VE.tick;
     parts.get(0).Z += speedZ * VE.tick;
     deploy = Math.abs(parts.get(0).Y - Camera.Y) > 375000 || Math.abs(parts.get(0).X - Camera.X) > 500000 || Math.abs(parts.get(0).Z - Camera.Z) > 500000;
    }
-   if (parts.get(parts.size() - 1).Y >= 0 || deploy) {
+   if (parts.get(parts.size() - 1).Y >= E.Ground.level || deploy) {
+    if (E.Ground.level == Double.POSITIVE_INFINITY && U.random() < .5) {
+     speedY *= -1;
+    }
     parts.get(0).X = Camera.X + U.randomPlusMinus(500000.);
-    parts.get(0).Y = Camera.Y - 125000 - U.random(250000.);
+    parts.get(0).Y = Camera.Y - ((125000 - U.random(250000.)) * speedY > 0 ? 1 : -1);
     parts.get(0).Z = Camera.Z + U.randomPlusMinus(500000.);
     double speedsXZ = U.random(2.) * globalSpeed;
     speedX = U.random() < .5 ? speedsXZ : -speedsXZ;
@@ -102,7 +100,7 @@ public enum Meteor {
    }
    for (int n = 1; n < parts.size(); n++) {
     parts.get(n).X = parts.get(0).X - (speedX * n);
-    parts.get(n).Y = parts.get(0).Y - (globalSpeed * n);
+    parts.get(n).Y = parts.get(0).Y - (speedY * n);
     parts.get(n).Z = parts.get(0).Z - (speedZ * n);
    }
    for (int n = parts.size(); --n > 0; ) {
@@ -112,7 +110,7 @@ public enum Meteor {
     meteorPart.run();
    }
    if (!VE.Match.muteSound && update) {
-    sound.loop(Math.sqrt(U.distance(parts.get(0))) * .08);
+    sound.loop(Math.sqrt(U.distance(parts.get(0))) * Sound.standardDistance(1));
    } else {
     sound.stop();
    }
@@ -138,11 +136,11 @@ public enum Meteor {
       U.Phong.setDiffuseRGB((PhongMaterial) S.getMaterial(), 0);
       U.Phong.setSpecularRGB((PhongMaterial) S.getMaterial(), 0);
       ((PhongMaterial) S.getMaterial()).setDiffuseMap(null);
-      ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.Images.fireLight + U.random(3)));
+      ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
      } else {
       U.Phong.setDiffuseRGB((PhongMaterial) S.getMaterial(), 1);
       U.Phong.setSpecularRGB((PhongMaterial) S.getMaterial(), 1);
-      ((PhongMaterial) S.getMaterial()).setDiffuseMap(U.Images.get("rock"));
+      ((PhongMaterial) S.getMaterial()).setDiffuseMap(U.Images.get(SL.rock));
       ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(null);
      }
      U.rotate(S, YZ, XZ);

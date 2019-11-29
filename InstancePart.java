@@ -390,26 +390,30 @@ public class InstancePart extends Core {
  }
 
  protected void setTriangles(int vertexQuantity) {
-  int[] faces = new int[(vertexQuantity << 2)];
-  int baseCoordinate = 0;
-  for (int n = 0; n < vertexQuantity << 1; n += 6) {
-   faces[n] = baseCoordinate;
-   faces[n + 1] = baseCoordinate;
-   faces[n + 2] = baseCoordinate + 1;
-   faces[n + 3] = baseCoordinate + 1;
-   faces[n + 4] = baseCoordinate + 2;
-   faces[n + 5] = baseCoordinate + 2;
-   baseCoordinate += 3;
+  int[] faces = new int[vertexQuantity << 2];
+  {//FORWARD
+   int baseCoordinate = 0;
+   for (int n = 0; n < vertexQuantity << 1; n += 6) {
+    faces[n] = baseCoordinate;
+    faces[n + 1] = baseCoordinate;
+    faces[n + 2] = baseCoordinate + 1;
+    faces[n + 3] = baseCoordinate + 1;
+    faces[n + 4] = baseCoordinate + 2;
+    faces[n + 5] = baseCoordinate + 2;
+    baseCoordinate += 3;
+   }
   }
-  baseCoordinate = 0;
-  for (int n = vertexQuantity << 1; n < vertexQuantity << 2; n += 6) {
-   faces[n] = baseCoordinate;
-   faces[n + 1] = baseCoordinate;
-   faces[n + 2] = baseCoordinate + 2;
-   faces[n + 3] = baseCoordinate + 2;
-   faces[n + 4] = baseCoordinate + 1;
-   faces[n + 5] = baseCoordinate + 1;
-   baseCoordinate += 3;
+  {//BACKWARD
+   int baseCoordinate = 0;
+   for (int n = vertexQuantity << 1; n < vertexQuantity << 2; n += 6) {
+    faces[n] = baseCoordinate;
+    faces[n + 1] = baseCoordinate;
+    faces[n + 2] = baseCoordinate + 2;
+    faces[n + 3] = baseCoordinate + 2;
+    faces[n + 4] = baseCoordinate + 1;
+    faces[n + 5] = baseCoordinate + 1;
+    baseCoordinate += 3;
+   }
   }
   TM.getFaces().addAll(faces);
  }

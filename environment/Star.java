@@ -11,7 +11,7 @@ import java.util.Collection;
 
 public enum Star {
  ;
- private static final PhongMaterial PM = new PhongMaterial(null, null, null, null, U.Images.get(SL.Images.white));
+ private static final PhongMaterial PM = new PhongMaterial(null, null, null, null, U.Images.get(SL.white));
  public static final Collection<Instance> instances = new ArrayList<>();
 
  public static void load(String s) {

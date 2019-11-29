@@ -33,46 +33,25 @@ public enum Fire {
  public static class Instance extends Core {
 
   private final MeshView pit;
-  private PointLight light;
+  private final PointLight PL;
   private final Collection<Flame> flames = new ArrayList<>();
-  private Sound sound;
+  private final Sound sound;
 
   Instance(String s) {
    X = U.getValue(s, 0);
    Z = U.getValue(s, 1);
    Y = U.getValue(s, 2);
    absoluteRadius = U.getValue(s, 3);
-   if (s.contains("light")) {
-    light = new PointLight();
-   }
+   PL = s.contains("light") ? new PointLight() : null;
+   double flameSize = absoluteRadius * .5;
    for (int n = 0; n < 50; n++) {
-    flames.add(new Flame());
+    flames.add(new Flame(this, flameSize));
    }
-   if (s.contains("hear")) {
-    sound = new Sound("fire");
-   }
-   for (Flame flame : flames) {
-    double fireSize = absoluteRadius * .5;
-    TriangleMesh TM = new TriangleMesh();
-    TM.getPoints().setAll((float) U.randomPlusMinus(fireSize), (float) U.randomPlusMinus(fireSize), (float) U.randomPlusMinus(fireSize),
-    (float) U.randomPlusMinus(fireSize), (float) U.randomPlusMinus(fireSize), (float) U.randomPlusMinus(fireSize),
-    (float) U.randomPlusMinus(fireSize), (float) U.randomPlusMinus(fireSize), (float) U.randomPlusMinus(fireSize));
-    TM.getTexCoords().setAll(0, 0);
-    TM.getFaces().setAll(0, 0, 1, 0, 2, 0);
-    flame.MV = new MeshView(TM);
-    flame.X = X;
-    flame.Y = Double.POSITIVE_INFINITY;
-    flame.Z = Z;
-    flame.MV.setCullFace(CullFace.NONE);
-    PhongMaterial PM = new PhongMaterial();
-    U.Phong.setDiffuseRGB(PM, 0);
-    U.Phong.setSpecularRGB(PM, 0);
-    U.setMaterialSecurely(flame.MV, PM);
-    U.Nodes.add(flame.MV);
-   }
+   sound = s.contains("hear") ? new Sound(SL.fire) : null;
    TriangleMesh TM = new TriangleMesh();
    double fireSize = absoluteRadius;
-   TM.getPoints().setAll((float) U.randomPlusMinus(fireSize), 0, (float) U.randomPlusMinus(fireSize),
+   TM.getPoints().setAll(
+   (float) U.randomPlusMinus(fireSize), 0, (float) U.randomPlusMinus(fireSize),
    (float) U.randomPlusMinus(fireSize), 0, (float) U.randomPlusMinus(fireSize),
    (float) U.randomPlusMinus(fireSize), 0, (float) U.randomPlusMinus(fireSize),
    (float) U.randomPlusMinus(fireSize), 0, (float) U.randomPlusMinus(fireSize),
@@ -124,7 +103,7 @@ public enum Fire {
     pit.setVisible(true);
     for (Flame flame : flames) {
      U.randomRotate(flame.MV);
-     ((PhongMaterial) flame.MV.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.Images.fireLight + U.random(3)));
+     ((PhongMaterial) flame.MV.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
      U.setTranslate(flame.MV, flame);
      flame.MV.setVisible(true);
     }
@@ -135,13 +114,13 @@ public enum Fire {
     }
    }
    double fireToCameraDistance = U.distance(this);
-   if (light != null) {
+   if (PL != null) {
     if (fireToCameraDistance < E.viewableMapDistance) {
-     U.Nodes.Light.setRGB(light, 1, .5 + U.random(.4), U.random(.25));
-     U.setTranslate(light, this);
-     U.Nodes.Light.add(light);
+     U.Nodes.Light.setRGB(PL, 1, .5 + U.random(.4), U.random(.25));
+     U.setTranslate(PL, this);
+     U.Nodes.Light.add(PL);
     } else {
-     U.Nodes.Light.remove(light);
+     U.Nodes.Light.remove(PL);
     }
    }
    if (sound != null) {
@@ -159,8 +138,28 @@ public enum Fire {
 
   static class Flame extends Core {
 
-   MeshView MV;
+   final MeshView MV;
    double speedX, speedZ;
+
+   Flame(Fire.Instance FI, double fireSize) {
+    TriangleMesh TM = new TriangleMesh();
+    TM.getPoints().setAll(
+    (float) U.randomPlusMinus(fireSize), (float) U.randomPlusMinus(fireSize), (float) U.randomPlusMinus(fireSize),
+    (float) U.randomPlusMinus(fireSize), (float) U.randomPlusMinus(fireSize), (float) U.randomPlusMinus(fireSize),
+    (float) U.randomPlusMinus(fireSize), (float) U.randomPlusMinus(fireSize), (float) U.randomPlusMinus(fireSize));
+    TM.getTexCoords().setAll(0, 0);
+    TM.getFaces().setAll(0, 0, 1, 0, 2, 0);
+    MV = new MeshView(TM);
+    X = FI.X;
+    Y = Double.POSITIVE_INFINITY;
+    Z = FI.Z;
+    MV.setCullFace(CullFace.NONE);
+    PhongMaterial PM = new PhongMaterial();
+    U.Phong.setDiffuseRGB(PM, 0);
+    U.Phong.setSpecularRGB(PM, 0);
+    U.setMaterialSecurely(MV, PM);
+    U.Nodes.add(MV);
+   }
   }
  }
 }

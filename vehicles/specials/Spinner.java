@@ -5,7 +5,6 @@ import ve.VE;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
 import ve.vehicles.VehiclePart;
-import ve.vehicles.Wheel;
 
 public class Spinner {
  private final Vehicle V;
@@ -33,14 +32,14 @@ public class Spinner {
      }
     }
     if (runSpinner) {
-     double speedChange = VE.tick * .005;
+     double speedChange = VE.tick * .005 * V.energyMultiple;
      speed += speed > 0 ? speedChange : speed < 0 ? -speedChange : (U.random() < .5 ? -1 : 1) * Double.MIN_VALUE;
     }
    }
   }
+  XZ += speed * 120 * VE.tick;
   while (XZ > 180) XZ -= 360;
   while (XZ < -180) XZ += 360;
-  XZ += speed * 120 * VE.tick;
   speed = U.clamp(-1, speed, 1);
   int spinSound = (int) (Math.round(Math.abs(speed) * 9) - 2);
   for (int n = V.VA.spinner.clips.size(); --n >= 0; ) {
@@ -69,22 +68,18 @@ public class Spinner {
      V.P.hitCheck(vehicle);
      for (VehiclePart part : vehicle.parts) {
       part.deform();
-      part.throwChip(U.randomPlusMinus(absSpeed * .5));
+      part.throwChip(U.randomPlusMinus(V.renderRadius * absSpeed));
      }
     }
     if (vehicle.getsPushed >= 0) {
      double speedX = (U.random() < .5 ? 1 : -1) * V.renderRadius * absSpeed * speedReduction * 4,
      speedZ = (U.random() < .5 ? 1 : -1) * V.renderRadius * absSpeed * speedReduction * 4;
-     for (Wheel wheel : vehicle.wheels) {
-      wheel.speedX += speedX;
-      wheel.speedZ += speedZ;
-     }
+     vehicle.P.speedX += speedX;
+     vehicle.P.speedZ += speedZ;
     }
     if (vehicle.getsLifted >= 0) {
      double speedY = (U.random() < .5 ? 1 : -1) * V.renderRadius * absSpeed * speedReduction;
-     for (Wheel wheel : vehicle.wheels) {
-      wheel.speedY += speedY;
-     }
+     vehicle.P.speedY += speedY;
     }
    }
    speed -= speed * speedReduction;

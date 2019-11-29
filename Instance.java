@@ -42,7 +42,7 @@ public class Instance extends Core {
    F = new File(U.modelFolder + File.separator + U.userSubmittedFolder + File.separator + file);
   }
   if (!F.exists()) {
-   F = new File(U.modelFolder + File.separator + "basic");
+   F = new File(U.modelFolder + File.separator + SL.basic);
   }
   try {
    return new FileInputStream(F);
@@ -60,13 +60,13 @@ public class Instance extends Core {
  }
 
  protected Color getLoadColor(String s, Color RGB) {
-  if (U.startsWith(s, "RGB(", "><RGB(")) {
+  if (U.startsWith(s, SL.RGB +"(", "><RGB(")) {
    try {
     RGB = U.getColor(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
    } catch (RuntimeException E) {
     RGB = U.getColor(U.getValue(s, 0));
    }
-  } else if (s.contains(SL.Instance.theRandomColor)) {
+  } else if (s.contains(SL.theRandomColor)) {
    try {
     RGB = U.getColor(
     theRandomColor.getRed() * U.getValue(s, 0),
@@ -75,15 +75,15 @@ public class Instance extends Core {
    } catch (RuntimeException E) {
     RGB = theRandomColor;
    }
-  } else if (s.startsWith("pavedColor")) {
+  } else if (s.startsWith(SL.pavedColor)) {
    RGB = U.getColor(TE.Paved.globalShade);
   }
   return RGB;//<-Value may pass through unchanged
  }
 
  protected void getSizeScaleTranslate(String s, double[] translate, double sizeIn, double[] scaleIn) {
-  modelSize = s.startsWith("size(") ? U.getValue(s, 0) : modelSize;
-  if (s.startsWith("scale(")) {
+  modelSize = s.startsWith(SL.size +"(") ? U.getValue(s, 0) : modelSize;
+  if (s.startsWith(SL.scale +"(")) {
    try {
     modelScale[0] = U.getValue(s, 0);
     modelScale[1] = U.getValue(s, 1);
@@ -214,11 +214,13 @@ public class Instance extends Core {
     maxMinusZ[1] += x0[n] < 0 ? z0[n] : 0;
     maxPlusZ[1] += x0[n] > 0 ? z0[n] : 0;
    }
+   String outerPlateProperties = " wheel wheelFaces ";
    if (vehicle) {
-    V.parts.add(new VehiclePart(V, x0, y0, z0, 48, wheelRGB, type + " wheel wheelFaces " + steers, textureType));
+    V.parts.add(new VehiclePart(V, x0, y0, z0, 48, wheelRGB, type + outerPlateProperties + steers, textureType));
    } else {//Outer Plate
-    TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 48, wheelRGB, type + " wheel wheelFaces " + steers, textureType));
+    TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 48, wheelRGB, type + outerPlateProperties + steers, textureType));
    }
+   String wheelRingProperties = " wheel wheelRingFaces ";
    if (rimRadius > 0) {
     if (i_wheelThickness != 0) {
      x0[0] += i_wheelThickness < 0 ? rimDepth : -rimDepth;
@@ -267,10 +269,11 @@ public class Instance extends Core {
      z0[14] = sourceZ - rimRadius * U.sin(67);
      z0[15] = sourceZ - smallRimRadius * U.sin(36);
      y0[16] = sourceY + rimRadius * U.cos(5);
+     String sportRimProperties = " wheel sportRimFaces ";
      if (vehicle) {
-      V.parts.add(new VehiclePart(V, x0, y0, z0, 17, rimRGB, type + rimType + " wheel sportRimFaces " + steers, textureType));
+      V.parts.add(new VehiclePart(V, x0, y0, z0, 17, rimRGB, type + rimType + sportRimProperties + steers, textureType));
      } else {//Sport rim
-      TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 17, rimRGB, type + rimType + " wheel sportRimFaces " + steers, textureType));
+      TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 17, rimRGB, type + rimType + sportRimProperties + steers, textureType));
      }
      for (n = x0.length; --n >= 0; ) {
       x0[n] = sourceX - (n < 48 ? i_wheelThickness : -i_wheelThickness);
@@ -324,63 +327,63 @@ public class Instance extends Core {
      y0[21] = sourceY + U.cos(315) * rimRadius;
      y0[22] = sourceY + U.cos(330) * rimRadius;
      y0[23] = sourceY + U.cos(345) * rimRadius;
-     smallRimRadius = rimRadius * .875;
-     z0[0 + 24] = sourceZ + U.sin(0) * smallRimRadius;
-     z0[1 + 24] = sourceZ + U.sin(15) * smallRimRadius;
-     z0[2 + 24] = sourceZ + U.sin(30) * smallRimRadius;
-     z0[3 + 24] = sourceZ + U.sin(45) * smallRimRadius;
-     z0[4 + 24] = sourceZ + U.sin(60) * smallRimRadius;
-     z0[5 + 24] = sourceZ + U.sin(75) * smallRimRadius;
-     z0[6 + 24] = sourceZ + U.sin(90) * smallRimRadius;
-     z0[7 + 24] = sourceZ + U.sin(105) * smallRimRadius;
-     z0[8 + 24] = sourceZ + U.sin(120) * smallRimRadius;
-     z0[9 + 24] = sourceZ + U.sin(135) * smallRimRadius;
-     z0[10 + 24] = sourceZ + U.sin(150) * smallRimRadius;
-     z0[11 + 24] = sourceZ + U.sin(165) * smallRimRadius;
-     z0[12 + 24] = sourceZ + U.sin(180) * smallRimRadius;
-     z0[13 + 24] = sourceZ + U.sin(195) * smallRimRadius;
-     z0[14 + 24] = sourceZ + U.sin(210) * smallRimRadius;
-     z0[15 + 24] = sourceZ + U.sin(225) * smallRimRadius;
-     z0[16 + 24] = sourceZ + U.sin(240) * smallRimRadius;
-     z0[17 + 24] = sourceZ + U.sin(255) * smallRimRadius;
-     z0[18 + 24] = sourceZ + U.sin(270) * smallRimRadius;
-     z0[19 + 24] = sourceZ + U.sin(285) * smallRimRadius;
-     z0[20 + 24] = sourceZ + U.sin(300) * smallRimRadius;
-     z0[21 + 24] = sourceZ + U.sin(315) * smallRimRadius;
-     z0[22 + 24] = sourceZ + U.sin(330) * smallRimRadius;
-     z0[23 + 24] = sourceZ + U.sin(345) * smallRimRadius;
-     y0[0 + 24] = sourceY + U.cos(0) * smallRimRadius;
-     y0[1 + 24] = sourceY + U.cos(15) * smallRimRadius;
-     y0[2 + 24] = sourceY + U.cos(30) * smallRimRadius;
-     y0[3 + 24] = sourceY + U.cos(45) * smallRimRadius;
-     y0[4 + 24] = sourceY + U.cos(60) * smallRimRadius;
-     y0[5 + 24] = sourceY + U.cos(75) * smallRimRadius;
-     y0[6 + 24] = sourceY + U.cos(90) * smallRimRadius;
-     y0[7 + 24] = sourceY + U.cos(105) * smallRimRadius;
-     y0[8 + 24] = sourceY + U.cos(120) * smallRimRadius;
-     y0[9 + 24] = sourceY + U.cos(135) * smallRimRadius;
-     y0[10 + 24] = sourceY + U.cos(150) * smallRimRadius;
-     y0[11 + 24] = sourceY + U.cos(165) * smallRimRadius;
-     y0[12 + 24] = sourceY + U.cos(180) * smallRimRadius;
-     y0[13 + 24] = sourceY + U.cos(195) * smallRimRadius;
-     y0[14 + 24] = sourceY + U.cos(210) * smallRimRadius;
-     y0[15 + 24] = sourceY + U.cos(225) * smallRimRadius;
-     y0[16 + 24] = sourceY + U.cos(240) * smallRimRadius;
-     y0[17 + 24] = sourceY + U.cos(255) * smallRimRadius;
-     y0[18 + 24] = sourceY + U.cos(270) * smallRimRadius;
-     y0[19 + 24] = sourceY + U.cos(285) * smallRimRadius;
-     y0[20 + 24] = sourceY + U.cos(300) * smallRimRadius;
-     y0[21 + 24] = sourceY + U.cos(315) * smallRimRadius;
-     y0[22 + 24] = sourceY + U.cos(330) * smallRimRadius;
-     y0[23 + 24] = sourceY + U.cos(345) * smallRimRadius;
+     double ringSmallRadius = rimRadius * .875;
+     z0[0 + 24] = sourceZ + U.sin(0) * ringSmallRadius;
+     z0[1 + 24] = sourceZ + U.sin(15) * ringSmallRadius;
+     z0[2 + 24] = sourceZ + U.sin(30) * ringSmallRadius;
+     z0[3 + 24] = sourceZ + U.sin(45) * ringSmallRadius;
+     z0[4 + 24] = sourceZ + U.sin(60) * ringSmallRadius;
+     z0[5 + 24] = sourceZ + U.sin(75) * ringSmallRadius;
+     z0[6 + 24] = sourceZ + U.sin(90) * ringSmallRadius;
+     z0[7 + 24] = sourceZ + U.sin(105) * ringSmallRadius;
+     z0[8 + 24] = sourceZ + U.sin(120) * ringSmallRadius;
+     z0[9 + 24] = sourceZ + U.sin(135) * ringSmallRadius;
+     z0[10 + 24] = sourceZ + U.sin(150) * ringSmallRadius;
+     z0[11 + 24] = sourceZ + U.sin(165) * ringSmallRadius;
+     z0[12 + 24] = sourceZ + U.sin(180) * ringSmallRadius;
+     z0[13 + 24] = sourceZ + U.sin(195) * ringSmallRadius;
+     z0[14 + 24] = sourceZ + U.sin(210) * ringSmallRadius;
+     z0[15 + 24] = sourceZ + U.sin(225) * ringSmallRadius;
+     z0[16 + 24] = sourceZ + U.sin(240) * ringSmallRadius;
+     z0[17 + 24] = sourceZ + U.sin(255) * ringSmallRadius;
+     z0[18 + 24] = sourceZ + U.sin(270) * ringSmallRadius;
+     z0[19 + 24] = sourceZ + U.sin(285) * ringSmallRadius;
+     z0[20 + 24] = sourceZ + U.sin(300) * ringSmallRadius;
+     z0[21 + 24] = sourceZ + U.sin(315) * ringSmallRadius;
+     z0[22 + 24] = sourceZ + U.sin(330) * ringSmallRadius;
+     z0[23 + 24] = sourceZ + U.sin(345) * ringSmallRadius;
+     y0[0 + 24] = sourceY + U.cos(0) * ringSmallRadius;
+     y0[1 + 24] = sourceY + U.cos(15) * ringSmallRadius;
+     y0[2 + 24] = sourceY + U.cos(30) * ringSmallRadius;
+     y0[3 + 24] = sourceY + U.cos(45) * ringSmallRadius;
+     y0[4 + 24] = sourceY + U.cos(60) * ringSmallRadius;
+     y0[5 + 24] = sourceY + U.cos(75) * ringSmallRadius;
+     y0[6 + 24] = sourceY + U.cos(90) * ringSmallRadius;
+     y0[7 + 24] = sourceY + U.cos(105) * ringSmallRadius;
+     y0[8 + 24] = sourceY + U.cos(120) * ringSmallRadius;
+     y0[9 + 24] = sourceY + U.cos(135) * ringSmallRadius;
+     y0[10 + 24] = sourceY + U.cos(150) * ringSmallRadius;
+     y0[11 + 24] = sourceY + U.cos(165) * ringSmallRadius;
+     y0[12 + 24] = sourceY + U.cos(180) * ringSmallRadius;
+     y0[13 + 24] = sourceY + U.cos(195) * ringSmallRadius;
+     y0[14 + 24] = sourceY + U.cos(210) * ringSmallRadius;
+     y0[15 + 24] = sourceY + U.cos(225) * ringSmallRadius;
+     y0[16 + 24] = sourceY + U.cos(240) * ringSmallRadius;
+     y0[17 + 24] = sourceY + U.cos(255) * ringSmallRadius;
+     y0[18 + 24] = sourceY + U.cos(270) * ringSmallRadius;
+     y0[19 + 24] = sourceY + U.cos(285) * ringSmallRadius;
+     y0[20 + 24] = sourceY + U.cos(300) * ringSmallRadius;
+     y0[21 + 24] = sourceY + U.cos(315) * ringSmallRadius;
+     y0[22 + 24] = sourceY + U.cos(330) * ringSmallRadius;
+     y0[23 + 24] = sourceY + U.cos(345) * ringSmallRadius;
      for (n = 48; --n >= 0; ) {
       z0[n + 48] = z0[n];
       y0[n + 48] = y0[n];
      }
      if (vehicle) {
-      V.parts.add(new VehiclePart(V, x0, y0, z0, 96, rimRGB, type + rimType + " wheel wheelRingFaces " + steers, textureType));
+      V.parts.add(new VehiclePart(V, x0, y0, z0, 96, rimRGB, type + rimType + wheelRingProperties + steers, textureType));
      } else {//Sport rim rings
-      TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 96, rimRGB, type + rimType + " wheel wheelRingFaces " + steers, textureType));
+      TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 96, rimRGB, type + rimType + wheelRingProperties + steers, textureType));
      }
     } else {
      double hexagonAngle1 = 0.86602540378443864676372317075294, hexagonAngle2 = .5;
@@ -396,10 +399,11 @@ public class Instance extends Core {
       x0[7] = sourceX + i_wheelThickness;
       x0[7] -= i_wheelThickness < 0 ? rimDepth : -rimDepth;
      }
+     String rimProperties = " wheel rimFaces ";
      if (vehicle) {
-      V.parts.add(new VehiclePart(V, x0, y0, z0, 8, rimRGB, type + rimType + " wheel rimFaces " + steers, textureType));
+      V.parts.add(new VehiclePart(V, x0, y0, z0, 8, rimRGB, type + rimType + rimProperties + steers, textureType));
      } else {//Normal rim
-      TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 8, rimRGB, type + rimType + " wheel rimFaces " + steers, textureType));
+      TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 8, rimRGB, type + rimType + rimProperties + steers, textureType));
      }
     }
    }
@@ -460,10 +464,11 @@ public class Instance extends Core {
      z0[n + 24] = z0[n];
      y0[n + 24] = y0[n];
     }
+    String treadProperties = " wheel cylindric ";
     if (vehicle) {
-     V.parts.add(new VehiclePart(V, x0, y0, z0, 48, wheelRGB, type + " wheel cylindric " + steers, textureType));
+     V.parts.add(new VehiclePart(V, x0, y0, z0, 48, wheelRGB, type + treadProperties + steers, textureType));
     } else {//Treads
-     TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 48, wheelRGB, type + " wheel cylindric " + steers, textureType));
+     TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 48, wheelRGB, type + treadProperties + steers, textureType));
     }
    }
    if (wheelSmoothing != 0) {
@@ -576,9 +581,9 @@ public class Instance extends Core {
      y0[n + 48] = y0[n];
     }
     if (vehicle) {
-     V.parts.add(new VehiclePart(V, x0, y0, z0, 96, wheelRGB, type + " wheel wheelRingFaces " + steers, textureType));
+     V.parts.add(new VehiclePart(V, x0, y0, z0, 96, wheelRGB, type + wheelRingProperties + steers, textureType));
     } else {//Tread edges
-     TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 96, wheelRGB, type + " wheel wheelRingFaces " + steers, textureType));
+     TP.parts.add(new TrackPartPart(TP, x0, y0, z0, 96, wheelRGB, type + wheelRingProperties + steers, textureType));
     }
    }
   }

@@ -3,29 +3,32 @@ package ve.vehicles;
 import javafx.scene.paint.Color;
 import ve.Camera;
 import ve.Network;
+import ve.Sound;
 import ve.VE;
 import ve.effects.Explosion;
 import ve.environment.*;
 import ve.trackElements.TE;
 import ve.trackElements.trackParts.TrackPart;
 import ve.trackElements.trackParts.TrackPlane;
+import ve.utilities.SL;
 import ve.utilities.U;
 import ve.vehicles.specials.Shot;
 import ve.vehicles.specials.Special;
 
 public class Physics {
  private final Vehicle V;
- public double speed, speedXZ, speedYZ, stallSpeed;
- double netSpeed;
- public double netSpeedX, netSpeedY, netSpeedZ;
+ public double speed, speedX, speedY, speedZ,
+ speedXZ, speedYZ, stallSpeed;
+ public double netSpeed;
  double minimumFlightSpeedWithoutStall;
- private double lastXZ;
+ private double driftXZ;
  public double cameraXZ;
  private double airSpinXZ;
  final double[] wheelSpin = new double[2];
+ private double hitOtherX, hitOtherZ;
  double destructTimer;
  double massiveHitTimer;
- double localVehicleGround;
+ public double localGround;
  public boolean flipped;
  public double stuntTimer;
  public double stuntXY, stuntYZ, stuntXZ;
@@ -34,29 +37,34 @@ public class Physics {
  private boolean onAntiGravity;
  public boolean inTornado;
  boolean onVolcano;
- boolean atPoolXZ;
- public boolean inPool;
- boolean wheelDiscord;
- double wheelGapFrontToBack;
- double wheelGapLeftToRight;
+ boolean atPoolXZ, inPool;
+ private boolean inWall;
+ double wheelGapFrontToBack, wheelGapLeftToRight;
  public boolean wrathEngaged;
  public boolean[] wrathStuck;
  boolean inWrath;
- private long spinMultiplyPositive = 1, spinMultiplyNegative = 1;
  public long vehicleHit = -1;
  public double explodeStage;
  public boolean subtractExplodeStage;
  public String terrainProperties = "";
  double explosionDiameter, explosionDamage, explosionPush;
  static final double fromAngleToVelocityConstant = .2;
+ static final double valueAdjustSmoothing = 1;
+ static final double highGrip = 100;
  public long polarity;
- public Mode mode = Mode.drive;
+ public Mode mode = Mode.driveSolid;
 
- public enum Mode {drive, neutral, stunt, fly, drivePool}
+ public enum Mode {driveSolid, drivePool, neutral, stunt, fly}
 
  enum Contact {none, rubber, metal}
 
  enum Landing {tires, touch, crash}
+
+ private enum RichHit {
+  ;
+  private static final double minimumSpeed = 150;
+  static final long dustQuantity = 8;
+ }
 
  Physics(Vehicle vehicle) {
   V = vehicle;
@@ -74,110 +82,110 @@ public class Physics {
   return V.wheels.get(0).againstWall || V.wheels.get(1).againstWall || V.wheels.get(2).againstWall || V.wheels.get(3).againstWall;
  }
 
- private void crash(double power) {
-  power = Math.abs(power * V.fragility);
-  if (power > 10) {
-   V.addDamage(Math.abs(power * 2 * VE.tick));
+ private double getNetSpeed() {
+  return U.netValue(speedX, speedY, speedZ);
+ }
+
+ private void crash(double power, boolean vehicleCollide) {
+  power = Math.abs(power);
+  double fragilityBased = power * V.fragility;
+  if (fragilityBased > (vehicleCollide ? 0 : 50)) {
+   V.addDamage(fragilityBased * 4 * VE.tick);
    for (VehiclePart part : V.parts) {
     part.deform();
-    part.throwChip(power);
+    part.throwChip(U.randomPlusMinus(power));
    }
    if (V.isIntegral() && V.VA.crashTimer <= 0) {
-    (power > 30 ? V.VA.crashHard : V.VA.crashSoft).play(Double.NaN, V.VA.distanceVehicleToCamera);
-    if (V.bounce > .9) {
-     V.VA.land.play(Double.NaN, V.VA.distanceVehicleToCamera);
-    }
+    (power > RichHit.minimumSpeed ? V.VA.crashHard : V.VA.crashSoft).play(Double.NaN, V.VA.distanceVehicleToCamera);
     V.VA.crashTimer = 2;
    }
+  }
+  if (V.bounce > .9 && V.isIntegral() && power > RichHit.minimumSpeed) {
+   V.VA.land.play(Double.NaN, V.VA.distanceVehicleToCamera);
   }
  }
 
  public void runCollisions() {
   boolean replay = VE.status == VE.Status.replay, greenTeam = V.index < VE.vehiclesInMatch >> 1;
   if (!V.phantomEngaged) {
-   double netDamage;
    if (!V.destroyed && !V.reviveImmortality) {
     for (Vehicle otherV : VE.vehicles) {
      if (!U.sameTeam(V, otherV) && !otherV.destroyed && !otherV.reviveImmortality && !otherV.phantomEngaged) {
-      boolean aHit = false;
-      for (int n = 4; --n >= 0; ) {
-       Wheel W = V.wheels.get(n), otherW = otherV.wheels.get(n);
-       double collideAt = (V.collisionRadius() + otherV.collisionRadius()) * .5,
-       behindX = W.X - (netSpeedX * VE.tick),
-       behindY = W.Y - (netSpeedY * VE.tick),
-       behindZ = W.Z - (netSpeedZ * VE.tick),
-       averageX = behindX * .5,
-       averageY = behindY * .5,
-       averageZ = behindZ * .5;
-       if (
-       ((U.distance(averageY, otherW.Y, averageZ, otherW.Z) < collideAt || U.distance(behindY, otherW.Y, behindZ, otherW.Z) < collideAt) && ((W.X > otherW.X && behindX < otherW.X) || (W.X < otherW.X && behindX > otherW.X))) ||//<-inBoundsX
-       ((U.distance(averageX, otherW.X, averageY, otherW.Y) < collideAt || U.distance(behindX, otherW.X, behindY, otherW.Y) < collideAt) && ((W.Z > otherW.Z && behindZ < otherW.Z) || (W.Z < otherW.Z && behindZ > otherW.Z))) ||//<-inBoundsZ
-       ((U.distance(averageX, otherW.X, averageZ, otherW.Z) < collideAt || U.distance(behindX, otherW.X, behindZ, otherW.Z) < collideAt) && ((W.Y > otherW.Y && behindY < otherW.Y) || (W.Y < otherW.Y && behindY > otherW.Y))) ||//<-inBoundsY
-       U.distance(W, otherW) < collideAt) {
-        W.speedY -= V.getsLifted > 0 && V.Y < otherV.Y ? E.gravity * 1.5 * VE.tick : 0;
-        netDamage = Math.abs(netSpeed - otherV.P.netSpeed) * otherV.damageDealt[n] * otherV.energyMultiple * .3;//<-Damage now RECEIVING from other vehicles--not vice versa
-        if (V.isIntegral()) {
-         VE.Match.scoreDamage[greenTeam ? 1 : 0] += replay ? 0 : netDamage;//<-Team assignment swapped because damage is RECEIVING
-        }
-        hitCheck(otherV);
-        double theirPushX = 0, theirPushZ = 0, yourPushX = 0, yourPushZ = 0;
-        if (otherV.isIntegral() && V.getsPushed >= otherV.getsPushed) {
-         theirPushX = Math.max(0, V.getsPushed) * (otherW.speedX - W.speedX) * .25;
-         theirPushZ = Math.max(0, V.getsPushed) * (otherW.speedZ - W.speedZ) * .25;
-        }
-        if (V.isIntegral() && V.getsPushed <= otherV.getsPushed) {
-         yourPushX = Math.max(0, V.pushesOthers) * (W.speedX - otherW.speedX) * .25;
-         yourPushZ = Math.max(0, V.pushesOthers) * (W.speedZ - otherW.speedZ) * .25;
-        }
-        if (V.getsPushed >= otherV.getsPushed) {
-         if (
-         ((V.X > otherV.X || W.X > otherW.X) && W.speedX < otherW.speedX) ||
-         ((V.X < otherV.X || W.X < otherW.X) && W.speedX > otherW.speedX)) {
-          W.hitOtherX = V.grip > 100 ? otherV.P.netSpeedX : otherW.speedX;
-         }
-         if (
-         ((V.Z > otherV.Z || W.Z > otherW.Z) && W.speedZ < otherW.speedZ) ||
-         ((V.Z < otherV.Z || W.Z < otherW.Z) && W.speedZ > otherW.speedZ)) {
-          W.hitOtherZ = V.grip > 100 ? otherV.P.netSpeedZ : otherW.speedZ;
-         }
-        }
-        otherW.speedX += yourPushX;
-        otherW.speedZ += yourPushZ;
-        W.speedX -= theirPushX;
-        W.speedZ -= theirPushZ;
-        if (V.getsLifted > 0 && V.Y != otherV.Y) {
-         W.speedY -= V.getsLifted * (V.Y < otherV.Y ? 1 : -1) * .0025 * Math.abs(U.netValue(netSpeedX, netSpeedZ) - U.netValue(otherV.P.netSpeedX, otherV.P.netSpeedZ));
-        }
-        crash(netDamage);//<-Crashing self now, not the collided
-        if (W.speedY < -100) {
-         V.VA.land();
-        }
-        if (otherV.getsLifted > 0 && otherV.Y != V.Y) {
-         otherW.speedY -= V.liftsOthers * (otherV.Y < V.Y ? 1 : -1) * .0025 * Math.abs(U.netValue(netSpeedX, netSpeedZ) - U.netValue(otherV.P.netSpeedX, otherV.P.netSpeedZ));
-        }
-        aHit = true;
+      double collideAt = V.collisionRadius + otherV.collisionRadius,//<-This is absolute--there's no reason for it to be any other value. Change the default value if needed
+      behindX = V.X - (speedX * VE.tick),
+      behindY = V.Y - (speedY * VE.tick),
+      behindZ = V.Z - (speedZ * VE.tick),
+      averageX = (V.X + behindX) * .5,
+      averageY = (V.Y + behindY) * .5,
+      averageZ = (V.Z + behindZ) * .5;
+      if (
+      ((U.distance(averageY, otherV.Y, averageZ, otherV.Z) < collideAt || U.distance(behindY, otherV.Y, behindZ, otherV.Z) < collideAt) && ((V.X > otherV.X && behindX < otherV.X) || (V.X < otherV.X && behindX > otherV.X))) ||//<-inBoundsX
+      ((U.distance(averageX, otherV.X, averageY, otherV.Y) < collideAt || U.distance(behindX, otherV.X, behindY, otherV.Y) < collideAt) && ((V.Z > otherV.Z && behindZ < otherV.Z) || (V.Z < otherV.Z && behindZ > otherV.Z))) ||//<-inBoundsZ
+      ((U.distance(averageX, otherV.X, averageZ, otherV.Z) < collideAt || U.distance(behindX, otherV.X, behindZ, otherV.Z) < collideAt) && ((V.Y > otherV.Y && behindY < otherV.Y) || (V.Y < otherV.Y && behindY > otherV.Y))) ||//<-inBoundsY
+      U.distance(V, otherV) < collideAt) {
+       if (V.getsLifted > 0 && V.Y < otherV.Y) {
+        speedY -= E.gravity * 1.5 * VE.tick;
        }
-      }
-      if (aHit) {
+       double yourDamage = Math.abs(netSpeed - otherV.P.netSpeed) * otherV.damageDealt * otherV.energyMultiple;//<-Damage now RECEIVING from other vehicles--not vice versa
+       //Don't multiply 'yourDamage' by a constant at initialization or it'll skew scores!
+       if (V.isIntegral()) {
+        VE.Match.scoreDamage[greenTeam ? 1 : 0] += replay ? 0 : yourDamage;
+       }
+       hitCheck(otherV);
+       double theirPushX = 0, theirPushZ = 0, yourPushX = 0, yourPushZ = 0;
+       if (otherV.isIntegral() && V.getsPushed >= otherV.getsPushed) {
+        theirPushX = V.getsPushed * (otherV.P.speedX - speedX);
+        theirPushZ = V.getsPushed * (otherV.P.speedZ - speedZ);
+       }
+       if (V.isIntegral() && V.getsPushed <= otherV.getsPushed) {
+        yourPushX = V.pushesOthers * (speedX - otherV.P.speedX);
+        yourPushZ = V.pushesOthers * (speedZ - otherV.P.speedZ);
+       }
+       if (V.getsPushed >= otherV.getsPushed) {
+        if (
+        (V.X > otherV.X && speedX < otherV.P.speedX) ||
+        (V.X < otherV.X && speedX > otherV.P.speedX)) {
+         hitOtherX = otherV.P.speedX;
+        }
+        if (
+        (V.Z > otherV.Z && speedZ < otherV.P.speedZ) ||
+        (V.Z < otherV.Z && speedZ > otherV.P.speedZ)) {
+         hitOtherZ = otherV.P.speedZ;
+        }
+       }
+       if (otherV.getsLifted > 0 && otherV.Y != V.Y) {
+        otherV.P.speedY -= V.liftsOthers * (otherV.Y < V.Y ? 1 : -1) * Math.abs(U.netValue(speedX, speedZ) - U.netValue(otherV.P.speedX, otherV.P.speedZ));
+       }
+       if (V.getsLifted > 0 && V.Y != otherV.Y) {
+        speedY -= V.getsLifted * (V.Y < otherV.Y ? 1 : -1) * Math.abs(U.netValue(speedX, speedZ) - U.netValue(otherV.P.speedX, otherV.P.speedZ));
+       }
+       if (speedY < -RichHit.minimumSpeed) {
+        V.VA.land();
+       }//^Lifting before pushing is probably better
+       otherV.P.speedX += yourPushX;
+       otherV.P.speedZ += yourPushZ;
+       speedX -= theirPushX;
+       speedZ -= theirPushZ;
+       crash(yourDamage * 2, true);
        if (V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name())) {
         V.setDamage(V.damageCeiling());
         otherV.setDamage(otherV.damageCeiling());
         VE.Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : otherV.durability;
         V.setCameraShake(Camera.shakePresets.normalNuclear);
        }
-       if (V.type != Vehicle.Type.aircraft && V.damageDealt[U.random(4)] >= 100 && (massiveHitTimer <= 0 || otherV.isIntegral())) {
+       if (V.dealsMassiveDamage() && (massiveHitTimer <= 0 || otherV.isIntegral())) {
         otherV.setDamage(otherV.damageCeiling());
         VE.Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : otherV.durability;
         V.VA.massiveHit.play(Double.NaN, V.VA.distanceVehicleToCamera);
         massiveHitTimer = U.random(5.);
         for (VehiclePart part : otherV.parts) {
          part.deform();
-         part.throwChip(U.randomPlusMinus(Math.abs(netSpeed - otherV.P.netSpeed) * .5));
+         part.throwChip(netSpeed - otherV.P.getNetSpeed());//<-Get it again because netSpeed field won't be updated with velocities from a KILL-O-MATIC slam
         }
         V.setCameraShake(Camera.shakePresets.massiveHit);
        }
       }
-      if (V.spinner != null && U.distance(V, otherV) < V.renderRadius + otherV.collisionRadius()) {//<-'renderRadius' is best if spinner has largest diameter of the vehicle
+      if (V.spinner != null && U.distance(V, otherV) < V.renderRadius + otherV.collisionRadius) {//<-'renderRadius' ideal if spinner has largest diameter of the vehicle
        V.spinner.hit(otherV);
       }
      }
@@ -186,15 +194,18 @@ public class Physics {
    for (Special special : V.specials) {
     for (Vehicle vehicle : VE.vehicles) {
      if (!U.sameTeam(V, vehicle) && (!vehicle.destroyed || wrathEngaged) && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
-      double diameter = special.type == Special.Type.mine ? U.netValue(vehicle.P.netSpeedX, vehicle.P.netSpeedY, vehicle.P.netSpeedZ) : special.diameter;
+      double diameter = special.type == Special.Type.mine ? vehicle.P.netSpeed : special.diameter;
       for (Shot shot : special.shots) {
        if (shot.stage > 0 && shot.hit < 1 && (shot.doneDamaging == null || !shot.doneDamaging[vehicle.index]) && (special.type != Special.Type.missile || vehicle.isIntegral()) && !(special.type == Special.Type.mine && (U.distance(shot, vehicle) > 2000 || !vehicle.isIntegral()))) {
-        double amount = special.diameter + vehicle.collisionRadius(), shotAverageX = (shot.X + shot.behindX) * .5, shotAverageY = (shot.Y + shot.behindY) * .5, shotAverageZ = (shot.Z + shot.behindZ) * .5;
+        double collideAt = special.diameter + vehicle.collisionRadius,
+        shotAverageX = (shot.X + shot.behindX) * .5,
+        shotAverageY = (shot.Y + shot.behindY) * .5,
+        shotAverageZ = (shot.Z + shot.behindZ) * .5;
         if (
-        ((U.distance(shotAverageY, vehicle.Y, shotAverageZ, vehicle.Z) < amount || U.distance(shot.behindY, vehicle.Y, shot.behindZ, vehicle.Z) < amount) && ((shot.X > vehicle.X && shot.behindX < vehicle.X) || (shot.X < vehicle.X && shot.behindX > vehicle.X))) ||//<-inBoundsX
-        ((U.distance(shotAverageX, vehicle.X, shotAverageY, vehicle.Y) < amount || U.distance(shot.behindX, vehicle.X, shot.behindY, vehicle.Y) < amount) && ((shot.Z > vehicle.Z && shot.behindZ < vehicle.Z) || (shot.Z < vehicle.Z && shot.behindZ > vehicle.Z))) ||//<-inBoundsZ
-        ((U.distance(shotAverageX, vehicle.X, shotAverageZ, vehicle.Z) < amount || U.distance(shot.behindX, vehicle.X, shot.behindZ, vehicle.Z) < amount) && ((shot.Y > vehicle.Y && shot.behindY < vehicle.Y) || (shot.Y < vehicle.Y && shot.behindY > vehicle.Y))) ||//<-inBoundsY
-        U.distance(shot, vehicle) < diameter + vehicle.collisionRadius()) {
+        ((U.distance(shotAverageY, vehicle.Y, shotAverageZ, vehicle.Z) < collideAt || U.distance(shot.behindY, vehicle.Y, shot.behindZ, vehicle.Z) < collideAt) && ((shot.X > vehicle.X && shot.behindX < vehicle.X) || (shot.X < vehicle.X && shot.behindX > vehicle.X))) ||//<-inBoundsX
+        ((U.distance(shotAverageX, vehicle.X, shotAverageY, vehicle.Y) < collideAt || U.distance(shot.behindX, vehicle.X, shot.behindY, vehicle.Y) < collideAt) && ((shot.Z > vehicle.Z && shot.behindZ < vehicle.Z) || (shot.Z < vehicle.Z && shot.behindZ > vehicle.Z))) ||//<-inBoundsZ
+        ((U.distance(shotAverageX, vehicle.X, shotAverageZ, vehicle.Z) < collideAt || U.distance(shot.behindX, vehicle.X, shot.behindZ, vehicle.Z) < collideAt) && ((shot.Y > vehicle.Y && shot.behindY < vehicle.Y) || (shot.Y < vehicle.Y && shot.behindY > vehicle.Y))) ||//<-inBoundsY
+        U.distance(shot, vehicle) < diameter + vehicle.collisionRadius) {
          hitCheck(vehicle);
          double shotDamage = special.damageDealt;
          if (special.type == Special.Type.raygun || special.type == Special.Type.flamethrower || special.type == Special.Type.thewrath || special.type.name().contains(Special.Type.blaster.name())) {
@@ -212,22 +223,18 @@ public class Physics {
          }
          if (special.pushPower > 0) {
           if (vehicle.getsPushed >= 0) {
-           for (Wheel wheel : vehicle.wheels) {
-            wheel.speedX += U.randomPlusMinus(special.pushPower);
-            wheel.speedZ += U.randomPlusMinus(special.pushPower);
-           }
+           vehicle.P.speedX += U.randomPlusMinus(special.pushPower);
+           vehicle.P.speedZ += U.randomPlusMinus(special.pushPower);
           }
-          if (vehicle.getsLifted >= 0 && (special.type == Special.Type.forcefield || U.contains(special.type.name(), Special.Type.shell.name(), Special.Type.missile.name()))) {
-           for (Wheel wheel : vehicle.wheels) {
-            wheel.speedY += U.randomPlusMinus(special.pushPower);
-           }
+          if (vehicle.getsLifted >= 0 && (special.type == Special.Type.forcefield || special.type == Special.Type.missile || special.type == Special.Type.mine || U.contains(special.type.name(), Special.Type.shell.name()))) {
+           vehicle.P.speedY += U.randomPlusMinus(special.pushPower);
           }
          }
          for (VehiclePart part : vehicle.parts) {
           part.deform();
-          part.throwChip(U.randomPlusMinus(shot.speed * .5));
+          part.throwChip(U.randomPlusMinus(shot.speed));
          }
-         double shotToCameraSoundDistance = Math.sqrt(U.distance(shot)) * .08;
+         double shotToCameraSoundDistance = Math.sqrt(U.distance(shot)) * Sound.standardDistance(1);
          if (special.useSmallHits) {
           V.VA.hitShot.play(Double.NaN, shotToCameraSoundDistance);
          }
@@ -302,11 +309,9 @@ public class Physics {
         vehicle.X = V.X;
         vehicle.Y = V.Y;
         vehicle.Z = V.Z;
-        for (int n = 4; --n >= 0; ) {
-         vehicle.wheels.get(n).speedX = V.wheels.get(n).speedX;
-         vehicle.wheels.get(n).speedY = V.wheels.get(n).speedY;
-         vehicle.wheels.get(n).speedZ = V.wheels.get(n).speedZ;
-        }
+        vehicle.P.speedX = speedX;
+        vehicle.P.speedY = speedY;
+        vehicle.P.speedZ = speedZ;
         for (VehiclePart part : vehicle.parts) {
          part.X = V.X + U.randomPlusMinus(V.absoluteRadius);
          part.Y = V.Y + U.randomPlusMinus(V.absoluteRadius);
@@ -326,7 +331,7 @@ public class Physics {
     for (Vehicle vehicle : VE.vehicles) {
      if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
       for (Explosion explosion : V.explosions) {
-       if (explosion.stage > 0 && U.distance(explosion, vehicle) < vehicle.collisionRadius() + explosionDiameter) {
+       if (explosion.stage > 0 && U.distance(explosion, vehicle) < vehicle.collisionRadius + explosionDiameter) {
         if (!explosion.doneDamaging[vehicle.index]) {
          hitCheck(vehicle);
          vehicle.addDamage(explosionDamage);
@@ -338,19 +343,15 @@ public class Physics {
          }
         }
         if (vehicle.getsPushed >= 0) {
-         for (Wheel wheel : vehicle.wheels) {
-          wheel.speedX += U.randomPlusMinus(explosionPush);
-          wheel.speedZ += U.randomPlusMinus(explosionPush);
-         }
+         vehicle.P.speedX += U.randomPlusMinus(explosionPush);
+         vehicle.P.speedZ += U.randomPlusMinus(explosionPush);
         }
         if (vehicle.getsLifted >= 0) {
-         for (Wheel wheel : vehicle.wheels) {
-          wheel.speedY += U.randomPlusMinus(explosionPush);
-         }
+         vehicle.P.speedY += U.randomPlusMinus(explosionPush);
         }
         for (VehiclePart part : vehicle.parts) {
          part.deform();
-         part.throwChip(U.randomPlusMinus(500.));
+         part.throwChip(300);
         }
         if (nuclear) {
          V.VA.crashDestroy.play(Double.NaN, V.VA.distanceVehicleToCamera);
@@ -363,17 +364,15 @@ public class Physics {
    if (!V.destroyed) {
     if (V.isFixed()) {
      for (Vehicle vehicle : VE.vehicles) {
-      if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && U.distance(V.X, vehicle.X, V.Y + (V.turretBaseY * .5), vehicle.Y, V.Z, vehicle.Z) < V.collisionRadius() * .5 + vehicle.collisionRadius() && !vehicle.phantomEngaged) {
+      if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && U.distance(V.X, vehicle.X, V.Y + (V.turretBaseY * .5), vehicle.Y, V.Z, vehicle.Z) < V.collisionRadius * .5 + vehicle.collisionRadius && !vehicle.phantomEngaged) {
        hitCheck(vehicle);
        if (vehicle.fragility > 0) {
-        vehicle.addDamage(V.turretBaseDamageDealt * vehicle.fragility);
-        VE.Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : V.turretBaseDamageDealt * vehicle.fragility;
+        vehicle.addDamage(V.structureBaseDamageDealt * vehicle.fragility);
+        VE.Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : V.structureBaseDamageDealt * vehicle.fragility;
        }
-       for (Wheel wheel : vehicle.wheels) {
-        wheel.speedX += U.randomPlusMinus(500.);
-        wheel.speedZ += U.randomPlusMinus(500.);
-        wheel.speedY += U.randomPlusMinus(200.);
-       }
+       vehicle.P.speedX += U.randomPlusMinus(500.);
+       vehicle.P.speedZ += U.randomPlusMinus(500.);
+       vehicle.P.speedY += U.randomPlusMinus(200.);
        for (VehiclePart part : vehicle.parts) {
         if (vehicle.fragility > 0) {
          part.deform();
@@ -388,16 +387,19 @@ public class Physics {
     }
     if (!V.reviveImmortality) {
      for (Special special : V.specials) {
-      if (special.fire && special.type.name().contains("particle")) {
+      if (special.type.name().contains(SL.particle) && special.fire) {
        boolean disintegrate = special.type == Special.Type.particledisintegrator;
        for (Vehicle vehicle : VE.vehicles) {
         if ((disintegrate ? !U.sameTeam(V, vehicle) : !U.sameVehicle(V, vehicle) && U.sameTeam(V, vehicle)) &&
         !vehicle.destroyed && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
          if (
-         ((vehicle.Y <= V.Y && U.sin(V.YZ) >= 0) || (vehicle.Y >= V.Y && U.sin(V.YZ) <= 0) || Math.abs(vehicle.Y - V.Y) < vehicle.collisionRadius()) &&//<-inY
+         ((vehicle.Y <= V.Y && U.sin(V.YZ) >= 0) || (vehicle.Y >= V.Y && U.sin(V.YZ) <= 0) || Math.abs(vehicle.Y - V.Y) < vehicle.collisionRadius) &&//<-inY
          ((vehicle.X <= V.X && U.sin(V.XZ) >= 0) || (vehicle.X >= V.X && U.sin(V.XZ) <= 0)) &&//<-inX
          ((vehicle.Z <= V.Z && U.cos(V.XZ) <= 0) || (vehicle.Z >= V.Z && U.cos(V.XZ) >= 0)))/*<-inZ*/ {
           if (disintegrate) {
+           for (VehiclePart part : vehicle.parts) {
+            part.deform();
+           }
            hitCheck(vehicle);
            VE.Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : 10 * VE.tick;
           }
@@ -411,8 +413,8 @@ public class Physics {
      }
      if (E.Storm.Lightning.exists && E.Storm.Lightning.strikeStage < 1) {
       double distance = U.distance(V.X, E.Storm.Lightning.X, V.Z, E.Storm.Lightning.Z);
-      if (V.Y >= E.Storm.stormCloudY && distance < V.collisionRadius() * 6) {
-       V.addDamage(V.durability * .5 + (distance < V.collisionRadius() * 2 ? V.durability : 0));
+      if (V.Y >= E.Storm.stormCloudY && distance < V.collisionRadius * 6) {
+       V.addDamage(V.durability * .5 + (distance < V.collisionRadius * 2 ? V.durability : 0));
        for (VehiclePart part : V.parts) {
         part.deform();
         part.throwChip(U.randomPlusMinus(500.));
@@ -424,9 +426,9 @@ public class Physics {
      }
      for (Fire.Instance fire : Fire.instances) {
       double distance = U.distance(V, fire);
-      if (distance < V.collisionRadius() + fire.absoluteRadius) {
+      if (distance < V.collisionRadius + fire.absoluteRadius) {
        V.addDamage(10 * VE.tick);
-       if (distance * 2 < V.collisionRadius() + fire.absoluteRadius) {
+       if (distance * 2 < V.collisionRadius + fire.absoluteRadius) {
         V.addDamage(10 * VE.tick);
        }
        for (VehiclePart part : V.parts) {
@@ -435,7 +437,7 @@ public class Physics {
       }
      }
      for (Boulder.Instance boulder : Boulder.instances) {
-      if (U.distance(V.X, boulder.X, V.Z, boulder.Z) < V.collisionRadius() + boulder.S.getRadius() && V.Y > boulder.Y - V.collisionRadius() - boulder.S.getRadius()) {
+      if (U.distanceXZ(V, boulder) < V.collisionRadius + boulder.S.getRadius() && V.Y > boulder.Y - V.collisionRadius - boulder.S.getRadius()) {//Will call incorrectly if a vehicle is underground and it rolls overhead
        V.setDamage(V.damageCeiling());
        for (VehiclePart part : V.parts) {
         part.deform();
@@ -486,12 +488,148 @@ public class Physics {
 
  public void run() {
   int n;
-  vehicleHit = V.isIntegral() ? -1 : vehicleHit;
+  if (V.isIntegral()) {
+   vehicleHit = -1;
+  }
   atPoolXZ = E.Pool.exists && U.distance(V.X, E.Pool.X, V.Z, E.Pool.Z) < E.Pool.C[0].getRadius();
-  if (V.isFixed())/*TURRETS & INFRASTRUCTURE*/ {
+  runVehiclesAircraft();
+  runTurretsInfrastructure();
+  if (V.explosionsWhenDestroyed > 0 && !V.isIntegral() && !V.destroyed) {
+   for (n = (int) V.explosionsWhenDestroyed; --n >= 0; ) {
+    V.explosions.get(V.currentExplosion).deploy(U.randomPlusMinus(V.absoluteRadius), U.randomPlusMinus(V.absoluteRadius), U.randomPlusMinus(V.absoluteRadius), V);
+    V.currentExplosion = ++V.currentExplosion >= E.explosionQuantity ? 0 : V.currentExplosion;
+   }
+   V.setCameraShake(Camera.shakePresets.vehicleExplode);
+   V.VA.explode.play(Double.NaN, V.VA.distanceVehicleToCamera);
+   //VA.crashDestroy.play(Double.NaN, VA.distanceVehicleToCamera);<-For turrets...maybe?
+  }
+  V.X = U.clamp(E.mapBounds.left, V.X, E.mapBounds.right);
+  V.Z = U.clamp(E.mapBounds.backward, V.Z, E.mapBounds.forward);
+  V.Y = U.clamp(E.mapBounds.Y, V.Y, -E.mapBounds.Y);
+ }
+
+ private void runVehiclesAircraft() {
+  if (!V.isFixed()) {
+   boolean replay = VE.status == VE.Status.replay;
+   netSpeed = getNetSpeed();
+   polarity = Math.abs(V.YZ) > 90 ? -1 : 1;
+   flipped = (Math.abs(V.XY) > 90 && Math.abs(V.YZ) <= 90) || (Math.abs(V.YZ) > 90 && Math.abs(V.XY) <= 90);
+   double clearance = flipped && !V.landStuntsBothSides ? -V.absoluteRadius * .075 : V.clearanceY;
+   inPool = atPoolXZ && V.Y + clearance > 0;
+   boolean onBouncy = U.contains(terrainProperties, SL.Thicks.bounce, " maxbounce ");
+   if (mode.name().startsWith(SL.drive)) {
+    stuntSpeedYZ = stuntSpeedXY = stuntSpeedXZ = 0;
+   }
+   if (!V.destroyed) {
+    runAirEngage();
+    if (mode == Mode.stunt) {
+     runAerialControl();
+    } else {
+     runDrivePower();
+    }
+   }
+   runWheelSpin();
+   double maxTurn = V.maxTurn + U.random(V.randomTurnKick);
+   if (!replay) {
+    runSteering(maxTurn);
+    if (V.VT != null) {
+     V.VT.runSteering(maxTurn);
+    }
+   }
+   double turnSpeed = V.steerInPlace ? 1 : Math.min(1, Math.max(netSpeed, Math.abs(speed)) * .025);
+   if (speed < 0) {
+    turnSpeed *= -1;
+   }
+   if (mode.name().startsWith(SL.drive) || V.phantomEngaged) {
+    if (!flipped) {
+     airSpinXZ = fromAngleToVelocityConstant * speedXZ * turnSpeed;
+     V.XZ += speedXZ * turnSpeed * fromAngleToVelocityConstant * VE.tick;
+    }
+   } else if (mode != Mode.fly) {//airSpinXZ gets zeroed in runAerialControl() if aerial control is enhanced
+    V.XZ += airSpinXZ * VE.tick;
+    stuntXZ += airSpinXZ * VE.tick;
+   }
+   runFlight(maxTurn, turnSpeed);
+   if (!V.phantomEngaged && !inTornado && !V.floats) {
+    speedY += E.gravity * (V.amphibious && inPool && V.Y > 0 ? -1 : 1) * VE.tick;
+   }//There IS better ground traction if the gravity is applied before setting wheel XYZ
+   runSetWheelXYZ(clearance);
+   if (mode.name().startsWith(SL.drive) || V.phantomEngaged) {
+    runDriveVelocity();
+    runSkidsAndDust();
+    runBouncyTerrain(onBouncy);
+    mode = Mode.neutral;
+   }
+   driftXZ = V.XZ;//<-Best spot for assigning this
+   runSpeedBoost();
+   boolean crashLand = (Math.abs(V.YZ) > 30 || Math.abs(V.XY) > 30) && !(Math.abs(V.YZ) > 150 && Math.abs(V.XY) > 150);
+   double gravityCompensation = E.gravity * 2 * VE.tick;
+   for (Wheel wheel : V.wheels) {//<-Best place for this?
+    wheel.againstWall = wheel.angledSurface = false;
+   }
+   if (!V.phantomEngaged) {
+    double bounceBackForce = flipped ? 1 : Math.abs(U.sin(V.XY)) + Math.abs(U.sin(V.YZ)),
+    flatPlaneBounce = Math.min(Math.abs(U.sin(V.XY)) + Math.abs(U.sin(V.YZ)), 1);
+    runGroundConnect(crashLand, bounceBackForce, flatPlaneBounce);
+    runPoolInteract();//<-AFTER ground connect for correct mode!
+    if (Volcano.exists) {
+     double volcanoDistance = U.distance(V.X, Volcano.X, V.Z, Volcano.Z);
+     onVolcano = volcanoDistance < Volcano.radiusBottom && volcanoDistance > Volcano.radiusTop && V.Y > -Volcano.radiusBottom + volcanoDistance;
+    } else {
+     onVolcano = false;
+    }
+    terrainProperties = E.Terrain.vehicleDefaultTerrain;
+    setTerrainFromTrackPlanes(clearance, gravityCompensation);//<-terrainProperties set here
+    runTrackPlaneInteraction(crashLand, bounceBackForce, flatPlaneBounce, gravityCompensation);
+    if (onVolcano) {
+     mode = Mode.driveSolid;
+    }
+    //runCollisionSpin();//<-Replace with a new spin system?
+   }
+   runAngleSet();
+   Tornado.vehicleInteract(V);
+   runHitOther();
+   if (mode == Mode.driveSolid && !onBouncy) {
+    V.Y = (V.wheels.get(0).Y + V.wheels.get(1).Y + V.wheels.get(2).Y + V.wheels.get(3).Y) * .25 - (clearance * U.cos(V.YZ) * U.cos(V.XY));//U.cos's correct upside-down landings
+   } else {
+    V.Y += speedY * V.energyMultiple * VE.tick;
+   }
+   V.X += speedX * V.energyMultiple * VE.tick;
+   V.Z += speedZ * V.energyMultiple * VE.tick;
+   localGround = E.Ground.level + (atPoolXZ ? E.Pool.depth : 0);
+   V.runMoundInteract(clearance, gravityCompensation);//<-localVehicleGround is set here
+   if (onVolcano) {
+    double baseAngle = flipped ? 225 : 45, vehicleVolcanoXZ = V.XZ, VolcanoPlaneY = Math.max(Volcano.radiusTop * .5, (Volcano.radiusBottom * .5) - ((Volcano.radiusBottom * .5) * (Math.abs(V.Y) / Volcano.height)));
+    vehicleVolcanoXZ += V.Z < Volcano.Z && Math.abs(V.X - Volcano.X) < VolcanoPlaneY ? 180 : V.X >= Volcano.X + VolcanoPlaneY ? 90 : V.X <= Volcano.X - VolcanoPlaneY ? -90 : 0;
+    V.XY += (baseAngle * U.sin(vehicleVolcanoXZ) - V.XY) * valueAdjustSmoothing * VE.tick;
+    V.YZ += (-baseAngle * U.cos(vehicleVolcanoXZ) - V.YZ) * valueAdjustSmoothing * VE.tick;
+    V.Y = Math.min(V.Y, -Volcano.radiusBottom + U.distance(V.X, Volcano.X, V.Z, Volcano.Z));
+    speedY = Math.min(speedY, 0);
+   }
+   runLandInvert();
+   runSolidDriveEffects();
+   if (V.engine == Vehicle.Engine.hotrod && !V.destroyed && U.random() < .5) {
+    V.XY += U.random() < .5 ? 1 : -1;
+   }
+   TE.runVehicleInteraction(V, replay);
+   V.runStuntScoring(replay);
+   runSpeedConstraints();
+   E.mapBounds.slowVehicle(V);
+   if ((mode == Mode.stunt || mode == Mode.fly) && V.destroyed) {
+    mode = Mode.neutral;
+   }
+   while (Math.abs(V.XZ - cameraXZ) > 180) {
+    cameraXZ += cameraXZ < V.XZ ? 360 : -360;
+   }
+   cameraXZ += (V.XZ - cameraXZ) * .3 * StrictMath.pow(VE.tick, .8);
+  }
+ }
+
+ private void runTurretsInfrastructure() {
+  if (V.isFixed()) {
    inPool = atPoolXZ && V.Y > 0;
    polarity = 1;
-   double randomTurnKick = U.random(V.randomTurn);
+   double randomTurnKick = U.random(V.randomTurnKick);
    if (V.steerByMouse && V.turnRate >= Double.POSITIVE_INFINITY) {
     speedXZ = U.clamp(-V.maxTurn - randomTurnKick, VE.Mouse.steerX, V.maxTurn + randomTurnKick);
    } else {
@@ -534,359 +672,14 @@ public class Physics {
     wheel.Y = V.Y + (V.turretBaseY * .5);
     wheel.Z = V.Z;
     wheel.againstWall = false;
-    wheel.speedX = wheel.speedZ = wheel.speedY = 0;
-    wheel.speedY += V.isIntegral() ? -wheel.speedY : E.gravity * VE.tick;
    }
-   localVehicleGround = V.Y + V.turretBaseY;//<-Confirmed correct
+   speedX = speedZ = speedY = 0;
+   //speedY += V.isIntegral() ? -speedY : E.gravity * VE.tick;//todo
+   localGround = V.Y + V.turretBaseY;//<-Confirmed correct
    V.YZ = U.clamp(-90, V.YZ, 90);
    V.XY = speed = 0;
    flipped = false;
-  } else /*VEHICLES & AIRCRAFT*/ {
-   boolean replay = VE.status == VE.Status.replay;
-   if (Volcano.exists) {
-    double volcanoDistance = U.distance(V.X, Volcano.X, V.Z, Volcano.Z);
-    onVolcano = volcanoDistance < Volcano.radiusBottom && volcanoDistance > Volcano.radiusTop && V.Y > -Volcano.radiusBottom + volcanoDistance;
-   } else {
-    onVolcano = false;
-   }
-   netSpeedX = (V.wheels.get(0).speedX + V.wheels.get(1).speedX + V.wheels.get(2).speedX + V.wheels.get(3).speedX) * .25;
-   netSpeedY = (V.wheels.get(0).speedY + V.wheels.get(1).speedY + V.wheels.get(2).speedY + V.wheels.get(3).speedY) * .25;
-   netSpeedZ = (V.wheels.get(0).speedZ + V.wheels.get(1).speedZ + V.wheels.get(2).speedZ + V.wheels.get(3).speedZ) * .25;
-   netSpeed = U.netValue(netSpeedX, netSpeedY, netSpeedZ);
-   polarity = Math.abs(V.YZ) > 90 ? -1 : 1;
-   flipped = (Math.abs(V.XY) > 90 && Math.abs(V.YZ) <= 90) || (Math.abs(V.YZ) > 90 && Math.abs(V.XY) <= 90);
-   double clearance = flipped && !V.landStuntsBothSides ? -V.absoluteRadius * .075 : V.clearanceY;
-   inPool = atPoolXZ && V.Y + clearance > 0;
-   if (mode.name().startsWith(Mode.drive.name())) {
-    stuntSpeedYZ = stuntSpeedXY = stuntSpeedXZ = 0;
-   }
-   if (!V.destroyed) {
-    runAirEngage();
-    if (mode == Mode.stunt) {
-     runAerialControl();
-    } else {
-     runDrivePower();
-    }
-   }
-   runWheelSpin();
-   double turnAmount = V.maxTurn + U.random(V.randomTurn);
-   if (!replay) {
-    runSteering(turnAmount);
-    if (V.VT != null) {
-     V.VT.runSteering(turnAmount);
-    }
-   }
-   double turnSpeed = V.steerInPlace ? 1 : Math.min(1, Math.max(netSpeed, Math.abs(speed)) * .025);
-   turnSpeed *= speed < 0 ? -1 : 1;
-   if (V.handbrake && mode == Mode.fly) {
-    V.XZ += speedXZ * turnSpeed * fromAngleToVelocityConstant * polarity * VE.tick;
-   } else if (mode.name().startsWith(Mode.drive.name()) || V.phantomEngaged) {
-    if (!flipped) {
-     airSpinXZ = (V.handbrake ? fromAngleToVelocityConstant : .0625) * speedXZ * turnSpeed;
-     V.XZ += speedXZ * turnSpeed * fromAngleToVelocityConstant * VE.tick;
-    }
-   } else if (mode != Mode.fly && (!V.aerialControlEnhanced || mode != Mode.stunt)) {
-    V.XZ += airSpinXZ * VE.tick;
-    stuntXZ += airSpinXZ * VE.tick;
-   }
-   runFlight(turnAmount);
-   for (Wheel wheel : V.wheels) {
-    wheel.X = V.X + wheel.pointX;
-    wheel.Y = V.Y + clearance;
-    wheel.Z = V.Z + wheel.pointZ;
-    double[] rotated = U.rotate(wheel.X, wheel.Y, V.X, V.Y, V.XY);
-    wheel.X = rotated[0];
-    wheel.Y = rotated[1];
-    if (!angledSurface()) {
-     rotated = U.rotate(wheel.Y, wheel.Z, V.Y, V.Z, V.YZ);
-     wheel.Y = rotated[0];
-     wheel.Z = rotated[1];
-    }
-    rotated = U.rotate(wheel.X, wheel.Z, V.X, V.Z, V.XZ);
-    wheel.X = rotated[0];
-    wheel.Z = rotated[1];
-    if (!wheel.angledSurface && !V.phantomEngaged && !inTornado && !V.floats)
-     wheel.speedY += (V.amphibious && atPoolXZ && wheel.Y - clearance > 0 ? -E.gravity : E.gravity) * VE.tick;
-   }
-   if (mode != Mode.fly || V.grip <= 100) {
-    for (Wheel wheel : V.wheels) {
-     wheel.speedX = wheel.speedX - netSpeedX > 200 ? netSpeedX + 200 : wheel.speedX - netSpeedX < -200 ? netSpeedX - 200 : wheel.speedX;
-     wheel.speedZ = wheel.speedZ - netSpeedZ > 200 ? netSpeedZ + 200 : wheel.speedZ - netSpeedZ < -200 ? netSpeedZ - 200 : wheel.speedZ;
-     wheel.X += (V.wheels.get(0).speedX + V.wheels.get(1).speedX + V.wheels.get(2).speedX + V.wheels.get(3).speedX) * .25 * VE.tick;
-     wheel.Z += (V.wheels.get(0).speedZ + V.wheels.get(1).speedZ + V.wheels.get(2).speedZ + V.wheels.get(3).speedZ) * .25 * VE.tick;
-     wheel.Y += wheel.speedY * VE.tick;
-    }
-   }
-   if (mode.name().startsWith(Mode.drive.name()) || V.phantomEngaged) {
-    speed -= V.turnDrag && (V.turnL || V.turnR) ? speed * .01 * VE.tick : 0;
-    double setGrip = V.grip - (V.handbrake && !flipped && !U.equals(VE.Map.name, "the Maze", "XY Land") ? V.grip * .25 * Math.abs(lastXZ - V.XZ) : 0);
-    setGrip *= (terrainProperties.contains(" ice ") ? .075 : terrainProperties.contains(" ground ") ? .75 : 1) * (flipped ? .2 : 1);
-    setGrip = Math.max(setGrip * VE.tick, 0);
-    if (V.destroyed) {
-     speed *= .9;
-     if (Math.abs(speed) < 2 * VE.tick) {
-      speed = 0;
-     } else {
-      speed += (speed < 0 ? 2 : speed > 0 ? -2 : 0) * VE.tick;
-     }
-    }
-    boolean modeDrive = mode == Mode.drive;
-    double speed1 = -(speed * U.sin(V.XZ) * U.cos(V.YZ)), speed2 = speed * U.cos(V.XZ) * U.cos(V.YZ), speed3 = -(speed * U.sin(V.YZ));
-    for (Wheel wheel : V.wheels) {
-     if (flipped) {
-      wheel.speedX -= wheel.speedX > setGrip ? setGrip : Math.max(wheel.speedX, -setGrip);
-      wheel.speedZ -= wheel.speedZ > setGrip ? setGrip : Math.max(wheel.speedZ, -setGrip);
-     } else {
-      if (Math.abs(wheel.speedX - speed1) > setGrip) {
-       wheel.speedX += wheel.speedX < speed1 ? setGrip : wheel.speedX > speed1 ? -setGrip : 0;
-      } else {
-       wheel.speedX = speed1;
-      }
-      if (Math.abs(wheel.speedZ - speed2) > setGrip) {
-       wheel.speedZ += wheel.speedZ < speed2 ? setGrip : wheel.speedZ > speed2 ? -setGrip : 0;
-      } else {
-       wheel.speedZ = speed2;
-      }
-      if (modeDrive || V.phantomEngaged) {
-       if (Math.abs(wheel.speedY - speed3) > setGrip) {
-        wheel.speedY += wheel.speedY < speed3 ? setGrip : wheel.speedY > speed3 ? -setGrip : 0;
-       } else {
-        wheel.speedY = speed3;
-       }
-      }
-     }
-    }
-    if (modeDrive) {
-     runSkidsAndDust();
-    }
-    speed *= V.grip <= 100 && !flipped && Math.abs(speed) > netSpeed && Math.abs(Math.abs(speed) - netSpeed) > Math.abs(speed) * .5 && !terrainProperties.contains(" ice ") ? .5 : 1;
-    if (terrainProperties.contains(" bounce ")) {
-     for (Wheel wheel : V.wheels) {
-      wheel.speedY -= U.random(.3) * Math.abs(speed) * V.bounce;
-     }
-     if (netSpeedY < -50 && V.bounce > .9) {
-      V.VA.land.playIfNotPlaying(Double.NaN, V.VA.distanceVehicleToCamera);
-     }
-    } else if (terrainProperties.contains(" maxbounce ")) {
-     for (Wheel wheel : V.wheels) {
-      wheel.speedY -= U.random(.6) * Math.abs(speed) * V.bounce;
-     }
-     if (netSpeedY < -50 && V.bounce > .9) {
-      V.VA.land.playIfNotPlaying(Double.NaN, V.VA.distanceVehicleToCamera);
-     }
-    }
-    mode = Mode.neutral;
-   }
-   lastXZ = V.XZ;
-   boolean crashLand = (Math.abs(V.YZ) > 30 || Math.abs(V.XY) > 30) && !(Math.abs(V.YZ) > 150 && Math.abs(V.XY) > 150);
-   runPoolInteract();
-   runSpeedBoost();
-   double gravityCompensation = E.gravity * 2 * VE.tick;
-   if (!V.phantomEngaged) {
-    double hitsGroundY = -5;
-    if (onAntiGravity) {
-     hitsGroundY = Double.POSITIVE_INFINITY;//<-Why was this done? To eliminate '-5' traction-lock, maybe?
-     onAntiGravity = false;
-    }
-    double bounceBackForce = flipped ? 1 : Math.abs(U.sin(V.XY)) + Math.abs(U.sin(V.YZ)),
-    flatPlaneBounce = Math.min(Math.abs(U.sin(V.XY)) + Math.abs(U.sin(V.YZ)), 1);
-    boolean possibleSpinnerHit = false;
-    for (Wheel wheel : V.wheels) {
-     if (wheel.Y > hitsGroundY + localVehicleGround) {
-      mode = Mode.drive;
-      if (V.Y + clearance > localVehicleGround + 100) {//Remove if bounce dust looks pointless
-       V.deployDust(wheel, true);
-      }
-      wheel.Y = localVehicleGround;
-      if (crashLand) {
-       crash(wheel.speedY * bounceBackForce * .1);
-      }
-      if (wheel.speedY > 100) {
-       V.VA.land();
-      }
-      if (wheel.speedY > 0) {
-       wheel.speedY *= V.destroyed ? 0 : -V.bounce * flatPlaneBounce;
-      }
-      wheel.XY -= wheel.XY * .25;
-      wheel.YZ -= wheel.YZ * .25;
-      if (flipped && terrainProperties.contains(" hard ")) {
-       wheel.sparks(true);
-      }
-      wheel.terrainRGB = E.Ground.RGB;
-      possibleSpinnerHit = true;
-     }
-     if (inPool) {
-      wheel.speedX -= wheel.speedX * .01 * VE.tick;
-      wheel.speedY -= wheel.speedY * .1 * VE.tick;
-      wheel.speedZ -= wheel.speedZ * .01 * VE.tick;
-     }
-     wheel.againstWall = wheel.angledSurface = false;
-    }
-    if (V.spinner != null && possibleSpinnerHit && !((Math.abs(V.YZ) < 10 && Math.abs(V.XY) < 10) || (Math.abs(V.YZ) > 170 && Math.abs(V.XY) > 170))) {
-     V.spinner.hit(null);
-    }
-    mode = V.amphibious && inPool ? Mode.drivePool : mode;
-    terrainProperties = E.Terrain.vehicleDefaultTerrain;
-    setTerrainFromTrackPlanes(clearance, gravityCompensation);
-    runTrackPlaneInteraction(crashLand, bounceBackForce, flatPlaneBounce, gravityCompensation);
-    mode = onVolcano ? Mode.drive : mode;
-    if (mode == Mode.drive && angledSurface()) {
-     V.XY = (Math.abs(V.XY) > 90 ? 180 : 0) + (V.wheels.get(0).XY + V.wheels.get(1).XY + V.wheels.get(2).XY + V.wheels.get(3).XY) * .25;
-     V.YZ = (Math.abs(V.YZ) > 90 ? 180 : 0) + (V.wheels.get(0).YZ + V.wheels.get(1).YZ + V.wheels.get(2).YZ + V.wheels.get(3).YZ) * .25;
-    }
-    if (Math.abs(V.XY) > 90) {
-     V.XY += V.wheels.get(0).speedY * VE.tick / wheelGapLeftToRight;
-     V.XY -= V.wheels.get(1).speedY * VE.tick / wheelGapLeftToRight;
-     V.XY += V.wheels.get(2).speedY * VE.tick / wheelGapLeftToRight;
-     V.XY -= V.wheels.get(3).speedY * VE.tick / wheelGapLeftToRight;
-    } else {
-     V.XY -= V.wheels.get(0).speedY * VE.tick / wheelGapLeftToRight;
-     V.XY += V.wheels.get(1).speedY * VE.tick / wheelGapLeftToRight;
-     V.XY -= V.wheels.get(2).speedY * VE.tick / wheelGapLeftToRight;
-     V.XY += V.wheels.get(3).speedY * VE.tick / wheelGapLeftToRight;
-    }
-    if (Math.abs(V.YZ) > 90) {
-     V.YZ += V.wheels.get(0).speedY * VE.tick / wheelGapFrontToBack;
-     V.YZ += V.wheels.get(1).speedY * VE.tick / wheelGapFrontToBack;
-     V.YZ -= V.wheels.get(2).speedY * VE.tick / wheelGapFrontToBack;
-     V.YZ -= V.wheels.get(3).speedY * VE.tick / wheelGapFrontToBack;
-    } else {
-     V.YZ -= V.wheels.get(0).speedY * VE.tick / wheelGapFrontToBack;
-     V.YZ -= V.wheels.get(1).speedY * VE.tick / wheelGapFrontToBack;
-     V.YZ += V.wheels.get(2).speedY * VE.tick / wheelGapFrontToBack;
-     V.YZ += V.wheels.get(3).speedY * VE.tick / wheelGapFrontToBack;
-    }
-    runCollisionSpin();
-   }
-   speed = V.topSpeeds[2] < Long.MAX_VALUE ? U.clamp(-V.topSpeeds[2], speed, V.topSpeeds[2]) : speed;
-   inTornado = false;
-   if (!V.phantomEngaged) {
-    Tornado.vehicleInteract(V);
-   }
-   for (Wheel wheel : V.wheels) {
-    if (!Double.isNaN(wheel.hitOtherX)) {
-     wheel.speedX = wheel.hitOtherX;
-     wheel.hitOtherX = Double.NaN;
-    }
-    if (!Double.isNaN(wheel.hitOtherZ)) {
-     wheel.speedZ = wheel.hitOtherZ;
-     wheel.hitOtherZ = Double.NaN;
-    }
-   }
-   if (mode == Mode.drive) {
-    V.Y = (V.wheels.get(0).Y + V.wheels.get(1).Y + V.wheels.get(2).Y + V.wheels.get(3).Y) * .25 - (clearance * U.cos(V.YZ) * U.cos(V.XY));
-   } else {
-    V.Y += (V.wheels.get(0).speedY + V.wheels.get(1).speedY + V.wheels.get(2).speedY + V.wheels.get(3).speedY) * .25 * VE.tick;
-   }
-   if (againstWall()) {
-    V.X = (V.wheels.get(0).X - V.wheels.get(0).pointX * U.cos(V.XZ) + polarity * V.wheels.get(0).pointZ * U.sin(V.XZ) + V.wheels.get(1).X - V.wheels.get(1).pointX * U.cos(V.XZ) + polarity * V.wheels.get(1).pointZ * U.sin(V.XZ) + V.wheels.get(2).X - V.wheels.get(2).pointX * U.cos(V.XZ) + polarity * V.wheels.get(2).pointZ * U.sin(V.XZ) + V.wheels.get(3).X - V.wheels.get(3).pointX * U.cos(V.XZ) + polarity * V.wheels.get(3).pointZ * U.sin(V.XZ)) * .25 + clearance * U.sin(V.XY) * U.cos(V.XZ) - clearance * U.sin(V.YZ) * U.sin(V.XZ);
-    V.Z = (V.wheels.get(0).Z - polarity * V.wheels.get(0).pointZ * U.cos(V.XZ) - V.wheels.get(0).pointX * U.sin(V.XZ) + V.wheels.get(1).Z - polarity * V.wheels.get(1).pointZ * U.cos(V.XZ) - V.wheels.get(1).pointX * U.sin(V.XZ) + V.wheels.get(2).Z - polarity * V.wheels.get(2).pointZ * U.cos(V.XZ) - V.wheels.get(2).pointX * U.sin(V.XZ) + V.wheels.get(3).Z - polarity * V.wheels.get(3).pointZ * U.cos(V.XZ) - V.wheels.get(3).pointX * U.sin(V.XZ)) * .25 + clearance * U.sin(V.XY) * U.sin(V.XZ) - clearance * U.sin(V.YZ) * U.cos(V.XZ);
-   } else {
-    V.X += (V.wheels.get(0).speedX + V.wheels.get(1).speedX + V.wheels.get(2).speedX + V.wheels.get(3).speedX) * .25 * V.energyMultiple * VE.tick;
-    V.Z += (V.wheels.get(0).speedZ + V.wheels.get(1).speedZ + V.wheels.get(2).speedZ + V.wheels.get(3).speedZ) * .25 * V.energyMultiple * VE.tick;
-   }
-   if (mode == Mode.drive && !angledSurface()) {
-    if (Math.abs(V.YZ) <= 90) {
-     V.YZ -= V.YZ > 0 ? VE.tick : 0;
-     V.YZ += V.YZ < 0 ? VE.tick : 0;
-    } else {
-     V.YZ += (V.YZ > 90 && V.YZ < 180 - VE.tick ? 1 : V.YZ < -90 && V.YZ > -180 + VE.tick ? -1 : 0) * VE.tick;
-    }
-    if (Math.abs(V.XY) <= 90) {
-     V.XY -= V.XY > 0 ? VE.tick : 0;
-     V.XY += V.XY < 0 ? VE.tick : 0;
-    }
-    if (V.sidewaysLandingAngle == 0) {
-     V.XY += (V.XY > 90 && V.XY < 180 - VE.tick ? 1 : V.XY < -90 && V.XY > -180 + VE.tick ? -1 : 0) * VE.tick;
-    } else {
-     V.XY += U.random(3.) * VE.tick *
-     ((V.XY > 90 && V.XY < V.sidewaysLandingAngle) || (V.XY < -V.sidewaysLandingAngle && V.XY > -(V.sidewaysLandingAngle + 30)) ? 1 :
-     (V.XY < -90 && V.XY > -V.sidewaysLandingAngle) || (V.XY > V.sidewaysLandingAngle && V.XY < V.sidewaysLandingAngle + 30) ? -1 : 0);
-     if (Math.abs(V.XY) >= V.sidewaysLandingAngle + 30) {
-      V.XY -= V.XY > -180 + VE.tick ? VE.tick : 0;
-      V.XY += V.XY < 180 - VE.tick ? VE.tick : 0;
-     }
-    }
-    V.XY *= Math.abs(V.XY) <= 90 ? .25 : 1;
-    V.YZ *= Math.abs(V.YZ) <= 90 ? .25 : 1;
-   }
-   localVehicleGround = E.Ground.level + (atPoolXZ ? E.Pool.depth : 0);
-   V.runMoundInteract(clearance, gravityCompensation);//<-localVehicleGround is set here
-   if (onVolcano) {
-    double baseAngle = flipped ? 225 : 45, vehicleVolcanoXZ = V.XZ, VolcanoPlaneY = Math.max(Volcano.radiusTop * .5, (Volcano.radiusBottom * .5) - ((Volcano.radiusBottom * .5) * (Math.abs(V.Y) / Volcano.height)));
-    vehicleVolcanoXZ += V.Z < Volcano.Z && Math.abs(V.X - Volcano.X) < VolcanoPlaneY ? 180 : V.X >= Volcano.X + VolcanoPlaneY ? 90 : V.X <= Volcano.X - VolcanoPlaneY ? -90 : 0;
-    V.XY = baseAngle * U.sin(vehicleVolcanoXZ);
-    V.YZ = -baseAngle * U.cos(vehicleVolcanoXZ);
-   }
-   for (Wheel wheel : V.wheels) {
-    wheel.vibrate = 0;
-   }
-   if (mode.name().startsWith(Mode.drive.name())) {
-    if (Math.abs(V.YZ) > 90 && Math.abs(V.XY) > 90) {
-     long randomFlip = U.random() < .5 ? 180 : -180;
-     V.XY += randomFlip;
-     V.YZ += randomFlip;
-     V.XZ += randomFlip;
-    }
-    if (flipped && V.landStuntsBothSides) {
-     V.XZ += Math.abs(V.YZ) > 90 && Math.abs(V.XY) < 90 ? 180 : 0;
-     V.XY = V.YZ = 0;
-    }
-    runGroundCruise();
-   }
-   if (V.engine == Vehicle.Engine.hotrod && !V.destroyed && U.random() < .5) {
-    V.XY += U.random() < .5 ? 1 : -1;
-   }
-   TE.runVehicleInteraction(V, replay);
-   V.runStuntScoring(replay);
-   speed *= againstWall() && V.grip > 100 && E.gravity != 0 ? .95 : 1;
-   if (V.drag != 0) {
-    if (Math.abs(speed) < V.drag * VE.tick) {
-     speed = 0;
-    } else if ((mode != Mode.fly && !V.drive && !V.reverse) || mode == Mode.stunt || Math.abs(speed) > V.topSpeeds[1]) {
-     speed -= (speed > 0 ? 1 : -1) * V.drag * VE.tick;
-    }
-   }
-   speed -= Math.abs(speed) > V.topSpeeds[1] ? speed * Math.abs(speed) * .0000005 * VE.tick : 0;
-   if (E.mapBounds.slowVehicles) {
-    if (V.X > E.mapBounds.right || V.X < E.mapBounds.left) {
-     V.wheels.get(U.random(4)).speedX = V.wheels.get(U.random(4)).speedZ = 0;
-     speed *= .95;
-    }
-    if (Math.abs(V.Y) > Math.abs(E.mapBounds.Y)) {
-     V.wheels.get(U.random(4)).speedY = 0;
-     speed *= .95;
-    }
-    if (V.Z > E.mapBounds.forward || V.Z < E.mapBounds.backward) {
-     V.wheels.get(U.random(4)).speedX = V.wheels.get(U.random(4)).speedZ = 0;
-     speed *= .95;
-    }
-   }
-   if (onVolcano && !V.phantomEngaged) {
-    V.Y = Math.min(V.Y, -Volcano.radiusBottom + U.distance(V.X, Volcano.X, V.Z, Volcano.Z));
-    for (Wheel wheel : V.wheels) {
-     wheel.speedY = Math.min(wheel.speedY, 0);
-    }
-   }
-   mode = (mode == Mode.stunt || mode == Mode.fly) && V.destroyed ? Mode.neutral : mode;
-   while (Math.abs(V.XZ - cameraXZ) > 180) {
-    cameraXZ += cameraXZ < V.XZ ? 360 : -360;
-   }
-   cameraXZ += (V.XZ - cameraXZ) * .3 * StrictMath.pow(VE.tick, .8);
-   lastXZ = V.XZ;
   }
-  if (V.explosionsWhenDestroyed > 0 && !V.isIntegral() && !V.destroyed) {
-   for (n = (int) V.explosionsWhenDestroyed; --n >= 0; ) {
-    V.explosions.get(V.currentExplosion).deploy(U.randomPlusMinus(V.absoluteRadius), U.randomPlusMinus(V.absoluteRadius), U.randomPlusMinus(V.absoluteRadius), V);
-    V.currentExplosion = ++V.currentExplosion >= E.explosionQuantity ? 0 : V.currentExplosion;
-   }
-   V.setCameraShake(Camera.shakePresets.vehicleExplode);
-   V.VA.explode.play(Double.NaN, V.VA.distanceVehicleToCamera);
-   //VA.crashDestroy.play(Double.NaN, VA.distanceVehicleToCamera);For turrets...maybe?
-  }
-  V.X = U.clamp(E.mapBounds.left, V.X, E.mapBounds.right);
-  V.Z = U.clamp(E.mapBounds.backward, V.Z, E.mapBounds.forward);
-  V.Y = U.clamp(E.mapBounds.Y, V.Y, -E.mapBounds.Y);
  }
 
  private void runDrivePower() {
@@ -955,23 +748,32 @@ public class Physics {
   }
  }
 
- private void runGroundCruise() {
-  if (V.isIntegral() && mode == Mode.drive && V.bounce > 0) {
-   if (V.type == Vehicle.Type.vehicle && !flipped) {
-    V.XY += speed * V.clearanceY * V.bounce * speedXZ * (speed < 0 ? -.0000133 : .0000133) * (Math.abs(V.XY) > 10 ? .5 : 1);
+ private void runSolidDriveEffects() {
+  boolean shockAbsorb = !Double.isNaN(V.shockAbsorb);
+  if (shockAbsorb) {
+   for (Wheel wheel : V.wheels) {
+    wheel.vibrateY -= wheel.vibrateY * valueAdjustSmoothing * VE.tick;
    }
-   boolean rockTerrain = terrainProperties.contains(" rock ");
-   if (rockTerrain || terrainProperties.contains(" ground ")) {
-    if (Double.isNaN(V.shockAbsorb)) {
-     double vibrate = terrainProperties.contains(" rock ") ? .0003 : .00015;
-     V.YZ += U.clamp(-180 - U.random(180.), U.randomPlusMinus(vibrate) * netSpeed * V.clearanceY * V.bounce, 180 + U.random(180.));
-     V.XY += U.clamp(-180 - U.random(180.), U.randomPlusMinus(vibrate) * netSpeed * V.clearanceY * V.bounce, 180 + U.random(180.));
-    } else {
+  }
+  if (V.isIntegral() && mode == Mode.driveSolid && V.bounce > 0) {
+   if (V.type == Vehicle.Type.vehicle && !flipped) {
+    double lean = speed * V.clearanceY * V.bounce * speedXZ * .0000133 * (speed < 0 ? -1 : 1) * (Math.abs(V.XY) > 10 ? .5 : 1);
+    V.XY += lean;
+    if (shockAbsorb) {
+     lean *= .25;
+     for (Wheel wheel : V.wheels) {
+      wheel.vibrateY -= wheel.pointX * U.sin(lean) * V.shockAbsorb;
+     }
+    }
+   }
+   boolean rockTerrain = terrainProperties.contains(SL.Thicks.rock);
+   if (rockTerrain || terrainProperties.contains(SL.Thicks.ground)) {
+    if (shockAbsorb) {
      double vibrate = rockTerrain ? 50 : 25;
      double[] storeVibrate = new double[4];
      for (int n = 4; --n >= 0; ) {
       storeVibrate[n] = U.randomPlusMinus(Math.min(vibrate * netSpeed * V.bounce * .002, vibrate));
-      V.wheels.get(n).vibrate = storeVibrate[n] * V.shockAbsorb;
+      V.wheels.get(n).vibrateY += storeVibrate[n] * V.shockAbsorb;
      }
      if (V.shockAbsorb < 1) {
       double setXY = 0, setYZ = 0;
@@ -990,7 +792,50 @@ public class Physics {
       V.YZ -= setYZ * V.clearanceY * .5;
       V.XY -= setXY * V.clearanceY * .5;
      }
+    } else {
+     double vibrate = terrainProperties.contains(SL.Thicks.rock) ? .0003 : .00015;
+     V.YZ += U.clamp(-180 - U.random(180.), U.randomPlusMinus(vibrate) * netSpeed * V.clearanceY * V.bounce, 180 + U.random(180.));
+     V.XY += U.clamp(-180 - U.random(180.), U.randomPlusMinus(vibrate) * netSpeed * V.clearanceY * V.bounce, 180 + U.random(180.));
     }
+   }
+  }
+ }
+
+ private void runGroundConnect(boolean crashLand, double bounceBackForce, double flatPlaneBounce) {
+  double hitsGroundY = -5;
+  if (onAntiGravity) {
+   hitsGroundY = Double.POSITIVE_INFINITY;//<-Should eliminate '-5' traction-lock that would prevent vehicles from rising
+   onAntiGravity = false;
+  }
+  boolean connected = false;
+  for (Wheel wheel : V.wheels) {
+   if (wheel.Y > hitsGroundY + localGround) {
+    mode = Mode.driveSolid;
+    connected = true;
+    wheel.Y = localGround;
+    wheel.XY -= wheel.XY * valueAdjustSmoothing * VE.tick;
+    wheel.YZ -= wheel.YZ * valueAdjustSmoothing * VE.tick;
+    if (flipped && terrainProperties.contains(SL.Thicks.hard)) {
+     wheel.sparks(true);
+    }
+   }
+  }
+  if (connected) {
+   if (crashLand) {
+    crash(speedY * bounceBackForce, false);
+   }
+   V.terrainRGB = E.Ground.RGB;
+   if (speedY > RichHit.minimumSpeed) {
+    V.VA.land();
+    for (long n = RichHit.dustQuantity; --n >= 0; ) {
+     V.deployDust(true);
+    }
+   }
+   if (speedY > 0) {
+    speedY *= V.destroyed ? 0 : -V.bounce * flatPlaneBounce;
+   }
+   if (V.spinner != null && !((Math.abs(V.YZ) < 10 && Math.abs(V.XY) < 10) || (Math.abs(V.YZ) > 170 && Math.abs(V.XY) > 170))) {
+    V.spinner.hit(null);
    }
   }
  }
@@ -1015,59 +860,81 @@ public class Physics {
   }
  }
 
- private void runCollisionSpin() {
-  if (V.spin > 0) {
-   if (againstWall()) {
-    double v1;
-    v1 = Math.abs(V.XZ + 45);
-    while (v1 > 180) v1 -= 360;
-    spinMultiplyPositive = Math.abs(v1) > 90 ? 1 : -1;
-    v1 = Math.abs(V.XZ - 45);
-    while (v1 > 180) v1 -= 360;
-    spinMultiplyNegative = Math.abs(v1) > 90 ? 1 : -1;
+ private void runDriveVelocity() {
+  double drift = V.handbrake && !flipped && !U.equals(VE.Map.name, SL.MN.theMaze, SL.MN.XYLand) ? V.grip * .25 * Math.abs(driftXZ - V.XZ) : 0,
+  setGrip = V.grip - drift;
+  setGrip *= (terrainProperties.contains(SL.Thicks.ice) ? .075 : terrainProperties.contains(SL.Thicks.ground) ? .75 : 1) * (flipped ? .2 : 1);
+  setGrip = Math.max(setGrip * VE.tick, 0);
+  double cosYZ = U.cos(V.YZ),
+  velocityX = -(speed * U.sin(V.XZ) * cosYZ),
+  velocityZ = speed * U.cos(V.XZ) * cosYZ,
+  velocityY = -(speed * U.sin(V.YZ));
+  if (flipped) {
+   speedX -= speedX > setGrip ? setGrip : Math.max(speedX, -setGrip);
+   speedZ -= speedZ > setGrip ? setGrip : Math.max(speedZ, -setGrip);
+  } else {
+   if (Math.abs(speedX - velocityX) > setGrip) {
+    speedX += setGrip * Double.compare(velocityX, speedX);
+   } else {
+    speedX = velocityX;
    }
-   V.XZ += ((((V.wheels.get(0).speedZ * spinMultiplyNegative - V.wheels.get(1).speedZ * spinMultiplyPositive) + V.wheels.get(2).speedZ * spinMultiplyPositive - V.wheels.get(3).speedZ * spinMultiplyNegative) + V.wheels.get(0).speedX * spinMultiplyPositive + V.wheels.get(1).speedX * spinMultiplyNegative) - V.wheels.get(2).speedX * spinMultiplyNegative - V.wheels.get(3).speedX * spinMultiplyPositive) * V.spin * VE.tick;
+   if (Math.abs(speedZ - velocityZ) > setGrip) {
+    speedZ += setGrip * Double.compare(velocityZ, speedZ);
+   } else {
+    speedZ = velocityZ;
+   }
+   if (mode == Mode.driveSolid || V.phantomEngaged) {
+    if (Math.abs(speedY - velocityY) > setGrip) {
+     speedY += setGrip * Double.compare(velocityY, speedY);
+    } else {
+     speedY = velocityY;
+    }
+   }
   }
  }
 
  private void runSkidsAndDust() {
-  boolean markedSnow = false;
-  if (terrainProperties.contains(" snow ")) {
-   for (Wheel wheel : V.wheels) {
-    wheel.skidmark(true);
-   }
-   markedSnow = true;
-  }
-  boolean kineticFriction = Math.abs(Math.abs(speed) - netSpeed) > 15, driveEngine = !U.contains(V.engine.name(), "prop", Vehicle.Engine.jet.name(), Vehicle.Engine.rocket.name());
-  if (((driveEngine && kineticFriction) || StrictMath.pow(speedXZ, 2) > 300000 / netSpeed) && (kineticFriction || Math.abs(speed) > V.topSpeeds[1] * .9)) {
-   if (terrainProperties.contains(" hard ") && V.contact == Contact.metal) {
+  if (mode == Mode.driveSolid) {
+   int n;
+   boolean markedSnow = false;
+   if (terrainProperties.contains(SL.Thicks.snow)) {
     for (Wheel wheel : V.wheels) {
-     wheel.sparks(true);
+     wheel.skidmark(true);
     }
+    markedSnow = true;
    }
-   if (V.contact == Contact.rubber || !terrainProperties.contains(" hard ")) {
-    for (Wheel wheel : V.wheels) {
-     V.deployDust(wheel, false);
-    }
-   }
-   if (!terrainProperties.contains(" ice ")) {
-    if (!markedSnow) {
+   boolean kineticFriction = Math.abs(Math.abs(speed) - netSpeed) > 15,
+   driveEngine = !U.containsEnum(V.engine, Vehicle.Engine.prop, Vehicle.Engine.jet, Vehicle.Engine.rocket);
+   if (((driveEngine && kineticFriction) || StrictMath.pow(speedXZ, 2) > 300000 / netSpeed) && (kineticFriction || Math.abs(speed) > V.topSpeeds[1] * .9)) {
+    if (terrainProperties.contains(SL.Thicks.hard) && V.contact == Contact.metal) {
      for (Wheel wheel : V.wheels) {
-      wheel.skidmark(false);
+      wheel.sparks(true);
      }
     }
-    V.VA.skid();
-   }
-  } else if (terrainProperties.contains(" snow ")) {
-   for (Wheel wheel : V.wheels) {
-    if (U.random() < .4) {
-     V.deployDust(wheel, false);
+    if (V.contact == Contact.rubber || !terrainProperties.contains(SL.Thicks.hard)) {
+     for (n = 4; --n >= 0; ) {
+      V.deployDust(false);
+     }
     }
-   }
-  } else if (terrainProperties.contains(" ground ")) {
-   for (Wheel wheel : V.wheels) {
-    if (U.random() < .2) {
-     V.deployDust(wheel, false);
+    if (!terrainProperties.contains(SL.Thicks.ice)) {
+     if (!markedSnow) {
+      for (Wheel wheel : V.wheels) {
+       wheel.skidmark(false);
+      }
+     }
+     V.VA.skid();
+    }
+   } else if (terrainProperties.contains(SL.Thicks.snow)) {
+    for (n = 4; --n >= 0; ) {
+     if (U.random() < .4) {
+      V.deployDust(false);
+     }
+    }
+   } else if (terrainProperties.contains(SL.Thicks.ground)) {
+    for (n = 4; --n >= 0; ) {
+     if (U.random() < .2) {
+      V.deployDust(false);
+     }
     }
    }
   }
@@ -1076,26 +943,22 @@ public class Physics {
  private void runAirEngage() {
   if (V.type == Vehicle.Type.vehicle && V.handbrake && mode == Mode.neutral) {
    mode = Mode.stunt;
-   V.VA.airEngage.playIfNotPlaying(V.VA.distanceVehicleToCamera);
   }
   if (V.type == Vehicle.Type.aircraft && V.drive2) {
    boolean engageFly = mode == Mode.neutral;
-   if (mode.name().startsWith(Mode.drive.name()) && V.reverse) {
+   if (mode.name().startsWith(SL.drive) && V.reverse) {
     V.Y -= 10;
     engageFly = true;
    }
    if (engageFly) {
     mode = Mode.fly;
-    V.VA.airEngage.playIfNotPlaying(V.VA.distanceVehicleToCamera);
    }
   }
  }
 
  private void runAerialControl() {
-  if (V.aerialControlEnhanced && !onAntiGravity) {
-   for (Wheel wheel : V.wheels) {
-    wheel.speedY = netSpeedY;
-   }
+  if (V.aerialControlEnhanced) {
+   airSpinXZ = 0;//TEST
   }
   if (V.drive) {
    stuntSpeedYZ -= V.airAcceleration < Double.POSITIVE_INFINITY ? V.airAcceleration * VE.tick : 0;
@@ -1111,7 +974,7 @@ public class Physics {
    }
    stuntSpeedYZ = Math.abs(stuntSpeedYZ) < V.airAcceleration || V.airAcceleration == Double.POSITIVE_INFINITY ? 0 : stuntSpeedYZ;
   }
-  if (stuntSpeedYZ < 0) {
+  if (!inWall && stuntSpeedYZ < 0) {
    double amount = Math.abs(V.XY) > 90 ? -1 : 1;
    V.X += amount * -V.airPush * U.sin(V.XZ) * -stuntSpeedYZ * VE.tick;
    V.Z += amount * V.airPush * U.cos(V.XZ) * -stuntSpeedYZ * VE.tick;
@@ -1151,13 +1014,16 @@ public class Physics {
   V.XZ -= 20 * polarity * stuntSpeedYZ * U.sin(V.XY) * VE.tick;
   V.XZ -= stuntSpeedXZ * 20 * polarity * VE.tick;
   V.XY += 20 * stuntSpeedXY * VE.tick;
-  V.X += V.airPush * U.cos(V.XZ) * polarity * stuntSpeedXY * VE.tick;
-  V.Z += V.airPush * U.sin(V.XZ) * polarity * stuntSpeedXY * VE.tick;
+  if (!inWall) {
+   V.X += V.airPush * U.cos(V.XZ) * polarity * stuntSpeedXY * VE.tick;
+   V.Z += V.airPush * U.sin(V.XZ) * polarity * stuntSpeedXY * VE.tick;
+  }
  }
 
- private void runFlight(double turnAmount) {
+ private void runFlight(double turnAmount, double turnSpeed) {
   if (mode == Mode.fly) {
    if (V.handbrake) {
+    V.XZ += speedXZ * turnSpeed * fromAngleToVelocityConstant * polarity * VE.tick;
     if (Math.abs(V.XY) < turnAmount * fromAngleToVelocityConstant * VE.tick) {
      V.XY = 0;
     } else {
@@ -1176,11 +1042,9 @@ public class Physics {
    double amount = (speed < 0 ? -5 : 5) * U.sin(V.XY) * polarity * VE.tick;
    V.XZ -= amount;
    stuntXZ -= amount;
-   for (Wheel wheel : V.wheels) {
-    wheel.speedX = -speed * U.sin(V.XZ) * U.cos(V.YZ);
-    wheel.speedZ = speed * U.cos(V.XZ) * U.cos(V.YZ);
-    wheel.speedY = -speed * U.sin(V.YZ) + stallSpeed;
-   }
+   speedX = -speed * U.sin(V.XZ) * U.cos(V.YZ);
+   speedZ = speed * U.cos(V.XZ) * U.cos(V.YZ);
+   speedY = -speed * U.sin(V.YZ) + stallSpeed;
    if (E.gravity == 0 || onAntiGravity || V.floats) {
     stallSpeed = 0;
    } else {
@@ -1191,42 +1055,42 @@ public class Physics {
     stallSpeed *= inPool ? Math.min(.95 * VE.tick, 1) : 1;
    }
   } else {
-   stallSpeed = netSpeedY;
+   stallSpeed = speedY;
   }
  }
 
  private void runSpeedBoost() {
   if (V.boost && V.speedBoost > 0 && !V.destroyed) {
-   for (Wheel wheel : V.wheels) {
-    if (Math.abs(wheel.speedX) < V.topSpeeds[2]) {
-     wheel.speedX -= V.speedBoost * U.sin(V.XZ) * polarity * VE.tick;
-    } else {
-     wheel.speedX *= .999;
-    }
-    if (Math.abs(wheel.speedZ) < V.topSpeeds[2]) {
-     wheel.speedZ += V.speedBoost * U.cos(V.XZ) * polarity * VE.tick;
-    } else {
-     wheel.speedZ *= .999;
-    }
-    if (Math.abs(wheel.speedY) < V.topSpeeds[2] || (E.gravity > 0 && wheel.speedY > 0)) {
-     wheel.speedY -= V.speedBoost * U.sin(V.YZ) * VE.tick;
-    } else {
-     wheel.speedY *= .999;
-    }
+   if (Math.abs(speedX) < V.topSpeeds[2]) {
+    speedX -= V.speedBoost * U.sin(V.XZ) * polarity * VE.tick;
+   } else {
+    speedX *= .999;
    }
-   speed += V.grip <= 100 ? V.speedBoost * VE.tick : 0;
+   if (Math.abs(speedZ) < V.topSpeeds[2]) {
+    speedZ += V.speedBoost * U.cos(V.XZ) * polarity * VE.tick;
+   } else {
+    speedZ *= .999;
+   }
+   if (Math.abs(speedY) < V.topSpeeds[2] || (E.gravity > 0 && speedY > 0)) {
+    speedY -= V.speedBoost * U.sin(V.YZ) * VE.tick;
+   } else {
+    speedY *= .999;
+   }
+   if (V.grip <= highGrip) {
+    speed += V.speedBoost * VE.tick;
+   }
   }
  }
 
  private void runPoolInteract() {
-  if (inPool && !V.phantomEngaged) {
+  if (inPool) {
    if (netSpeed > 0) {
     for (int n = 3; --n >= 0; ) {
      for (Wheel wheel : V.wheels) {
       V.splashes.get(V.currentSplash).deploy(wheel, V.absoluteRadius * .0125 + U.random(V.absoluteRadius * .0125),
-      wheel.speedX + U.randomPlusMinus(Math.max(speed, netSpeed)),
-      wheel.speedY + U.randomPlusMinus(Math.max(speed, netSpeed)),
-      wheel.speedZ + U.randomPlusMinus(Math.max(speed, netSpeed)));
+      speedX + U.randomPlusMinus(Math.max(speed, netSpeed)),
+      speedY + U.randomPlusMinus(Math.max(speed, netSpeed)),
+      speedZ + U.randomPlusMinus(Math.max(speed, netSpeed)));
       V.currentSplash = ++V.currentSplash >= E.splashQuantity ? 0 : V.currentSplash;
      }
     }
@@ -1242,194 +1106,143 @@ public class Physics {
      V.addDamage(E.Pool.type == E.Pool.Type.acid ? .0025 * V.durability * VE.tick : 0);
     }
    }
-  }
- }
-
- void runHitTsunami() {
-  //* Turrets automatically have getsPushed/Lifted set to -1
-  for (Tsunami.Part tsunamiPart : Tsunami.parts) {
-   if (U.distance(V, tsunamiPart) < V.collisionRadius() + tsunamiPart.C.getRadius()) {
-    if (V.getsPushed >= 0) {//*
-     for (Wheel wheel : V.wheels) {
-      wheel.speedX += Tsunami.speedX * .5 * VE.tick;
-      wheel.speedZ += Tsunami.speedZ * .5 * VE.tick;
-     }
-    }
-    if (V.getsLifted >= 0) {//*
-     for (Wheel wheel : V.wheels) {
-      wheel.speedY += E.gravity * VE.tick * (V.Y < tsunamiPart.Y ? 4 : V.Y > tsunamiPart.Y ? -4 : 0);
-     }
-    }
-    for (int n1 = 20; --n1 >= 0; ) {
-     V.splashes.get(V.currentSplash).deploy(V.wheels.get(U.random(4)), U.random(V.absoluteRadius * .05),
-     Tsunami.speedX + U.randomPlusMinus(Math.max(Tsunami.speed, netSpeed)),
-     U.randomPlusMinus(Math.max(Tsunami.speed, netSpeed)),
-     Tsunami.speedZ + U.randomPlusMinus(Math.max(Tsunami.speed, netSpeed)));
-     V.currentSplash = ++V.currentSplash >= E.splashQuantity ? 0 : V.currentSplash;
-    }
-    V.VA.tsunamiSplash.playIfNotPlaying(V.VA.distanceVehicleToCamera);
+   speedX -= speedX * .01 * VE.tick;
+   speedY -= speedY * .1 * VE.tick;
+   speedZ -= speedZ * .01 * VE.tick;
+   if (V.amphibious) {
+    mode = Mode.drivePool;
    }
   }
  }
 
  private void runTrackPlaneInteraction(boolean crashLand, double bounceBackForce, double flatPlaneBounce, double gravityCompensation) {
-  double wallPlaneBounce = Math.min(Math.abs(U.cos(V.XY)) + Math.abs(U.cos(V.YZ)), 1);
-  boolean spinnerHit = false;
+  double sinXZ = U.sin(V.XZ), cosXZ = U.cos(V.XZ), cosYZ = U.cos(V.YZ), cosXY = U.cos(V.XY),
+  wallPlaneBounce = Math.min(Math.abs(cosXY) + Math.abs(cosYZ), 1),//<-Not the best, but still probably better than a flat value
+  crashPower = 0;
+  boolean spinnerHit = inWall = false;
   for (TrackPart trackPart : TE.trackParts) {
    if (!trackPart.trackPlanes.isEmpty() && U.distance(V.X, trackPart.X, V.Z, trackPart.Z) < trackPart.renderRadius + V.renderRadius) {
     for (TrackPlane trackPlane : trackPart.trackPlanes) {
      double trackX = trackPlane.X + trackPart.X, trackY = trackPlane.Y + trackPart.Y, trackZ = trackPlane.Z + trackPart.Z,
-     velocityXZ = Math.abs(U.sin(V.XZ)),
+     velocityXZ = Math.abs(sinXZ),
      radiusX = trackPlane.radiusX + (trackPlane.addSpeed && velocityXZ > U.sin45 ? netSpeed * VE.tick : 0),
      radiusY = trackPlane.radiusY + (trackPlane.addSpeed ? netSpeed * VE.tick : 0),
      radiusZ = trackPlane.radiusZ + (trackPlane.addSpeed && velocityXZ < U.sin45 ? netSpeed * VE.tick : 0);
-     boolean isTree = trackPlane.type.contains(" tree "), gate = trackPlane.type.contains("gate"),
+     boolean isTree = trackPlane.type.contains(SL.Thicks.tree), gate = trackPlane.type.contains(SL.gate),
      isWall = trackPlane.wall != TrackPlane.Wall.none;
      String trackProperties = "";
      if (!isTree && !gate && (isWall || (Math.abs(V.X - trackX) < radiusX && Math.abs(V.Z - trackZ) < radiusZ && trackY + (radiusY * .5) >= V.Y))) {
-      trackProperties = trackPlane.type + (U.contains(trackPlane.type, " paved ", " rock ", " grid ", " antigravity ", " metal ", " brightmetal") ? " hard " : " ground ");
+      trackProperties = trackPlane.type + (U.contains(trackPlane.type, SL.Thicks.paved, SL.Thicks.rock, SL.Thicks.grid, SL.Thicks.antigravity, SL.Thicks.metal, SL.Thicks.brightmetal) ? SL.Thicks.hard : SL.Thicks.ground);
      }
+     //NON-WHEEL BASED
+     if (Math.abs(V.Y - (trackY + gravityCompensation)) <= trackPlane.radiusY) {
+      if (Math.abs(V.X - trackX) <= radiusX && Math.abs(V.Z - trackZ) <= radiusZ) {
+       if (gate) {
+        runSpeedGate(trackPlane);
+       } else if (trackProperties.contains(SL.Thicks.antigravity)) {
+        speedY -= E.gravity * 2 * VE.tick;
+        onAntiGravity = true;
+       }
+      }
+     }
+     //WHEEL BASED
+     boolean
+     criterion = V.Y >= trackY || speedY >= 0 || Math.abs(speed) < E.gravity * 4 * VE.tick,
+     angleAdjustForYZ = criterion || Math.abs((cosXZ > 0 ? -V.YZ : V.YZ) - trackPlane.YZ) < 30,
+     angleAdjustForXY = criterion || Math.abs((sinXZ < 0 ? -V.YZ : V.YZ) - trackPlane.XY) < 30;
      for (Wheel wheel : V.wheels) {
       boolean inX = Math.abs(wheel.X - trackX) <= radiusX, inZ = Math.abs(wheel.Z - trackZ) <= radiusZ;
       if (Math.abs(wheel.Y - (trackY + gravityCompensation)) <= trackPlane.radiusY) {
        if (inX && inZ) {
         if (isTree) {
-         wheel.speedX -= U.random(3.) * wheel.speedX * VE.tick;
-         wheel.speedY -= U.random(3.) * wheel.speedY * VE.tick;
-         wheel.speedZ -= U.random(3.) * wheel.speedZ * VE.tick;
+         speedX -= U.random() * speedX * VE.tick;
+         speedY -= U.random() * speedY * VE.tick;
+         speedZ -= U.random() * speedZ * VE.tick;
          wheel.againstWall = true;
-        } else if (gate) {
-         if (trackPlane.type.contains(" slowgate ")) {
-          if (Math.abs(trackPlane.YZ) == 90) {
-           if (Math.abs(wheel.speedZ) > V.topSpeeds[0]) {
-            wheel.speedZ *= .333;
-            V.VA.gate.play(1, V.VA.distanceVehicleToCamera);
-           }
-          } else if (Math.abs(trackPlane.XY) == 90) {
-           if (Math.abs(wheel.speedX) > V.topSpeeds[0]) {
-            wheel.speedX *= .333;
-            V.VA.gate.play(1, V.VA.distanceVehicleToCamera);
-           }
-          }
-         } else {
-          wheel.speedZ *= Math.abs(trackPlane.YZ) == 90 ? 3 : 1;
-          wheel.speedX *= Math.abs(trackPlane.XY) == 90 ? 3 : 1;
-          speed *= (speed > 0 && speed < V.topSpeeds[1]) || (speed < 0 && speed > -V.topSpeeds[0]) ? 1.25 : 1;
-          if (wheel.speedX != 0 || wheel.speedZ != 0) {
-           V.VA.gate.play(0, V.VA.distanceVehicleToCamera);
-          }
-         }
-        } else if (trackProperties.contains(" antigravity ")) {
-         wheel.speedY -= E.gravity * 2 * VE.tick;
-         onAntiGravity = true;
         } else if (!isWall) {
          if (trackPlane.YZ == 0 && trackPlane.XY == 0 && wheel.Y > trackY - 5) {//'- 5' is for better traction control--not to be used for stationary objects. Do not transfer '-5' to any assignments
-          mode = Mode.drive;
-          wheel.Y = Math.min(localVehicleGround, trackY);
-          if (flipped && trackProperties.contains(" hard ")) {
+          mode = Mode.driveSolid;
+          wheel.Y = Math.min(localGround, trackY);
+          if (flipped && trackProperties.contains(SL.Thicks.hard)) {
            wheel.sparks(true);
           }
           if (crashLand) {
-           crash(wheel.speedY * bounceBackForce * .1);
+           crashPower = Math.max(crashPower, Math.abs(speedY * bounceBackForce));
           }
-          if (wheel.speedY > 100) {
-           V.deployDust(wheel, true);
+          if (speedY > RichHit.minimumSpeed) {
+           for (long n = RichHit.dustQuantity; --n >= 0; ) {
+            V.deployDust(true);
+           }
            V.VA.land();
           }
-          if (wheel.speedY > 0) {
-           wheel.speedY *= V.destroyed ? 0 : -V.bounce * flatPlaneBounce;
+          if (speedY > 0) {
+           speedY *= V.destroyed ? 0 : -V.bounce * flatPlaneBounce;
           }
-          wheel.XY -= wheel.XY * .25;
-          wheel.YZ -= wheel.YZ * .25;
+          wheel.XY -= wheel.XY * valueAdjustSmoothing * VE.tick;
+          wheel.YZ -= wheel.YZ * valueAdjustSmoothing * VE.tick;
           wheel.minimumY = trackY;
          } else if (trackPlane.YZ != 0) {
           double setY = trackY + (wheel.Z - trackZ) * (trackPlane.radiusY / trackPlane.radiusZ) * (trackPlane.YZ > 0 ? 1 : trackPlane.YZ < 0 ? -1 : 0);
           if (wheel.Y >= setY - 100) {
            wheel.angledSurface = true;
-           mode = Mode.drive;
-           if (!trackProperties.contains(" hard ")) {
-            V.deployDust(wheel, false);
+           mode = Mode.driveSolid;
+           if (!trackProperties.contains(SL.Thicks.hard)) {
+            V.deployDust(false);
            } else if (flipped) {
             wheel.sparks(true);
            }
-           if (V.Y >= trackY || wheel.speedY >= 0 || Math.abs(speed) < E.gravity * 4 * VE.tick || Math.abs((U.cos(V.XZ) > 0 ? -V.YZ : V.YZ) - trackPlane.YZ) < 30) {
-            wheel.YZ += (-trackPlane.YZ * U.cos(V.XZ) - wheel.YZ) * .25;
+           if (angleAdjustForYZ) {
+            wheel.YZ += (-trackPlane.YZ * cosXZ - wheel.YZ) * valueAdjustSmoothing * VE.tick;
             wheel.Y = setY;
            }
-           wheel.XY += (trackPlane.YZ * U.sin(V.XZ) - wheel.XY) * .25;
+           wheel.XY += (trackPlane.YZ * sinXZ - wheel.XY) * valueAdjustSmoothing * VE.tick;
           }
          } else if (trackPlane.XY != 0) {
           double setY = trackY + (wheel.X - trackX) * (trackPlane.radiusY / trackPlane.radiusX) * (trackPlane.XY > 0 ? 1 : trackPlane.XY < 0 ? -1 : 0);
           if (wheel.Y >= setY - 100) {
            wheel.angledSurface = true;
-           mode = Mode.drive;
-           if (!trackProperties.contains(" hard ")) {
-            V.deployDust(wheel, false);
+           mode = Mode.driveSolid;
+           if (!trackProperties.contains(SL.Thicks.hard)) {
+            V.deployDust(false);
            } else if (flipped) {
             wheel.sparks(true);
            }
-           if (V.Y >= trackY || wheel.speedY >= 0 || Math.abs(speed) < E.gravity * 4 * VE.tick || (Math.abs((U.sin(V.XZ) < 0 ? -V.YZ : V.YZ) - trackPlane.XY) < 30)) {
-            wheel.YZ += (trackPlane.XY * U.sin(V.XZ) - wheel.YZ) * .25;
+           if (angleAdjustForXY) {
+            wheel.YZ += (trackPlane.XY * sinXZ - wheel.YZ) * valueAdjustSmoothing * VE.tick;
             wheel.Y = setY;
            }
-           wheel.XY += (trackPlane.XY * U.cos(V.XZ) - wheel.XY) * .25;
+           wheel.XY += (trackPlane.XY * cosXZ - wheel.XY) * valueAdjustSmoothing * VE.tick;
           }
          }
         }
        }
        if (isWall) {
-        double vehicleRadius = V.collisionRadius() * .5, contactX = trackPlane.radiusX + vehicleRadius, contactZ = trackPlane.radiusZ + vehicleRadius;
+        double vehicleRadius = V.collisionRadius * .5, contactX = trackPlane.radiusX + vehicleRadius, contactZ = trackPlane.radiusZ + vehicleRadius;
         if (inX && Math.abs(wheel.Z - trackZ) <= contactZ) {
-         if (trackPlane.wall == TrackPlane.Wall.front && wheel.Z < trackZ + contactZ && wheel.speedZ < 0) {
-          for (Wheel otherWheel : V.wheels) {
-           otherWheel.Z -= wheel != otherWheel && otherWheel.Z >= trackZ + contactZ ? wheel.Z - (trackZ + contactZ) : 0;
-          }
-          wheel.Z = trackZ + contactZ;
-          if (trackProperties.contains(" hard ")) {
+         if (
+         (trackPlane.wall == TrackPlane.Wall.front && wheel.Z < trackZ + contactZ && speedZ < 0) ||
+         (trackPlane.wall == TrackPlane.Wall.back && wheel.Z > trackZ - contactZ && speedZ > 0)) {
+          if (trackProperties.contains(SL.Thicks.hard)) {
            wheel.sparks(false);
           }
-          crash(wheel.speedZ * trackPlane.damage * .1);
-          wheel.speedZ += Math.abs(wheel.speedZ) * V.bounce * wallPlaneBounce;
+          crashPower = Math.max(crashPower, Math.abs(speedZ * trackPlane.damage));
+          speedZ *= -1 * V.bounce * wallPlaneBounce;
           spinnerHit = wheel.againstWall = true;
          }
-         if (trackPlane.wall == TrackPlane.Wall.back && wheel.Z > trackZ - contactZ && wheel.speedZ > 0) {
-          for (Wheel otherWheel : V.wheels) {
-           otherWheel.Z -= wheel != otherWheel && otherWheel.Z <= trackZ - contactZ ? wheel.Z - (trackZ - contactZ) : 0;
-          }
-          wheel.Z = trackZ - contactZ;
-          if (trackProperties.contains(" hard ")) {
-           wheel.sparks(false);
-          }
-          crash(wheel.speedZ * trackPlane.damage * .1);
-          wheel.speedZ -= Math.abs(wheel.speedZ) * V.bounce * wallPlaneBounce;
-          spinnerHit = wheel.againstWall = true;
-         }
+         inWall = true;
         }
         if (inZ && Math.abs(wheel.X - trackX) <= contactX) {
-         if (trackPlane.wall == TrackPlane.Wall.right && wheel.X < trackX + contactX && wheel.speedX < 0) {
-          for (Wheel otherWheel : V.wheels) {
-           otherWheel.X -= wheel != otherWheel && otherWheel.X >= trackX + contactX ? wheel.X - (trackX + contactX) : 0;
-          }
-          wheel.X = trackX + contactX;
-          if (trackProperties.contains(" hard ")) {
+         if (
+         (trackPlane.wall == TrackPlane.Wall.right && wheel.X < trackX + contactX && speedX < 0) ||
+         (trackPlane.wall == TrackPlane.Wall.left && wheel.X > trackX - contactX && speedX > 0)) {
+          if (trackProperties.contains(SL.Thicks.hard)) {
            wheel.sparks(false);
           }
-          crash(wheel.speedX * trackPlane.damage * .1);
-          wheel.speedX += Math.abs(wheel.speedX) * V.bounce * wallPlaneBounce;
+          crashPower = Math.max(crashPower, Math.abs(speedX * trackPlane.damage));
+          speedX *= -1 * V.bounce * wallPlaneBounce;
           spinnerHit = wheel.againstWall = true;
          }
-         if (trackPlane.wall == TrackPlane.Wall.left && wheel.X > trackX - contactX && wheel.speedX > 0) {
-          for (Wheel otherWheel : V.wheels) {
-           otherWheel.X -= wheel != otherWheel && otherWheel.X <= trackX - contactX ? wheel.X - (trackX - contactX) : 0;
-          }
-          wheel.X = trackX - contactX;
-          if (trackProperties.contains(" hard ")) {
-           wheel.sparks(false);
-          }
-          crash(wheel.speedX * trackPlane.damage * .1);
-          wheel.speedX -= Math.abs(wheel.speedX) * V.bounce * wallPlaneBounce;
-          spinnerHit = wheel.againstWall = true;
-         }
+         inWall = true;
         }
        }
       }
@@ -1437,8 +1250,34 @@ public class Physics {
     }
    }
   }
+  if (crashPower > 0) {//<-Math.abs not needed as value should always be positive
+   crash(crashPower, false);
+  }
   if (V.spinner != null && spinnerHit) {
    V.spinner.hit(null);
+  }
+ }
+
+ private void runSpeedGate(TrackPlane trackPlane) {
+  if (trackPlane.type.contains(" slowgate ")) {
+   if (Math.abs(trackPlane.YZ) == 90) {
+    if (Math.abs(speedZ) > V.topSpeeds[0]) {
+     speedZ *= .333;
+     V.VA.gate.play(1, V.VA.distanceVehicleToCamera);
+    }
+   } else if (Math.abs(trackPlane.XY) == 90) {
+    if (Math.abs(speedX) > V.topSpeeds[0]) {
+     speedX *= .333;
+     V.VA.gate.play(1, V.VA.distanceVehicleToCamera);
+    }
+   }
+  } else {
+   speedZ *= Math.abs(trackPlane.YZ) == 90 ? 3 : 1;
+   speedX *= Math.abs(trackPlane.XY) == 90 ? 3 : 1;
+   speed *= (speed > 0 && speed < V.topSpeeds[1]) || (speed < 0 && speed > -V.topSpeeds[0]) ? 1.25 : 1;
+   if (speedX != 0 || speedZ != 0) {
+    V.VA.gate.play(0, V.VA.distanceVehicleToCamera);
+   }
   }
  }
 
@@ -1446,37 +1285,154 @@ public class Physics {
   for (TrackPart trackPart : TE.trackParts) {
    if (!trackPart.trackPlanes.isEmpty() && U.distance(V.X, trackPart.X, V.Z, trackPart.Z) < trackPart.renderRadius + V.renderRadius) {
     for (TrackPlane trackPlane : trackPart.trackPlanes) {
-     if (trackPlane.wall == TrackPlane.Wall.none && !trackPlane.type.contains(" tree ") && !trackPlane.type.contains("gate")) {
+     if (trackPlane.wall == TrackPlane.Wall.none && !trackPlane.type.contains(SL.Thicks.tree) && !trackPlane.type.contains(SL.gate)) {
       double trackX = trackPlane.X + trackPart.X, trackY = trackPlane.Y + trackPart.Y, trackZ = trackPlane.Z + trackPart.Z;
-      String addHard = U.contains(trackPlane.type, " paved ", " rock ", " grid ", " antigravity ", " metal ", " brightmetal") ? " hard " : " ground ";
+      String addHard = U.contains(trackPlane.type, SL.Thicks.paved, SL.Thicks.rock, SL.Thicks.grid, SL.Thicks.antigravity, SL.Thicks.metal, SL.Thicks.brightmetal) ? SL.Thicks.hard : SL.Thicks.ground;
       if (Math.abs(V.X - trackX) <= trackPlane.radiusX && Math.abs(V.Z - trackZ) <= trackPlane.radiusZ &&
       Math.abs(V.Y + clearance - (trackY + gravityCompensation)) <= trackPlane.radiusY) {
        if (trackPlane.YZ == 0 && trackPlane.XY == 0) {
         terrainProperties = trackPlane.type + addHard;
-        for (Wheel wheel : V.wheels) {
-         wheel.terrainRGB = trackPlane.RGB;
-        }
+        V.terrainRGB = trackPlane.RGB;
        } else if (trackPlane.YZ != 0) {
         double setY = trackY + (V.Z - trackZ) * (trackPlane.radiusY / trackPlane.radiusZ) * (trackPlane.YZ > 0 ? 1 : trackPlane.YZ < 0 ? -1 : 0);
         if (V.Y >= setY - 100) {
          terrainProperties = trackPlane.type + addHard;
-         for (Wheel wheel : V.wheels) {
-          wheel.terrainRGB = trackPlane.RGB;
-         }
+         V.terrainRGB = trackPlane.RGB;
         }
        } else if (trackPlane.XY != 0) {
         double setY = trackY + (V.X - trackX) * (trackPlane.radiusY / trackPlane.radiusX) * (trackPlane.XY > 0 ? 1 : trackPlane.XY < 0 ? -1 : 0);
         if (V.Y >= setY - 100) {
          terrainProperties = trackPlane.type + addHard;
-         for (Wheel wheel : V.wheels) {
-          wheel.terrainRGB = trackPlane.RGB;
-         }
+         V.terrainRGB = trackPlane.RGB;
         }
        }
       }
      }
     }
    }
+  }
+ }
+
+ private void runBouncyTerrain(boolean onBouncy) {
+  if (onBouncy) {
+   speedY -= U.random(terrainProperties.contains(SL.Thicks.bounce) ? .3 : .6) * Math.abs(speed) * V.bounce;
+   if (speedY < -50 && V.bounce > .9) {
+    V.VA.land.playIfNotPlaying(Double.NaN, V.VA.distanceVehicleToCamera);
+   }
+  }
+ }
+
+ private void runSpeedConstraints() {
+  if (mode.name().startsWith(SL.drive) || V.phantomEngaged) {
+   if (V.grip <= highGrip && !flipped && Math.abs(speed) > netSpeed && Math.abs(Math.abs(speed) - netSpeed) > Math.abs(speed) * .5 && !terrainProperties.contains(SL.Thicks.ice)) {
+    speed *= .5;
+   }
+   if (V.turnDrag && (V.turnL || V.turnR)) {
+    speed -= speed * .01 * VE.tick;
+   }
+   if (V.destroyed) {
+    speed *= .9;
+    if (Math.abs(speed) < 2 * VE.tick) {
+     speed = 0;
+    } else {
+     speed += (speed < 0 ? 2 : speed > 0 ? -2 : 0) * VE.tick;
+    }
+   }
+  }
+  speed = U.clamp(-V.topSpeeds[2], speed, V.topSpeeds[2]);
+  if (againstWall() && V.grip > highGrip) {
+   speed *= .95;
+  }
+  if (V.drag != 0) {
+   if (Math.abs(speed) < V.drag * VE.tick) {
+    speed = 0;
+   } else if ((mode != Mode.fly && !V.drive && !V.reverse) || mode == Mode.stunt || Math.abs(speed) > V.topSpeeds[1]) {
+    speed -= (speed > 0 ? 1 : -1) * V.drag * VE.tick;
+   }
+  }
+  if (Math.abs(speed) > V.topSpeeds[1]) {
+   speed -= speed * Math.abs(speed) * .0000005 * VE.tick;
+  }
+ }
+
+ private void runAngleSet() {
+  if (mode.name().startsWith(SL.drive)) {
+   if (angledSurface()) {
+    V.XY = (Math.abs(V.XY) > 90 ? 180 : 0) + (V.wheels.get(0).XY + V.wheels.get(1).XY + V.wheels.get(2).XY + V.wheels.get(3).XY) * .25;
+    V.YZ = (Math.abs(V.YZ) > 90 ? 180 : 0) + (V.wheels.get(0).YZ + V.wheels.get(1).YZ + V.wheels.get(2).YZ + V.wheels.get(3).YZ) * .25;
+   } else if (!onVolcano) {//<-May need stabilization for drivePOOL!
+    if (Math.abs(V.YZ) <= 90) {
+     V.YZ -= V.YZ > 0 ? VE.tick : 0;
+     V.YZ += V.YZ < 0 ? VE.tick : 0;
+    } else {
+     V.YZ += (V.YZ > 90 && V.YZ < 180 - VE.tick ? 1 : V.YZ < -90 && V.YZ > -180 + VE.tick ? -1 : 0) * VE.tick;
+    }
+    if (Math.abs(V.XY) <= 90) {
+     V.XY -= V.XY > 0 ? VE.tick : 0;
+     V.XY += V.XY < 0 ? VE.tick : 0;
+    }
+    if (V.sidewaysLandingAngle == 0) {
+     V.XY += (V.XY > 90 && V.XY < 180 - VE.tick ? 1 : V.XY < -90 && V.XY > -180 + VE.tick ? -1 : 0) * VE.tick;
+    } else {
+     V.XY += U.random(3.) * VE.tick *
+     ((V.XY > 90 && V.XY < V.sidewaysLandingAngle) || (V.XY < -V.sidewaysLandingAngle && V.XY > -(V.sidewaysLandingAngle + 30)) ? 1 :
+     (V.XY < -90 && V.XY > -V.sidewaysLandingAngle) || (V.XY > V.sidewaysLandingAngle && V.XY < V.sidewaysLandingAngle + 30) ? -1 : 0);
+     if (Math.abs(V.XY) >= V.sidewaysLandingAngle + 30) {
+      V.XY -= V.XY > -180 + VE.tick ? VE.tick : 0;
+      V.XY += V.XY < 180 - VE.tick ? VE.tick : 0;
+     }
+    }
+    double centerOut = mode == Mode.drivePool ? .9375 : .25;
+    if (Math.abs(V.XY) <= 90) {
+     V.XY *= centerOut;
+    }
+    if (Math.abs(V.YZ) <= 90) {
+     V.YZ *= centerOut;
+    }
+   }
+  }
+ }
+
+ private void runLandInvert() {
+  if (mode.name().startsWith(SL.drive)) {
+   if (Math.abs(V.YZ) > 90 && Math.abs(V.XY) > 90) {
+    long randomFlip = U.random() < .5 ? 180 : -180;
+    V.XY += randomFlip;
+    V.YZ += randomFlip;
+    V.XZ += randomFlip;
+   }
+   if (flipped && V.landStuntsBothSides) {
+    V.XZ += Math.abs(V.YZ) > 90 && Math.abs(V.XY) < 90 ? 180 : 0;
+    V.XY = V.YZ = 0;
+   }
+  }
+ }
+
+ private void runHitOther() {
+  if (!Double.isNaN(hitOtherX)) {
+   speedX = hitOtherX;
+   hitOtherX = Double.NaN;
+  }
+  if (!Double.isNaN(hitOtherZ)) {
+   speedZ = hitOtherZ;
+   hitOtherZ = Double.NaN;
+  }
+ }
+
+ private void runSetWheelXYZ(double clearance) {
+  double primeX = speedX * VE.tick, primeY = speedY * VE.tick, primeZ = speedZ * VE.tick;
+  for (Wheel wheel : V.wheels) {
+   double[] wheelX = {wheel.pointX}, wheelY = {clearance}, wheelZ = {wheel.pointZ};
+   if (V.XY != 0) {
+    U.rotate(wheelX, wheelY, V.XY);
+   }
+   if (V.YZ != 0) {
+    U.rotate(wheelY, wheelZ, V.YZ);
+   }
+   U.rotate(wheelX, wheelZ, V.XZ);
+   wheel.X = wheelX[0] + V.X + primeX;//<-Must be primed with existing speeds or will be delayed from Core positions!
+   wheel.Y = wheelY[0] + V.Y + primeY;
+   wheel.Z = wheelZ[0] + V.Z + primeZ;
   }
  }
 }

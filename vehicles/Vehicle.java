@@ -13,9 +13,7 @@ import ve.trackElements.trackParts.TrackPart;
 import ve.utilities.Quaternion;
 import ve.utilities.SL;
 import ve.utilities.U;
-import ve.vehicles.specials.Port;
-import ve.vehicles.specials.Special;
-import ve.vehicles.specials.Spinner;
+import ve.vehicles.specials.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -29,8 +27,10 @@ public class Vehicle extends Instance {
  public AI AI;
  public final VehicleAudio VA = new VehicleAudio(this);
  public Spinner spinner;
- MaxNukeBlast MNB;
+ public final double collisionRadius;
+ public MaxNukeBlast MNB;
  public final List<VehiclePart> parts = new ArrayList<>();
+ public Color terrainRGB = U.getColor(0);
  //CORE PROPERTIES--keep the order!
  public String name = "";
  public Type type = Vehicle.Type.vehicle;
@@ -39,7 +39,7 @@ public class Vehicle extends Instance {
  public final double[] topSpeeds = {0, 0, Double.POSITIVE_INFINITY};
  public double turnRate;
  double maxTurn;
- double randomTurn;
+ double randomTurnKick;
  double brake;
  double grip;
  double drag;
@@ -55,10 +55,10 @@ public class Vehicle extends Instance {
  public double getsPushed;
  double liftsOthers;
  public double getsLifted;
- public final double[] damageDealt = new double[4];
- double turretBaseDamageDealt;
+ public double damageDealt;
+ double structureBaseDamageDealt;
  public double durability, fragility, selfRepair;
- double spin;
+ private double spin;
  boolean turnDrag;
  boolean steerInPlace;
  public double speedBoost;
@@ -98,16 +98,16 @@ public class Vehicle extends Instance {
  public boolean inDriverView;
  private boolean gotStunt;
  public boolean offTheEdge;
- boolean reviveImmortality;
+ public boolean reviveImmortality;
  public boolean thrusting;
  public final boolean[] rollCheck = new boolean[2], flipCheck = new boolean[2], spinCheck = new boolean[2];
  Death death = Death.none;
  public final List<Wheel> wheels = new ArrayList<>();
  private final List<Dust> dusts = new ArrayList<>();
  private int currentDust;
- final List<Splash> splashes = new ArrayList<>();
- int currentSplash;
- public final List<repairSphere> repairSpheres = new ArrayList<>();
+ public final List<Splash> splashes = new ArrayList<>();
+ public int currentSplash;
+ public final List<RepairSphere> repairSpheres = new ArrayList<>();
  private static final long maxSpecials = 3;
  public boolean hasShooting;
  public final List<Explosion> explosions = new ArrayList<>();
@@ -115,12 +115,12 @@ public class Vehicle extends Instance {
 
  public enum Type {vehicle, aircraft, turret, supportInfrastructure}
 
- enum Engine {//<-The engine holds more info than just audio, so keep in this class
+ enum Engine {//<-The 'Engine' holds more info than just audio, so keep in this class
   none, normal, tiny, agera, aventador, veyron, chiron, hotrod, huayra, laferrari, minicooper, p1, s7, turboracer,
   retro, electric,
   smalltruck, bigtruck, authentictruck, monstertruck, humvee, tank, smallcraft, turbo, power, massive, train,
-  smallprop, bigprop,
-  jet, brightjet, powerjet, torchjet, jetfighter, turbine, smallrocket, rocket, bigrocket, turborocket
+  smallprop, prop, bigprop,//'Prop' is not an engine YET
+  jet, brightjet, powerjet, torchjet, jetfighter1, jetfighter2, turbine, smallrocket, rocket, bigrocket, turborocket
  }
 
  public enum ExplosionType {none, normal, nuclear, maxnuclear}
@@ -139,7 +139,7 @@ public class Vehicle extends Instance {
   realVehicle = isReal;
   modelName = VE.vehicleModels.get(modelNumber);
   int n;
-  theRandomColor = index == VE.userPlayerIndex ? VE.userRandomRGB/*VERIFY*/ : U.getColor(U.random(), U.random(), U.random());
+  theRandomColor = index == VE.userPlayerIndex ? VE.userRandomRGB : U.getColor(U.random(), U.random(), U.random());
   int wheelCount = 0;
   for (n = 4; --n >= 0; ) {
    wheels.add(new Wheel(this));
@@ -204,37 +204,37 @@ public class Vehicle extends Instance {
       xx.add((U.getValue(s, 0) * modelSize * modelScale[0]) + translate[0]);
       yy.add((U.getValue(s, 1) * modelSize * modelScale[1]) + translate[1]);
       zz.add((U.getValue(s, 2) * modelSize * modelScale[2]) + translate[2]);
-      if (!String.valueOf(properties).contains(" thrust ")) {
+      if (!String.valueOf(properties).contains(SL.Thicks.thrust)) {
        int size = xx.size() - 1;
        addSizes(xx.get(size), yy.get(size), zz.get(size));
       }
      }
      if (xx.size() < 1) {
-      texture = s.startsWith("texture(") ? U.getString(s, 0) : texture;
-      properties.append(s.startsWith("cs") ? " fastCull" + (s.endsWith("B") ? "B" : s.endsWith("F") ? "F" : s.endsWith("R") ? "R" : s.endsWith("L") ? "L" : "") + " " : "");
-      if (s.startsWith("lit")) {
-       properties.append(" light ").append(s.endsWith("fire") ? " fire " : "");
+      texture = s.startsWith(SL.texture + "(") ? U.getString(s, 0) : texture;
+      properties.append(s.startsWith(SL.fastCull) ? " fastCull" + (s.endsWith("B") ? "B" : s.endsWith("F") ? "F" : s.endsWith("R") ? "R" : s.endsWith("L") ? "L" : "") + " " : "");
+      if (s.startsWith(SL.lit)) {
+       properties.append(SL.Thicks.light).append(s.endsWith(SL.fire) ? SL.Thicks.fire : "");
        lightsAdded++;
       }
-      append(properties, s, false, SL.Instance.noTexture, "noCrush",
-      SL.Instance.reflect, SL.Instance.blink, "line", SL.Instance.selfIlluminate, SL.Instance.noSpecular, SL.Instance.shiny,
-      "smokePoint", "thrustTrailPoint", SL.Instance.flick1, SL.Instance.flick2, "landingGear", "shake", "spinner", "driver",
+      append(properties, s, false, SL.noTexture, "noCrush",
+      SL.reflect, SL.blink, SL.line, SL.selfIlluminate, SL.noSpecular, SL.shiny,
+      "smokePoint", "thrustTrailPoint", SL.flick1, SL.flick2, "landingGear", "shake", SL.spinner, "driver",
       InstancePart.FaceFunction.conic.name(),
       InstancePart.FaceFunction.cylindric.name(),
       InstancePart.FaceFunction.strip.name(),
       InstancePart.FaceFunction.squares.name(),
       InstancePart.FaceFunction.triangles.name(),
-      "base", "exterior");
-      properties.append(s.startsWith("thrustWhite") ? " thrustWhite " : s.startsWith("thrustBlue") ? " thrustBlue " : s.startsWith("thrust") ? " thrust " : "");
-      properties.append(s.startsWith("turretBarrel") ? " turretBarrel " : s.startsWith("turret") ? " turret " : "");
-      if (s.startsWith(SL.Instance.controller)) {
-       properties.append(" controller ").append(s.contains("XZ") ? " steerXZ " : s.contains("XY") ? " steerXY " : "");
-      } else if (s.startsWith("wheel")) {
-       properties.append(" wheel ");
-       addWheel = s.startsWith("wheelPoint") || addWheel;
+      SL.base, "exterior");
+      properties.append(s.startsWith("thrustWhite") ? SL.Thicks.thrustWhite : s.startsWith("thrustBlue") ? SL.Thicks.thrustBlue : s.startsWith(SL.thrust) ? SL.Thicks.thrust : "");
+      properties.append(s.startsWith("turretBarrel") ? SL.Thicks.turretBarrel : s.startsWith(SL.turret) ? SL.Thicks.turret : "");
+      if (s.startsWith(SL.controller)) {
+       properties.append(SL.Thicks.controller).append(s.contains(SL.XZ) ? SL.Thicks.steerXZ : s.contains(SL.XY) ? SL.Thicks.steerXY : "");
+      } else if (s.startsWith(SL.wheel)) {
+       properties.append(SL.Thicks.wheel);
+       addWheel = s.startsWith(SL.wheelPoint) || addWheel;
       } else if (s.startsWith("steer")) {
-       properties.append(s.startsWith("steerXY") ? " steerXY " : s.startsWith("steerYZ") ? " steerYZ " : U.startsWith(s, "steerXZ", "steers") ? " steerXZ " : "");
-       properties.append(s.startsWith("steerFromYZ") ? " steerFromYZ " : s.startsWith("steerFromXZ") ? " steerFromXZ " : "");
+       properties.append(s.startsWith("steerXY") ? SL.Thicks.steerXY : s.startsWith("steerYZ") ? SL.Thicks.steerYZ : U.startsWith(s, "steerXZ", SL.steers) ? SL.Thicks.steerXZ : "");
+       properties.append(s.startsWith("steerFromYZ") ? SL.Thicks.steerFromYZ : s.startsWith("steerFromXZ") ? SL.Thicks.steerFromXZ : "");
       } else if (s.startsWith("pivot(")) {
        pivotX = U.getValue(s, 0) * modelSize * modelScale[0];
        pivotY = U.getValue(s, 1) * modelSize * modelScale[1];
@@ -260,7 +260,7 @@ public class Vehicle extends Instance {
     }
     turnRate = s.startsWith("turnRate(") ? Math.max(0, U.getValue(s, 0)) : turnRate;
     maxTurn = s.startsWith("maxTurn(") ? U.getValue(s, 0) : maxTurn;
-    randomTurn = s.startsWith("randomTurn(") ? U.getValue(s, 0) : randomTurn;
+    randomTurnKick = s.startsWith("randomTurn(") ? U.getValue(s, 0) : randomTurnKick;
     brake = s.startsWith("brake(") ? U.getValue(s, 0) : brake;
     grip = s.startsWith("grip(") ? U.getValue(s, 0) < 0 ? Double.POSITIVE_INFINITY : U.getValue(s, 0) : grip;
     drag = s.startsWith("drag(") ? U.getValue(s, 0) : drag;
@@ -282,17 +282,9 @@ public class Vehicle extends Instance {
     getsPushed = s.startsWith("getsPushed(") ? U.getValue(s, 0) : getsPushed;
     liftsOthers = s.startsWith("liftsOthers(") ? U.getValue(s, 0) : liftsOthers;
     getsLifted = s.startsWith("getsLifted(") ? U.getValue(s, 0) : getsLifted;
-    if (s.startsWith("damageDealt(")) {
-     try {
-      for (n = 4; --n >= 0; ) {
-       damageDealt[n] = U.getValue(s, n);
-      }
-     } catch (RuntimeException E) {
-      damageDealt[0] = damageDealt[1] = damageDealt[2] = damageDealt[3] = U.getValue(s, 0);
-     }
-    }
-    turretBaseDamageDealt = s.startsWith("baseDamageDealt(") ? U.getValue(s, 0) : turretBaseDamageDealt;
-    turretBaseY = s.startsWith("baseY(") ? U.getValue(s, 0) : turretBaseY;
+    damageDealt = s.startsWith("damageDealt(") ? U.getValue(s, 0) : damageDealt;
+    structureBaseDamageDealt = s.startsWith("structureBaseDamageDealt(") ? U.getValue(s, 0) : structureBaseDamageDealt;
+    turretBaseY = s.startsWith("turretBaseY(") ? U.getValue(s, 0) : turretBaseY;
     durability = s.startsWith("durability(") ? U.getValue(s, 0) : durability;
     fragility = s.startsWith("fragility(") ? U.getValue(s, 0) : fragility;
     selfRepair = s.startsWith("selfRepair(") ? U.getValue(s, 0) : selfRepair;
@@ -325,8 +317,8 @@ public class Vehicle extends Instance {
     if (s.startsWith("behavior(") && !U.getString(s, 0).isEmpty()) {
      behavior = ve.vehicles.AI.Behavior.valueOf(U.getString(s, 0));
     }
-    if (s.startsWith("special(") && !U.getString(s, 0).isEmpty()) {
-     addSpecial(s);
+    if (s.startsWith("special(") && !U.getString(s, 0).isEmpty() && specials.size() < maxSpecials) {
+     specials.add(new Special(this, s));
     }
     addSpecialProperties(s);
     if (s.startsWith("explosion(") && !U.getString(s, 0).isEmpty()) {
@@ -338,21 +330,21 @@ public class Vehicle extends Instance {
     }
     getSizeScaleTranslate(s, translate, 1, new double[]{1, 1, 1});
     if (s.startsWith("wheelColor(")) {
-     if (s.contains(SL.Instance.reflect)) {
-      wheelProperties.append(" reflect ");
+     if (s.contains(SL.reflect)) {
+      wheelProperties.append(SL.Thicks.reflect);
      } else {
       try {
        wheelRGB = U.getColor(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
       } catch (RuntimeException E) {
-       if (s.contains(SL.Instance.theRandomColor)) {
+       if (s.contains(SL.theRandomColor)) {
         wheelRGB = theRandomColor;
-        wheelProperties.append(" theRandomColor ");
+        wheelProperties.append(SL.Thicks.theRandomColor);
        } else {
         wheelRGB = U.getColor(U.getValue(s, 0));
        }
       }
      }
-     append(wheelProperties, s, true, SL.Instance.noSpecular, SL.Instance.shiny);
+     append(wheelProperties, s, true, SL.noSpecular, SL.shiny);
     } else if (s.startsWith("rims(")) {
      if (!show) {
       break;
@@ -363,16 +355,16 @@ public class Vehicle extends Instance {
      try {
       rimRGB = U.getColor(U.getValue(s, 2), U.getValue(s, 3), U.getValue(s, 4));
      } catch (RuntimeException E) {
-      if (s.contains(SL.Instance.theRandomColor)) {
+      if (s.contains(SL.theRandomColor)) {
        rimRGB = theRandomColor;
-       rimProperties.append(" theRandomColor ");
+       rimProperties.append(SL.Thicks.theRandomColor);
       } else {
        rimRGB = U.getColor(U.getValue(s, 2));
       }
      }
-     append(rimProperties, s, true, SL.Instance.reflect, SL.Instance.noSpecular, SL.Instance.shiny, SL.Instance.sport);
+     append(rimProperties, s, true, SL.reflect, SL.noSpecular, SL.shiny, SL.sport);
     }
-    wheelProperties.append(s.startsWith("landingGearWheels") ? " landingGear " : "");
+    wheelProperties.append(s.startsWith("landingGearWheels") ? SL.Thicks.landingGear : "");
     wheelTextureType = s.startsWith("wheelTexture(") ? U.getString(s, 0) : wheelTextureType;//<-Using 'append' would mess this up if found more than once in file
     wheelSmoothing = s.startsWith("smoothing(") ? U.getValue(s, 0) * modelSize : wheelSmoothing;
     if (s.startsWith("wheel(")) {
@@ -386,18 +378,18 @@ public class Vehicle extends Instance {
       wheels.get(wheelCount).sparkPoint = U.getValue(s, 4) * 2 * modelSize;
      }
      String side = U.getValue(s, 0) > 0 ? " R " : U.getValue(s, 0) < 0 ? " L " : U.random() < .5 ? " R " : " L ";
-     loadWheel(this, null, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2), U.getValue(s, 3), U.getValue(s, 4), wheelProperties + side, String.valueOf(rimProperties), wheelTextureType, s.contains("steers"), s.contains("hide"));
+     loadWheel(this, null, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2), U.getValue(s, 3), U.getValue(s, 4), wheelProperties + side, String.valueOf(rimProperties), wheelTextureType, s.contains(SL.steers), s.contains(SL.hide));
      wheelCount++;
     }
     steerAngleMultiply = s.startsWith("steerAngleMultiply(") ? U.getValue(s, 0) : steerAngleMultiply;
    }
   } catch (IOException e) {
    System.out.println(U.modelLoadingError + e);
-   System.out.println("At File: " + model);
-   System.out.println("At Line: " + s);
+   System.out.println(VE.UI.At_File_ + model);
+   System.out.println(VE.UI.At_Line_ + s);
   }
   if (lightsAdded < 1) {
-   parts.add(new VehiclePart(this, new double[1], new double[1], new double[1], 1, U.getColor(1), " light ", ""));
+   parts.add(new VehiclePart(this, new double[1], new double[1], new double[1], 1, U.getColor(1), SL.Thicks.light, ""));
   }
   maxMinusX[1] /= vertexQuantity;
   maxPlusX[1] /= vertexQuantity;
@@ -417,6 +409,7 @@ public class Vehicle extends Instance {
     break;
    }
   }
+  collisionRadius = spinner == null ? absoluteRadius * .2 : Math.min(renderRadius * .75, absoluteRadius * .2);//<-Optimized for CALAMITUS MAXIMUS
   explosionType = explosionsWhenDestroyed > 0 && !explosionType.name().contains(ExplosionType.nuclear.name()) ? ExplosionType.normal : explosionType;
   X = Y = Z = XZ = 0;
   for (VehiclePart part : parts) {
@@ -424,7 +417,7 @@ public class Vehicle extends Instance {
   }
   if (realVehicle) {
    P = new Physics(this);
-   if (E.Pool.exists || !Tsunami.parts.isEmpty()) {
+   if (E.Pool.exists || Tsunami.exists) {
     for (n = E.splashQuantity; --n >= 0; ) {
      splashes.add(new Splash());
     }
@@ -448,98 +441,81 @@ public class Vehicle extends Instance {
     MNB = new MaxNukeBlast(this);
    }
    TE.setVehicleMatchStartPlacement(this);
-   loadVehicle();
+   load();
   }
-  Quaternion baseXZ = new Quaternion(0, U.sin(XZ * .5), 0, U.cos(XZ * .5)),
+  Quaternion
+  baseXZ = new Quaternion(0, U.sin(XZ * .5), 0, U.cos(XZ * .5)),
   baseYZ = new Quaternion(-U.sin(YZ * .5), 0, 0, U.cos(YZ * .5)),
   baseXY = new Quaternion(0, 0, -U.sin(XY * .5), U.cos(XY * .5));
   rotation = baseXY.multiply(baseYZ).multiply(baseXZ);
  }
 
- private void addSpecial(String s) {
-  if (specials.size() < maxSpecials) {
-   specials.add(new Special(this));
-   Special S = specials.get(specials.size() - 1);
-   S.type = Special.Type.valueOf(U.getString(s, 0));
-   if (!S.type.name().contains("particle") && S.type != Special.Type.spinner) {
-    String specialAudio = "";
-    try {
-     specialAudio = U.getString(s, 1);
-    } catch (RuntimeException ignored) {
-    }
-    S.sound = new Sound(S.type.name() + specialAudio);
-   }
-   S.homing = s.contains("homing") || S.homing;
-   S.aimType = s.contains("autoAim") || specials.size() > 2 ? Special.AimType.auto : s.contains("ofVehicleTurret") ? Special.AimType.ofVehicleTurret : S.aimType;
-  }
- }
-
  private void addSpecialProperties(String s) {
   if (!specials.isEmpty() && specials.size() <= maxSpecials) {
-   Special S = specials.get(specials.size() - 1);
+   Special special = specials.get(specials.size() - 1);
    if (s.startsWith("gunY(")) {
     for (int n1 = 0; n1 < E.shotQuantity; n1++) {
      try {
-      S.ports.add(new Port());
-      S.ports.get(n1).Y = U.getValue(s, S.type == Special.Type.shotgun ? 0 : n1) * modelSize;
+      special.ports.add(new Port());
+      special.ports.get(n1).Y = U.getValue(s, special.type == Special.Type.shotgun ? 0 : n1) * modelSize;
      } catch (RuntimeException e) {
-      S.ports.remove(S.ports.size() - 1);
+      special.ports.remove(special.ports.size() - 1);
       break;
      }
     }
    } else if (s.startsWith("gunX(")) {
     try {
-     for (Port port : S.ports) {
-      port.X = U.getValue(s, S.ports.indexOf(port)) * modelSize;
+     for (Port port : special.ports) {
+      port.X = U.getValue(s, special.ports.indexOf(port)) * modelSize;
      }
     } catch (RuntimeException E) {
-     for (Port port : S.ports) {
+     for (Port port : special.ports) {
       port.X = U.getValue(s, 0) * modelSize;
      }
     }
    } else if (s.startsWith("gunZ(")) {
     try {
-     for (Port port : S.ports) {
-      port.Z = U.getValue(s, S.ports.indexOf(port)) * modelSize;
+     for (Port port : special.ports) {
+      port.Z = U.getValue(s, special.ports.indexOf(port)) * modelSize;
      }
     } catch (RuntimeException E) {
-     for (Port port : S.ports) {
+     for (Port port : special.ports) {
       port.Z = U.getValue(s, 0) * modelSize;
      }
     }
    } else if (s.startsWith("gunXZ(")) {
     try {
-     for (Port port : S.ports) {
-      port.XZ = U.getValue(s, S.ports.indexOf(port));
+     for (Port port : special.ports) {
+      port.XZ = U.getValue(s, special.ports.indexOf(port));
      }
     } catch (RuntimeException E) {
-     for (Port port : S.ports) {
+     for (Port port : special.ports) {
       port.XZ = U.getValue(s, 0);
      }
     }
    } else if (s.startsWith("gunYZ(")) {
     try {
-     for (Port port : S.ports) {
-      port.YZ = U.getValue(s, S.ports.indexOf(port));
+     for (Port port : special.ports) {
+      port.YZ = U.getValue(s, special.ports.indexOf(port));
      }
     } catch (RuntimeException E) {
-     for (Port port : S.ports) {
+     for (Port port : special.ports) {
       port.YZ = U.getValue(s, 0);
      }
     }
    }
    if (s.startsWith("gunRandomPosition(")) {
-    S.randomPosition = U.getValue(s, 0) * modelSize;
+    special.randomPosition = U.getValue(s, 0) * modelSize;
    } else if (s.startsWith("gunRandomAngle(")) {
-    S.randomAngle = U.getValue(s, 0);
+    special.randomAngle = U.getValue(s, 0);
    }
   }
  }
 
- public void addTransparents() {
+ public void addTransparentNodes() {
   if (realVehicle) {
    int n;
-   if (contact == Physics.Contact.rubber || E.Terrain.terrain.contains(" snow ")) {
+   if (contact == Physics.Contact.rubber || E.Terrain.terrain.contains(SL.Thicks.snow)) {
     Color C = U.getColor(wheelRGB.getRed() * .5, wheelRGB.getGreen() * .5, wheelRGB.getBlue() * .5);
     if (!wheelTextureType.isEmpty()) {
      C = U.getColor(C.getRed() * .333, C.getGreen() * .333, C.getBlue() * .333);
@@ -552,24 +528,29 @@ public class Vehicle extends Instance {
     }
    }
    for (n = 32; --n >= 0; ) {
-    repairSpheres.add(new repairSphere(this));
+    repairSpheres.add(new RepairSphere(this));
    }
    if (!isFixed()) {
     for (n = E.dustQuantity; --n >= 0; ) {
      dusts.add(new Dust());
     }
    }
+   for (Special special : specials) {
+    for (Shot shot : special.shots) {
+     U.Nodes.add(shot.MV);
+    }
+   }
    for (VehiclePart part : parts) {
     if (part.smokes != null) {
      for (Smoke smoke : part.smokes) {
-      U.Nodes.add(smoke.C);
+      U.Nodes.add(smoke.C);//<-Smokes are the most transparent, thus should be the last Nodes added
      }
     }
    }
   }
  }
 
- private void loadVehicle() {
+ private void load() {
   P.cameraXZ = XZ;
   for (Wheel wheel : wheels) {
    wheel.X = X;
@@ -578,11 +559,9 @@ public class Vehicle extends Instance {
   }
   P.wheelGapFrontToBack = Math.max(Math.abs(wheels.get(0).pointZ - wheels.get(2).pointZ), Math.abs(wheels.get(1).pointZ - wheels.get(3).pointZ));
   P.wheelGapLeftToRight = Math.max(Math.abs(wheels.get(0).pointX - wheels.get(1).pointX), Math.abs(wheels.get(2).pointX - wheels.get(3).pointX));
-  for (Special special : specials) {
-   special.time();
-  }
   int n;
   for (Special special : specials) {
+   special.time();
    special.load();
   }
   if (!explosionType.name().contains(ExplosionType.nuclear.name())) {
@@ -602,16 +581,12 @@ public class Vehicle extends Instance {
   Y = P.onVolcano ? Math.min(Y, -Volcano.radiusBottom + volcanoDistance) - (isFixed() ? turretBaseY : 0) : Y;
   P.atPoolXZ = E.Pool.exists && U.distance(X, E.Pool.X, Z, E.Pool.Z) < E.Pool.C[0].getRadius();
   P.inPool = P.atPoolXZ && Y + clearanceY > 0;
-  P.localVehicleGround = E.Ground.level + (P.atPoolXZ ? E.Pool.depth : 0);
+  P.localGround = E.Ground.level + (P.atPoolXZ ? E.Pool.depth : 0);
   lightBrightness = VE.Map.defaultVehicleLightBrightness;
  }
 
  public boolean isFixed() {
   return type == Type.turret || type == Type.supportInfrastructure;
- }
-
- public double collisionRadius() {
-  return absoluteRadius * .3;
  }
 
  public void addDamage(double in) {
@@ -627,11 +602,15 @@ public class Vehicle extends Instance {
  }
 
  public double damageCeiling() {
-  return durability * 1.004;//<-Always rounds to '100%' in UI
+  return durability * 1.004;//<-Always rounds to '100%' visually in UI
  }
 
  public boolean isIntegral() {
   return damage <= durability;
+ }
+
+ public boolean dealsMassiveDamage() {
+  return type != Type.aircraft && damageDealt >= 100;
  }
 
  public void runGraphics(boolean gamePlay) {
@@ -647,8 +626,8 @@ public class Vehicle extends Instance {
    part.setPosition(nullPhysics);
   }
   boolean renderALL = E.renderType == E.RenderType.ALL;
-  if (renderALL || E.renderType == E.RenderType.fullDistance || distanceToCamera < E.viewableMapDistance + collisionRadius()) {
-   onFire = VE.Map.name.equals("the Sun") || onFire;
+  if (renderALL || E.renderType == E.RenderType.fullDistance || distanceToCamera < E.viewableMapDistance + collisionRadius) {
+   onFire = VE.Map.name.equals(SL.MN.theSun) || onFire;
    rotation.set();
    rotation.multiply(0, 0, -U.sin(XY * .5), U.cos(XY * .5));//<-Mind the multiply order!
    rotation.multiply(-U.sin(YZ * .5), 0, 0, U.cos(YZ * .5));
@@ -657,7 +636,7 @@ public class Vehicle extends Instance {
     part.render(nullPhysics, renderALL);
    }
   }
-  double smokeEmitProbability = nullPhysics || destroyed ? 0 : (P.mode.name().contains(Physics.Mode.drive.name()) || P.mode == Physics.Mode.neutral) && (drive || reverse) ? 1 : .25;
+  double smokeEmitProbability = nullPhysics || destroyed ? 0 : (P.mode.name().contains(SL.drive) || P.mode == Physics.Mode.neutral) && (drive || reverse) ? 1 : .25;
   for (VehiclePart part : parts) {
    if (part.smokes != null) {
     if (U.random() < smokeEmitProbability) {
@@ -670,7 +649,7 @@ public class Vehicle extends Instance {
    }
    if (part.thrustTrails != null) {
     for (ThrustTrail trail : part.thrustTrails) {
-     trail.run(this, part);
+     trail.run(part);
     }
    }
    part.MV.setVisible(part.visible);
@@ -699,11 +678,15 @@ public class Vehicle extends Instance {
    splash.run();
   }
   long repairSpheresRemoved = 0;
-  for (ve.vehicles.repairSphere repairSphere : repairSpheres) {
+  for (RepairSphere repairSphere : repairSpheres) {
    repairSphere.run(this);
-   repairSpheresRemoved += repairSphere.stage <= 0 ? 1 : 0;
+   if (repairSphere.stage <= 0) {
+    repairSpheresRemoved++;
+   }
   }
-  reviveImmortality = repairSpheresRemoved < repairSpheres.size() && reviveImmortality;
+  if (repairSpheresRemoved >= repairSpheres.size()) {
+   reviveImmortality = false;
+  }
   if (!isIntegral() && VE.Map.defaultVehicleLightBrightness > 0 && !parts.isEmpty() && distanceToCamera < E.viewableMapDistance) {
    U.Nodes.Light.setRGB(burnLight, .5, .25 + U.random(.2), U.random(.125));
    U.setTranslate(burnLight, this);
@@ -711,11 +694,11 @@ public class Vehicle extends Instance {
   }
  }
 
- void deployDust(Wheel wheel, boolean groundHit) {
-  if (!destroyed && !phantomEngaged && !P.terrainProperties.contains(" ice ")) {
-   double dustSpeed = U.netValue(wheel.speedX, wheel.speedZ), speedDifference = P.flipped ? dustSpeed : Math.abs(Math.abs(P.speed) - dustSpeed);
+ void deployDust(boolean groundHit) {
+  if (!destroyed && !phantomEngaged && !P.terrainProperties.contains(SL.Thicks.ice)) {
+   double dustSpeed = U.netValue(P.speedX, P.speedZ), speedDifference = P.flipped ? dustSpeed : Math.abs(Math.abs(P.speed) - dustSpeed);
    if (groundHit || speedDifference * .5 > 10 + U.random(5.) || (!P.flipped && Math.abs(P.speed) > 50 + U.random(50.))) {
-    dusts.get(currentDust).deploy(this, wheel, dustSpeed, speedDifference);
+    dusts.get(currentDust).deploy(this, dustSpeed, speedDifference);
     currentDust = ++currentDust >= E.dustQuantity ? 0 : currentDust;
    }
   }
@@ -763,11 +746,11 @@ public class Vehicle extends Instance {
   if (!phantomEngaged) {
    for (TrackPart TP : TE.trackParts) {
     if (TP.mound != null) {
-     double distance = U.distance(X, TP.X, Z, TP.Z),
+     double distance = U.distanceXZ(this, TP),
      radiusTop = TP.mound.getMinorRadius(), moundHeight = TP.mound.getHeight();
      if (distance < radiusTop) {
       if (Y - clearance <= TP.Y + gravityCompensation) {
-       P.localVehicleGround = Math.min(P.localVehicleGround, TP.Y - moundHeight);
+       P.localGround = Math.min(P.localGround, TP.Y - moundHeight);
       }
      } else {
       double radiusBottom = TP.mound.getMajorRadius();
@@ -778,14 +761,12 @@ public class Vehicle extends Instance {
         double baseAngle = U.arcTan(slope) + (P.flipped ? 180 : 0),
         vehicleMoundXZ = XZ, moundPlaneY = Math.max(radiusTop * .5, (radiusBottom * .5) - ((radiusBottom * .5) * (Math.abs(Y) / moundHeight)));
         vehicleMoundXZ += Z < TP.Z && Math.abs(X - TP.X) < moundPlaneY ? 180 : X >= TP.X + moundPlaneY ? 90 : X <= TP.X - moundPlaneY ? -90 : 0;
-        XY += (baseAngle * U.sin(vehicleMoundXZ) - XY) * .5;
-        YZ += (-baseAngle * U.cos(vehicleMoundXZ) - YZ) * .5;
+        XY += (baseAngle * U.sin(vehicleMoundXZ) - XY) * Physics.valueAdjustSmoothing * VE.tick;
+        YZ += (-baseAngle * U.cos(vehicleMoundXZ) - YZ) * Physics.valueAdjustSmoothing * VE.tick;
         Y = finalHeight;
-        P.mode = Physics.Mode.drive;
+        P.mode = Physics.Mode.driveSolid;
         P.terrainProperties = E.Terrain.vehicleDefaultTerrain;
-        for (Wheel wheel : wheels) {
-         wheel.terrainRGB = E.Ground.RGB;
-        }
+        terrainRGB = E.Ground.RGB;
        }
       }
      }
@@ -797,7 +778,7 @@ public class Vehicle extends Instance {
  public void repair(boolean gamePlay) {
   if (!reviveImmortality && (explosionType != ExplosionType.maxnuclear || isIntegral())) {
    setDamage(0);
-   for (repairSphere sphere : repairSpheres) {
+   for (RepairSphere sphere : repairSpheres) {
     sphere.deploy();
    }
    if (gamePlay) {
@@ -819,8 +800,12 @@ public class Vehicle extends Instance {
     }
    }
   }
-  VA.distanceVehicleToCamera = index == VE.vehiclePerspective && Camera.view == Camera.View.driver ? 0 : Math.sqrt(distanceToCamera) * .08;
-  P.massiveHitTimer -= P.massiveHitTimer > 0 ? VE.tick : 0;
+  VA.distanceVehicleToCamera =
+  index == VE.vehiclePerspective && Camera.view == Camera.View.driver ? 0 :
+  Math.sqrt(distanceToCamera) * Sound.standardDistance(1);
+  if (P.massiveHitTimer > 0) {
+   P.massiveHitTimer -= VE.tick;
+  }
   if (screenFlash > 0) {
    screenFlash -= VE.tick * (explosionType == ExplosionType.maxnuclear ? .01 : .1);
   }
@@ -829,7 +814,7 @@ public class Vehicle extends Instance {
   if (isIntegral()) {
    destroyed = false;
    P.destructTimer = 0;
-   onFire = VE.Map.name.equals("the Sun") && onFire;
+   onFire = VE.Map.name.equals(SL.MN.theSun) && onFire;
    setDamage(getDamage(false) - (gamePlay ? selfRepair * VE.tick : 0));
    for (VehiclePart part : parts) {
     part.explodeStage = VehiclePart.ExplodeStage.intact;
@@ -867,9 +852,9 @@ public class Vehicle extends Instance {
   for (VehiclePart part : parts) {//Ensures the visual deformation is never above the damage
    part.damage.setAngle(U.clamp(-deformation, part.damage.getAngle(), deformation));
   }
-  if (VE.bonusHolder == index && passBonus) {
+  if (passBonus && VE.bonusHolder == index) {
    for (Vehicle vehicle : VE.vehicles) {
-    if (!U.sameVehicle(this, vehicle) && U.sameTeam(this, vehicle) && U.distance(this, vehicle) < collisionRadius() + vehicle.collisionRadius()) {
+    if (!U.sameVehicle(this, vehicle) && U.sameTeam(this, vehicle) && U.distance(this, vehicle) < collisionRadius + vehicle.collisionRadius) {
      TE.Bonus.setHolder(vehicle);//^Checking same team, so sameVehicle check IS needed
     }
    }
@@ -877,8 +862,8 @@ public class Vehicle extends Instance {
   if (spinner != null) {
    spinner.run(gamePlay);
   }
-  P.runHitTsunami();
-  boolean isJet = U.contains(engine.name(), Engine.jet.name(), Engine.turbine.name(), Engine.rocket.name()),
+  Tsunami.vehicleInteract(this);
+  boolean isJet = U.containsEnum(engine, Engine.jet, Engine.turbine, Engine.rocket),
   thrustDrive = drive2 || (drive && P.mode != Physics.Mode.fly);
   thrusting = !destroyed && ((speedBoost > 0 && boost) || exhausting > 0 || (P.mode != Physics.Mode.stunt && isJet &&
   (thrustDrive || (P.mode == Physics.Mode.fly && engine != Engine.turbine && VA.engineClipQuantity * (Math.abs(P.speed) / topSpeeds[1]) >= 1))));
@@ -887,7 +872,7 @@ public class Vehicle extends Instance {
    for (VehiclePart part : parts) {
     if (part.thrustTrails != null) {
      for (n = 4; --n >= 0; ) {
-      part.thrustTrails.get(part.currentThrustTrail).deploy(part, forceOut);
+      part.thrustTrails.get(part.currentThrustTrail).deploy(this, part, forceOut);
       part.currentThrustTrail = ++part.currentThrustTrail >= E.thrustTrailQuantity ? 0 : part.currentThrustTrail;
      }
     }
@@ -921,9 +906,6 @@ public class Vehicle extends Instance {
     }
    }
   }
-  P.wheelDiscord = VA.grind != null && P.mode.name().startsWith(Physics.Mode.drive.name()) &&
-  (Math.abs(wheels.get(U.random(4)).speedZ - (wheels.get(0).speedZ + wheels.get(1).speedZ + wheels.get(2).speedZ + wheels.get(3).speedZ) * .25) > 1 ||
-  Math.abs(wheels.get(U.random(4)).speedX - (wheels.get(0).speedX + wheels.get(1).speedX + wheels.get(2).speedX + wheels.get(3).speedX) * .25) > 1);
   VA.run(gamePlay);
  }
 
@@ -942,7 +924,7 @@ public class Vehicle extends Instance {
  }
 
  void runStuntScoring(boolean replay) {
-  if (P.mode.name().startsWith(Physics.Mode.drive.name())) {
+  if (P.mode.name().startsWith(SL.drive)) {
    if ((P.stuntTimer += VE.tick) > P.stuntLandWaitTime && !gotStunt) {
     if (!P.flipped || landStuntsBothSides) {
      double rollReward = Math.abs(P.stuntXY) > 135 ? Math.abs(P.stuntXY) * .75 : rollCheck[0] || rollCheck[1] ? 270 : 0;

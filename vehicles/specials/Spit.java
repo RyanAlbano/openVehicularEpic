@@ -71,7 +71,7 @@ public class Spit extends Core {
  public void render() {
   if (stage > 0 && U.render(this)) {
    U.setTranslate(MV, this);
-   ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.Images.fireLight + U.random(3)));
+   ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
    MV.setVisible(true);
   } else {
    MV.setVisible(false);

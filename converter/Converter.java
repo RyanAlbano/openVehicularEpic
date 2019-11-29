@@ -5,15 +5,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.scene.paint.Color;
+import ve.utilities.SL;
 import ve.utilities.U;
 
 class Converter {
 
  static boolean axisSwap;
- static final String triangulationError = ".OBJ must be fully Triangulated";
+ static final String /*.*/obj = ".obj", triangulationError = ".OBJ must be fully Triangulated";
 
  static void saveFile(File file, CharSequence content) {
-  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File("ConvertedFiles" + File.separator + file.getName().replace(".obj", "")), U.standardChars))) {
+  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(MainFrame.convertedFileFolder + File.separator + file.getName().replace(obj, "")), U.standardChars))) {
    bufferedWriter.write(content.toString());
   } catch (IOException e) {
    e.printStackTrace();
@@ -28,7 +29,7 @@ class Converter {
   List<Vector3<Double>> vertices = new ArrayList<>();
   List<double[]> faces = new ArrayList<>();
   boolean hasMaterial = true;
-  try (BufferedReader reader = new BufferedReader(new FileReader(file.getAbsolutePath().replace(".obj", ".mtl"), U.standardChars))) {
+  try (BufferedReader reader = new BufferedReader(new FileReader(file.getAbsolutePath().replace(obj, ".mtl"), U.standardChars))) {
    for (String line; (line = reader.readLine()) != null; ) {
     String[] split = line.split(" ");
     if (split[0].startsWith("newmtl")) {
@@ -65,7 +66,7 @@ class Converter {
   }
   StringBuilder SB = new StringBuilder();
   for (int n = 0; n < faces.size(); ++n) {
-   StringBuilder s2 = new StringBuilder("RGB(" + (hasMaterial ? Double.valueOf(modelColor.get(n).getRed()) : "1") + "," + (hasMaterial ? Double.valueOf(modelColor.get(n).getGreen()) : "1") + "," + (hasMaterial ? Double.valueOf(modelColor.get(n).getBlue()) : "1") + U.lineSeparator);
+   StringBuilder s2 = new StringBuilder(SL.RGB + "(" + (hasMaterial ? Double.valueOf(modelColor.get(n).getRed()) : "1") + "," + (hasMaterial ? Double.valueOf(modelColor.get(n).getGreen()) : "1") + "," + (hasMaterial ? Double.valueOf(modelColor.get(n).getBlue()) : "1") + U.lineSeparator);
    for (int n1 = 0; n1 < faces.get(n).length; ++n1) {
     int n2 = (int) faces.get(n)[n1];
     double y = vertices.get(n2).Y * (invertY ? -1 : 1), z = vertices.get(n2).Z * (invertZ ? -1 : 1);
@@ -76,7 +77,7 @@ class Converter {
    }
    SB.append(s2);
   }
-  File newFile = new File("ConvertedFiles" + File.separator + file.getName().replace(".obj", ""));
+  File newFile = new File(MainFrame.convertedFileFolder + File.separator + file.getName().replace(obj, ""));
   try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(newFile, U.standardChars))) {
    bufferedWriter.write(SB.toString());
   } catch (IOException e) {
@@ -93,7 +94,7 @@ class Converter {
     if (s.startsWith("(")) {
      SB.append(s).append(U.lineSeparator);
     }
-    if (s.startsWith("RGB(")) {
+    if (s.startsWith(SL.RGB + "(")) {
      if (!lastColor.equals(s)) {
       SB.append("><").append(s).append(U.lineSeparator).append("<>").append(U.lineSeparator).append("triangles").append(U.lineSeparator);
      }

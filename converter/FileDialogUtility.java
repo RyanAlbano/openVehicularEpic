@@ -13,7 +13,7 @@ class FileDialogUtility {
  }
 
  FileDialogUtility setWorkingDirectory() {
-  dialog.setCurrentDirectory(new File("ConvertedFiles"));
+  dialog.setCurrentDirectory(new File(MainFrame.convertedFileFolder));
   return this;
  }
 

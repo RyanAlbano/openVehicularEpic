@@ -36,7 +36,9 @@ public enum U {//Utilities
  public static final double minimumAccurateLayeredOpacity = .05;
  public static final long refreshRate = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode().getRefreshRate();
  public static final Dimension dimension = Toolkit.getDefaultToolkit().getScreenSize();
- public static final String imageFolder = "images", modelFolder = "models", soundFolder = "sounds", soundExtension = ".au";
+ public static final String imageFolder = "images", soundFolder = "sounds", soundExtension = ".au",
+ modelFolder = "models";
+ private static final String mapFolder = "maps";
  public static final String userSubmittedFolder = "User-Submitted";
  private static final String imageExtension = ".png";
  public static final String JLayerStuff = "JLayerStuff";
@@ -54,7 +56,7 @@ public enum U {//Utilities
   try {
    return regex.split(s)[index + 1];
   } catch (RuntimeException e) {
-   return "";
+   return "";//Catch is needed!
   }
  }
 
@@ -115,6 +117,11 @@ public enum U {//Utilities
   GC.setFill(Color.color(clamp(R), clamp(G), clamp(B), clamp(transparency)));
  }
 
+ public static void strokeRGB(double shade) {
+  shade = clamp(shade);
+  VE.graphicsContext.setStroke(Color.color(shade, shade, shade));
+ }
+
  public static void strokeRGB(double R, double G, double B) {
   VE.graphicsContext.setStroke(Color.color(clamp(R), clamp(G), clamp(B)));
  }
@@ -138,13 +145,13 @@ public enum U {//Utilities
  }
 
  public static FileInputStream getMapFile(int n) {
-  File F = new File("maps" + File.separator + VE.maps.get(n));
+  File F = new File(mapFolder + File.separator + VE.maps.get(n));
   if (!F.exists()) {
-   F = new File("maps" + File.separator + userSubmittedFolder + File.separator + VE.maps.get(n));
+   F = new File(mapFolder + File.separator + userSubmittedFolder + File.separator + VE.maps.get(n));
   }
   if (!F.exists()) {
    VE.map = 0;
-   F = new File("maps" + File.separator + VE.maps.get(0));
+   F = new File(mapFolder + File.separator + VE.maps.get(0));
   }
   try {
    return new FileInputStream(F);
@@ -353,6 +360,16 @@ public enum U {//Utilities
   return false;
  }
 
+ public static boolean containsEnum(Enum in, Enum... prefixes) {//<-Does this work?!todo
+  String name = in.name();
+  for (Enum s : prefixes) {
+   if (name.contains(s.name())) {
+    return true;
+   }
+  }
+  return false;
+ }
+
  public static double[] listToArray(List<Double> source) {
   if (source.isEmpty()) {
    return new double[source.size()];
@@ -462,20 +479,16 @@ public enum U {//Utilities
   N.setRotate(random(360.));
  }
 
- public static double[] rotate(double a, double b, double pivot1, double pivot2, double axis) {
-  return new double[]{pivot1 + ((a - pivot1) * cos(axis) - (b - pivot2) * sin(axis)), pivot2 + ((a - pivot1) * sin(axis) + (b - pivot2) * cos(axis))};
- }
-
  public static void rotate(double[] a, double[] b, double axis) {
-  double a1 = a[0], b1 = b[0];
-  a[0] = a1 * cos(axis) - b1 * sin(axis);
-  b[0] = a1 * sin(axis) + b1 * cos(axis);
+  double a1 = a[0], b1 = b[0], sinAxis = sin(axis), cosAxis = cos(axis);
+  a[0] = a1 * cosAxis - b1 * sinAxis;
+  b[0] = a1 * sinAxis + b1 * cosAxis;
  }
 
  public static void rotateWithPivot(double[] a, double[] b, double pivot1, double pivot2, double axis) {
-  double a1 = a[0], b1 = b[0];
-  a[0] = pivot1 + ((a1 - pivot1) * cos(axis) - (b1 - pivot2) * sin(axis));
-  b[0] = pivot2 + ((a1 - pivot1) * sin(axis) + (b1 - pivot2) * cos(axis));
+  double a1 = a[0], b1 = b[0], sinAxis = sin(axis), cosAxis = cos(axis);
+  a[0] = pivot1 + ((a1 - pivot1) * cosAxis - (b1 - pivot2) * sinAxis);
+  b[0] = pivot2 + ((a1 - pivot1) * sinAxis + (b1 - pivot2) * cosAxis);
  }
 
  /*public static double round(double value) {
@@ -514,6 +527,10 @@ public enum U {//Utilities
 
  public static double distance(Core C1, Core C2) {
   return distance(C1.X, C2.X, C1.Y, C2.Y, C1.Z, C2.Z);
+ }
+
+ public static double distanceXZ(Core C1, Core C2) {
+  return distance(C1.X, C2.X, C1.Z, C2.Z);
  }
 
  private static double distance(double x, double y, double z) {
@@ -597,7 +614,7 @@ public enum U {//Utilities
  }
 
  public static boolean maxedFPS(boolean useAverage) {
-  return (useAverage ? averageFPS : FPS) > 59;//<-'59's more reliable
+  return (useAverage ? averageFPS : FPS) > 59;//<-'59' is more reliable
  }
 
  /*public static void cache(Node N) {

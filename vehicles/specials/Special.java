@@ -3,6 +3,7 @@ package ve.vehicles.specials;
 import ve.Sound;
 import ve.VE;
 import ve.environment.E;
+import ve.utilities.SL;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
 
@@ -10,23 +11,20 @@ import java.util.*;
 
 public class Special {
 
- public final Vehicle V;
+ private final Vehicle V;
  public EnergyBolt EB;
- public Type type = Type.none;
+ public final Type type;
  private int currentShot;
- public double randomPosition;
- public double randomAngle;
+ public double randomPosition, randomAngle;
  public double timer;
  public double speed;
- public double diameter;
- public double damageDealt;
+ public double diameter, damageDealt;
  public double pushPower;
  double length;
  double width;
- public boolean homing;
+ public final boolean homing;
  boolean hasThrust;
- public boolean ricochets;
- public boolean useSmallHits;
+ public boolean ricochets, useSmallHits;
  public boolean fire;
  public long AIAimPrecision = Long.MAX_VALUE;
  public final List<Shot> shots = new ArrayList<>();
@@ -34,7 +32,6 @@ public class Special {
  public Sound sound;
 
  public enum Type {
-  none,
   gun, machinegun, minigun, heavymachinegun, shotgun, raygun, railgun,
   shell, powershell, missile, bomb, flamethrower, mine,
   blaster, heavyblaster, forcefield,
@@ -42,12 +39,27 @@ public class Special {
   particledisintegrator, particlereintegrator, spinner, thewrath, energy
  }
 
- public AimType aimType = AimType.normal;
+ public final AimType aimType;
 
  public enum AimType {normal, ofVehicleTurret, auto}
 
- public Special(Vehicle vehicle) {
+ public Special(Vehicle vehicle, String s) {
   V = vehicle;
+  type = Special.Type.valueOf(U.getString(s, 0));
+  if (!type.name().contains(SL.particle) && type != Special.Type.spinner) {
+   if (type == Type.energy) {
+    sound = new Sound(type.name(), Double.POSITIVE_INFINITY);
+   } else {
+    String specialAudio = "";
+    try {
+     specialAudio = U.getString(s, 1);
+    } catch (RuntimeException ignored) {
+    }
+    sound = new Sound(type.name() + specialAudio);
+   }
+  }
+  homing = s.contains("homing");
+  aimType = s.contains(SL.autoAim) ? Special.AimType.auto : s.contains("ofVehicleTurret") ? Special.AimType.ofVehicleTurret : AimType.normal;
  }
 
  public void load() {
@@ -170,10 +182,10 @@ public class Special {
    length = width;
    V.hasShooting = true;
   } else if (type == Type.forcefield) {
-   diameter = V.collisionRadius() * 2;
+   diameter = V.collisionRadius * 2;
    damageDealt = 2500;
    pushPower = 2000;
-   width = V.collisionRadius() * 2;
+   width = V.collisionRadius * 2;
   } else if (type == Type.mine) {
    diameter = 500;
    damageDealt = 15000;
@@ -191,7 +203,7 @@ public class Special {
   AIAimPrecision = homing ? Long.MAX_VALUE : AIAimPrecision;
   if (type == Type.energy) {
    EB = new EnergyBolt(V, this);
-  } else if (!type.name().contains("particle") && type != Type.spinner) {
+  } else if (!type.name().contains(SL.particle) && type != Type.spinner) {
    for (int n = E.shotQuantity; --n >= 0; ) {
     shots.add(new Shot(this));
    }
@@ -215,7 +227,7 @@ public class Special {
  public void run(boolean gamePlay) {
   if (type == Type.energy) {
    EB.run(gamePlay);
-  } else if (!type.name().contains("particle") && type != Type.spinner && type != Type.phantom && type != Type.teleport) {
+  } else if (!type.name().contains(SL.particle) && type != Type.spinner && type != Type.phantom && type != Type.teleport) {
    if (gamePlay) {
     if (timer <= 0) {
      if (fire && !V.destroyed) {
@@ -229,7 +241,7 @@ public class Special {
       }
      }
     } else {
-     timer -= VE.tick;
+     timer -= VE.tick * (type != Type.thewrath || !V.P.wrathEngaged ? V.energyMultiple : 1);//<-Don't shorten wrath duration if energized
     }
     if (V.P.wrathEngaged) {
      shoot();
@@ -290,6 +302,5 @@ public class Special {
   type == Type.forcefield ? 20 :
   type == Type.thewrath ? 1000 :
   0;
-  timer /= V.energyMultiple;
  }
 }

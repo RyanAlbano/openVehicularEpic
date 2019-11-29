@@ -1,6 +1,8 @@
 package ve.vehicles;
 
+import ve.Sound;
 import ve.VE;
+import ve.utilities.SL;
 import ve.utilities.U;
 
 public class VehicleTurret {
@@ -18,7 +20,17 @@ public class VehicleTurret {
   verticalRanges[1] = U.getValue(s, 1);
   pivotZ = U.getValue(s, 2) * V.modelSize * V.modelScale[2];
   pivotY = U.getValue(s, 3) * V.modelSize * V.modelScale[1];
-  hasAutoAim = s.contains("autoAim");
+  double pitchRatio;
+  try {
+   pitchRatio = U.getValue(s, 4);
+  } catch (Exception E) {
+   pitchRatio = 1;
+  }
+  if (V.VA.turret == null) {
+   V.VA.turret = new Sound();
+   V.VA.turret.addClip(SL.turret, pitchRatio);
+  }
+  hasAutoAim = s.contains(SL.autoAim);
   driverInside = s.contains("driverViewInside");
  }
 

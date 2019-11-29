@@ -5,14 +5,15 @@ import java.io.File;
 import javax.swing.*;
 
 public class MainFrame extends JFrame {
-
+static final String convertedFileFolder = "ConvertedFiles";
+ private static final String error = "Error";
  public MainFrame() {
   initComponents();
   setLocationRelativeTo(null);
  }
 
  private void initComponents() {
-  File saveFolder = new File("ConvertedFiles");
+  File saveFolder = new File(convertedFileFolder);
   if (!saveFolder.exists()) {
    saveFolder.mkdir();
   }
@@ -108,15 +109,15 @@ public class MainFrame extends JFrame {
  }
 
  private void convertVEActionPerformed() {
-  if (fileDialog.getSelectedFile().getName().endsWith(".obj")) {
+  if (fileDialog.getSelectedFile().getName().endsWith(Converter.obj)) {
    try {
     Converter.saveFile(fileDialog.getSelectedFile(), new Converter().convert(fileDialog.getSelectedFile(), invertX.isSelected(), invertY.isSelected(), invertZ.isSelected()));
     JOptionPane.showMessageDialog(this, "Conversion Successful", "Completed", JOptionPane.INFORMATION_MESSAGE);
    } catch (IllegalStateException e) {
-    JOptionPane.showMessageDialog(this, Converter.triangulationError, "Error", JOptionPane.ERROR_MESSAGE);
+    JOptionPane.showMessageDialog(this, Converter.triangulationError, error, JOptionPane.ERROR_MESSAGE);
    }
   } else {
-   JOptionPane.showMessageDialog(this, "File selected is not an .OBJ", "Error", JOptionPane.ERROR_MESSAGE);
+   JOptionPane.showMessageDialog(this, "File selected is not an .OBJ", error, JOptionPane.ERROR_MESSAGE);
   }
  }
 

@@ -8,7 +8,7 @@ import ve.VE;
 import ve.environment.E;
 import ve.utilities.U;
 
-class Splash extends Core {
+public class Splash extends Core {
 
  private final Cylinder C;
  private double speedX, speedY, speedZ;
@@ -23,12 +23,12 @@ class Splash extends Core {
   C.setVisible(false);
  }
 
- public void deploy(Wheel W, double size, double speedX, double speedY, double speedZ) {
+ public void deploy(Wheel W, double size, double inSpeedX, double inSpeedY, double inSpeedZ) {
   U.setScale(C, size);
   absoluteRadius = size;
-  this.speedX = speedX;
-  this.speedY = speedY;
-  this.speedZ = speedZ;
+  speedX = inSpeedX;
+  speedY = inSpeedY;
+  speedZ = inSpeedZ;
   X = W.X;
   Y = W.Y;
   Z = W.Z;

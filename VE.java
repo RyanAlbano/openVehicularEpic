@@ -1,5 +1,5 @@
 /*
-THE VEHICULAR EPIC
+OPEN VEHICULAR EPIC
 
 HEAD DEVELOPER: Ryan Albano
 PAST ASSISTANT DEVS: Vitor Macedo, Dany Fernández Diaz
@@ -65,7 +65,6 @@ public class VE extends Application {
  public static int vehiclePerspective;
  public static int userPlayerIndex;
  public static int vehiclesInMatch = 1;
- static final int[] vehicleNumber = new int[maxPlayers];
  public static int bonusHolder = -1;
  public static int map;
  public static boolean yinYang;
@@ -79,13 +78,12 @@ public class VE extends Application {
  private static long userFPS = Long.MAX_VALUE;
  private static String initialization = "Loading V.E.";
  public static String vehicleMaker = "";
- private static final String[] unitName = {"VEs", "VEs"};
  private static String error = "";
  public static final String[] playerNames = new String[maxPlayers];
  public static final java.util.Map<String, Image> images = new HashMap<>();
  public static final List<Vehicle> vehicles = new ArrayList<>(maxPlayers);
  public static List<String> vehicleModels;
- public static final List<String> maps = new ArrayList<>(Arrays.asList("basic", "lapsGlory", "checkpoint", "gunpowder", "underOver", "antigravity", "versus1", "versus2", "versus3", "trackless", "desert", "3DRace", "trip", "raceNowhere", "moonlight", "bottleneck", "railing", "twisted", "deathPit", "falls", "pyramid", "fusion", "darkDivide", "arctic", "scenicRoute", "winterMode", "mountainHop", "damage", "cavern", "southPole", "aerialControl", "matrix", "mist", "vansLand", "dustDevil", "forest", "columns", "zipCross", "highlands", "coldFury", "tornado", "volcanic", "tsunami", "boulder", "sands", "meteor", "speedway", "endurance", "tunnel", "circle", "circleXL", "circles", "everything", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "lastStand", "parkingLot", "city", "machine", "military", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "space3", "summit", "portal", "blackHole", "doomsday", "+UserMap & TUTORIAL+"));
+ public static final List<String> maps = new ArrayList<>(Arrays.asList(SL.basic, "lapsGlory", SL.checkpoint, "gunpowder", "underOver", "antigravity", "versus1", "versus2", "versus3", "trackless", "desert", "3DRace", "trip", "raceNowhere", "moonlight", "bottleneck", "railing", "twisted", "deathPit", "falls", "pyramid", "fusion", "darkDivide", "arctic", "scenicRoute", "winterMode", "mountainHop", "damage", "cavern", "southPole", "aerialControl", "matrix", "mist", "vansLand", "dustDevil", "forest", "columns", "zipCross", "highlands", "coldFury", SL.tornado, "volcanic", SL.tsunami, SL.boulder, "sands", SL.meteor, "speedway", "endurance", "tunnel", "circle", "circleXL", "circles", "everything", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "lastStand", "parkingLot", "city", "machine", "military", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "space3", "summit", "portal", "blackHole", "doomsday", "+UserMap & TUTORIAL+"));
  public static Status status = VE.Status.mainMenu;
  private static Status lastStatus;
 
@@ -96,13 +94,21 @@ public class VE extends Application {
   howToPlay, loadLAN
  }
 
- enum UI {//UserInterface
+ enum Units {VEs, metric, US}
+
+ public enum UI {//UserInterface
   ;
   private static long selected;
   private static double selectionWait, selectionTimer;
   static long page;
   private static final double selectionHeight = .03, clickRangeY = selectionHeight * .5, baseClickOffset = -.025, textOffset = .01;
   private static double movementSpeedMultiple = 1;
+  static final String Yes = "Yes", No = "No", ON = "ON", OFF = "OFF",
+  HIDE = "HIDE", last = "<-LAST", next = "NEXT->", CONTINUE = "CONTINUE", RETURN = "RETURN", BACK_TO_MAIN_MENU = "BACK TO MAIN MENU",
+  HOW_TO_PLAY = "HOW TO PLAY", Made_by_ = "Made by ",
+  GREEN_TEAM = "GREEN TEAM", RED_TEAM = "RED TEAM",
+  /*..*/Please_Wait_For_ = "..Please Wait for ", notifyUserOfArrowKeyNavigation = "You can also use the Arrow Keys and Enter to navigate.";
+  public static final String At_File_/*:*/ = "At File: ", At_Line_/*:*/ = "At Line: ";
 
   static boolean selectionReady() {
    return selectionTimer > selectionWait;
@@ -111,6 +117,22 @@ public class VE extends Application {
   private enum drawOpacity {
    ;
    private static final double minimal = .5, maximal = .75;
+  }
+
+  static String getUnitName() {
+   return Options.units == Units.VEs ? Units.VEs.name() : Options.units == Units.metric ? "Meters" : "Feet";
+  }
+
+  static String getUnitSpeedName() {
+   return Options.units == Units.VEs ? Units.VEs.name() : Options.units == Units.metric ? "Kph" : "Mph";
+  }
+
+  static double getUnitSpeed(double in) {
+   return in * (Options.units == Units.VEs ? 1 : Options.units == Units.metric ? .5364466667 : 1 / 3.);
+  }
+
+  public static double getUnitDistance(double in) {
+   return in * (VE.Options.units == Units.VEs ? 1 : VE.Options.units == Units.metric ? .0175 : .0574147);
   }
  }
 
@@ -123,12 +145,12 @@ public class VE extends Application {
     F = new File(U.modelFolder + File.separator + U.userSubmittedFolder + File.separator + vehicleModels.get(n));
    }
    if (!F.exists()) {
-    F = new File(U.modelFolder + File.separator + "basic");
+    F = new File(U.modelFolder + File.separator + SL.basic);
    }
    try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(F), U.standardChars))) {
     for (String s2; (s2 = BR.readLine()) != null; ) {
      s1 = s2.trim();
-     if (s1.startsWith("name")) {
+     if (s1.startsWith(SL.name)) {
       s3 = U.getString(s1, 0);
       break;
      }
@@ -150,12 +172,12 @@ public class VE extends Application {
    F = new File(U.modelFolder + File.separator + U.userSubmittedFolder + File.separator + vehicleModels.get(in));
   }
   if (!F.exists()) {
-   F = new File(U.modelFolder + File.separator + "basic");
+   F = new File(U.modelFolder + File.separator + SL.basic);
   }
   try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(F), U.standardChars))) {
    for (String s2; (s2 = BR.readLine()) != null; ) {
     s = s2.trim();
-    if (s.startsWith("name")) {
+    if (s.startsWith(SL.name)) {
      s3 = U.getString(s, 0);
      break;
     }
@@ -375,7 +397,7 @@ public class VE extends Application {
     E.reset();
     TE.reset();
     Camera.camera.setFarClip(Camera.clipRange.maximumFar);
-    scene3D.setFill(Color.color(0, 0, 0));
+    scene3D.setFill(U.getColor(0));
     defaultVehicleLightBrightness = 0;
     randomVehicleStartAngle = guardCheckpointAI = false;
     speedLimitAI = Double.POSITIVE_INFINITY;
@@ -386,7 +408,7 @@ public class VE extends Application {
     for (; (s = BR.readLine()) != null; ) {
      s = s.trim();
      if (status == VE.Status.mapLoadPass2) {
-      name = s.startsWith("name") ? U.getString(s, 0) : name;
+      name = s.startsWith(SL.name) ? U.getString(s, 0) : name;
       if (s.startsWith("ambientLight(")) {
        U.Nodes.Light.setRGB(E.ambientLight, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
       }
@@ -444,7 +466,7 @@ public class VE extends Application {
        }
       } else if (s.startsWith("cacti(")) {
        for (n = 0; n < U.getValue(s, 0); n++) {
-        TE.trackParts.add(new TrackPart(TE.getTrackPartIndex("cactus" + U.random(3)), U.randomPlusMinus(800000), 0, U.randomPlusMinus(800000), 0, .5 + U.random(.5), TE.instanceScale));
+        TE.trackParts.add(new TrackPart(TE.getTrackPartIndex(SL.cactus + U.random(3)), U.randomPlusMinus(800000), 0, U.randomPlusMinus(800000), 0, .5 + U.random(.5), TE.instanceScale));
        }
       } else if (s.startsWith("mounds(")) {
        for (n = 0; n < U.getValue(s, 0); n++) {
@@ -460,8 +482,8 @@ public class VE extends Application {
        Music.load(U.getString(s, 0));
       }
      }
-     TE.instanceSize = s.startsWith("size(") ? U.getValue(s, 0) : TE.instanceSize;
-     if (s.startsWith("scale(")) {
+     TE.instanceSize = s.startsWith(SL.size + "(") ? U.getValue(s, 0) : TE.instanceSize;
+     if (s.startsWith(SL.scale + "(")) {
       try {
        TE.instanceScale[0] = U.getValue(s, 0);
        TE.instanceScale[1] = U.getValue(s, 1);
@@ -474,11 +496,11 @@ public class VE extends Application {
       TE.randomX = s.startsWith("randomX(") ? U.getValue(s, 0) : TE.randomX;
       TE.randomY = s.startsWith("randomY(") ? U.getValue(s, 0) : TE.randomY;
       TE.randomZ = s.startsWith("randomZ(") ? U.getValue(s, 0) : TE.randomZ;
-      if (U.startsWith(s, "(", "strip(", "curve(")) {
+      if (U.startsWith(s, "(", SL.strip + "(", SL.curve + "(")) {
        int trackNumber = TE.getTrackPartIndex(U.getString(s, 0));//<-Returns '-1' on exception
        if (trackNumber < 0 && !U.getString(s, 0).isEmpty()) {
         System.out.println("Map Part List Exception (" + name + ")");
-        System.out.println("At line: " + s);
+        System.out.println(UI.At_Line_ + s);
        }
        long[] random = {Math.round(U.randomPlusMinus(TE.randomX)), Math.round(U.randomPlusMinus(TE.randomY)), Math.round(U.randomPlusMinus(TE.randomZ))};
        if (trackNumber == TE.getTrackPartIndex(TE.Models.checkpoint.name())) {
@@ -496,7 +518,7 @@ public class VE extends Application {
        } else if (U.equals(name, "the Linear Accelerator")) {
         random[0] *= 1000;
         random[2] *= 1000;
-       } else if (name.equals("Phantom Cavern")) {
+       } else if (name.equals(SL.MN.phantomCavern)) {
         random[0] *= Math.abs(random[0]) > 40000 ? .5 : 1;
         random[2] *= Math.abs(random[2]) > 40000 ? .5 : 1;
         if (random[1] > 0) {
@@ -509,7 +531,7 @@ public class VE extends Application {
        summedPositionX = U.getValue(s, 1) + random[0],
        summedPositionZ = U.getValue(s, 2) + random[2],
        summedPositionY = U.getValue(s, 3) + random[1];
-       if (s.startsWith("strip(")) {
+       if (s.startsWith(SL.strip + "(")) {
         double partAngle = Double.NaN;
         try {
          partAngle = U.getValue(s, 7);
@@ -525,7 +547,7 @@ public class VE extends Application {
          summedPositionZ + (advanceDistance * iteration * U.cos(advanceAngle)),
          Double.isNaN(partAngle) ? -advanceAngle : partAngle);
         }
-       } else if (s.startsWith("curve(")) {
+       } else if (s.startsWith(SL.curve + "(")) {
         double angle = 90;
         try {
          angle += U.getValue(s, 9);
@@ -555,7 +577,7 @@ public class VE extends Application {
    } catch (Exception E) {//<-Don't further specify
     status = VE.Status.mapError;
     System.out.println("Map Error (" + name + ")");
-    System.out.println("At line: " + s);
+    System.out.println(UI.At_Line_ + s);
     E.printStackTrace();
    }
    if (status == VE.Status.mapLoadPass3) {
@@ -607,23 +629,21 @@ public class VE extends Application {
      for (n = vehiclesInMatch; --n >= 0; ) {
       vehicles.add(null);
      }
-     vehicles.set(userPlayerIndex, new Vehicle(vehicleNumber[userPlayerIndex], userPlayerIndex, true));
+     vehicles.set(userPlayerIndex, new Vehicle(VS.chosen[userPlayerIndex], userPlayerIndex, true));
      for (n = vehiclesInMatch; --n >= 0; ) {
       if (n != userPlayerIndex) {//<-User player set first for Linux sound optimization
-       vehicles.set(n, new Vehicle(vehicleNumber[n], n, true));
+       vehicles.set(n, new Vehicle(VS.chosen[n], n, true));
       }
      }
-     for (Vehicle vehicle : vehicles) {
-      vehicle.addTransparents();
-     }
     }
+    addTransparentNodes();
     reset();
    }
    String loadText = status == VE.Status.mapLoadPass0 ? "Removing Previous Content" : status == VE.Status.mapLoadPass1 ? "Loading Properties & Scenery" : status == VE.Status.mapLoadPass2 ? "Adding Track Parts" : "Adding " + vehiclesInMatch + " Vehicle(s)";
-   U.fillRGB(0, 0, 0);
+   U.fillRGB(0);
    U.fillRectangle(.5, .5, 1, 1);
    U.font(.025);
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.text(Tournament.stage > 0 ? "Round " + Tournament.stage + (Tournament.stage > 5 ? "--Overtime!" : "") : "", .425);
    U.text(name, .475);
    U.text(".." + loadText + "..", .525);
@@ -638,14 +658,23 @@ public class VE extends Application {
    E.renderType = E.RenderType.ALL;
   }
 
-  static int getMapName(String s) {
+  static void addTransparentNodes() {
+   for (Boulder.Instance instance : Boulder.instances) {
+    instance.addTransparentNodes();
+   }
+   for (Vehicle vehicle : vehicles) {
+    vehicle.addTransparentNodes();
+   }
+  }
+
+  static int getName(String s) {
    int n;
    String s1;
    for (n = 0; n < maps.size(); n++) {
     try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(U.getMapFile(n)), U.standardChars))) {
      for (String s2; (s2 = BR.readLine()) != null; ) {
       s1 = s2.trim();
-      name = s1.startsWith("name") ? U.getString(s1, 0) : name;
+      name = s1.startsWith(SL.name) ? U.getString(s1, 0) : name;
      }
     } catch (IOException e) {
      status = VE.Status.mapError;
@@ -661,7 +690,7 @@ public class VE extends Application {
   private static void runQuickSelect(boolean gamePlay) {
    if (Network.mode == Network.Mode.JOIN) {
     U.font(.03);
-    U.text("..Please Wait for " + playerNames[0] + " to Select Map..", .5, .5);
+    U.text(UI.Please_Wait_For_ + playerNames[0] + " to Select Map..", .5, .5);
    } else {
     String mapMaker;
     name = mapMaker = "";
@@ -670,7 +699,7 @@ public class VE extends Application {
     try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(U.getMapFile(map)), U.standardChars))) {
      for (String s1; (s1 = BR.readLine()) != null; ) {
       s = s1.trim();
-      name = s.startsWith("name") ? U.getString(s, 0) : name;
+      name = s.startsWith(SL.name) ? U.getString(s, 0) : name;
       mapMaker = s.startsWith("maker") ? U.getString(s, 0) : mapMaker;
      }
     } catch (IOException e) {
@@ -682,18 +711,18 @@ public class VE extends Application {
     } else {
      U.fillRGB(0, 0, 0, UI.drawOpacity.maximal);
      U.fillRectangle(.5, .5, 1, 1);
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
      U.font(.05);
      U.text(name, .5);
      U.font(.03);
      U.text(Viewer.inUse ? "SELECT MAP TO EDIT:" : "SELECT MAP:", .25);
-     U.text("<-LAST", .125, .75);
-     U.text("NEXT->", .875, .75);
-     U.text("CONTINUE", .875);
+     U.text(UI.last, .125, .75);
+     U.text(UI.next, .875, .75);
+     U.text(UI.CONTINUE, .875);
      U.font(.02);
-     U.text("Made by " + mapMaker, .6);
+     U.text(UI.Made_by_ + mapMaker, .6);
      U.font(.01);
-     U.text("You can also use the Arrow Keys and Enter to navigate.", .95);
+     U.text(UI.notifyUserOfArrowKeyNavigation, .95);
      if (UI.selectionTimer > UI.selectionWait) {
       if (Keys.Right) {
        map = ++map >= maps.size() ? 0 : map;
@@ -731,11 +760,11 @@ public class VE extends Application {
    scene.setCursor(Cursor.CROSSHAIR);
    U.font(.015);
    U.fillRGB(E.Ground.RGB.invert());
-   U.text("<-LAST", .2, .75);
-   U.text("NEXT->", .8, .75);
-   U.text("CONTINUE", .75);
+   U.text(UI.last, .2, .75);
+   U.text(UI.next, .8, .75);
+   U.text(UI.CONTINUE, .75);
    U.font(.01);
-   U.text("You can also use the Arrow Keys and Enter to navigate.", .95);
+   U.text(UI.notifyUserOfArrowKeyNavigation, .95);
    U.fillRGB(E.skyRGB.invert());
    U.font(.02);
    U.text("| " + name + " |", .15);
@@ -768,20 +797,20 @@ public class VE extends Application {
    E.renderType = E.RenderType.standard;
   }
 
-  private static void runErrred() {
+  private static void runErrored() {
    scene.setCursor(Cursor.CROSSHAIR);
    U.fillRGB(0, 0, 0, UI.drawOpacity.maximal);
    U.fillRectangle(.5, .5, 1, 1);
    U.font(.03);
    U.fillRGB(1, 0, 0);
    U.text("Error Loading This Map", .475);
-   U.fillRGB(1, 1, 1);
-   U.text("<-LAST", .125, .75);
-   U.text("NEXT->", .875, .75);
-   U.text("CONTINUE", .875);
+   U.fillRGB(1);
+   U.text(UI.last, .125, .75);
+   U.text(UI.next, .875, .75);
+   U.text(UI.CONTINUE, .875);
    U.text("Hit Continue or Enter to try again", .525);
    U.font(.01);
-   U.text("You can also use the Arrow Keys and Enter to navigate.", .95);
+   U.text(UI.notifyUserOfArrowKeyNavigation, .95);
    if (Keys.Space || Keys.Enter) {
     status = VE.Status.mapLoadPass0;
     Keys.Space = Keys.Enter = false;
@@ -823,7 +852,7 @@ public class VE extends Application {
    for (Vehicle vehicle : vehicles) {
     vehicle.closeSounds();
    }
-   E.Storm.rain.stop();
+   Rain.sound.stop();
    Tornado.sound.stop();
    Tsunami.sound.stop();
    for (Fire.Instance fire : Fire.instances) {
@@ -871,7 +900,7 @@ public class VE extends Application {
   }
  }
 
- static void run(String[] s) {//<-Will NOT work if moved to Launcher
+ static void run(String[] s) {//<-Will NOT work if moved to Launcher!
   launch(s);
  }
 
@@ -879,24 +908,24 @@ public class VE extends Application {
   Thread loadVE = new Thread(() -> {
    try {
     int n;
-    scene3D.setFill(Color.color(0, 0, 0));
+    scene3D.setFill(U.getColor(0));
     TE.Arrow.scene.setFill(Color.color(0, 0, 0, 0));
     initialization = "Loading Images";
-    U.Images.load(images, "RA");
-    U.Images.load(images, SL.Images.white);
-    U.Images.load(images, SL.Images.fireLight, 3);
-    U.Images.load(images, "blueJet", 3);
-    U.Images.load(images, SL.Instance.blink, 3);
+    U.Images.load(images, SL.RA);
+    U.Images.load(images, SL.white);
+    U.Images.load(images, SL.firelight, 3);
+    U.Images.load(images, SL.blueJet, 3);
+    U.Images.load(images, SL.blink, 3);
     initialization = "Loading Textures";
-    U.Images.load(images, "water");
-    U.Images.load(images, "rock");
+    U.Images.load(images, SL.water);
+    U.Images.load(images, SL.rock);
     U.Images.load(images, "metal");
     U.Images.load(images, "brightmetal");
     U.Images.load(images, "grid");
-    U.Images.load(images, SL.Images.paved);
+    U.Images.load(images, SL.paved);
     U.Images.load(images, "wood");
-    U.Images.load(images, "foliage");
-    U.Images.load(images, "cactus");
+    U.Images.load(images, SL.foliage);
+    U.Images.load(images, SL.cactus);
     U.Images.load(images, "grass");
     U.Images.load(images, "sand");
     U.Images.load(images, "ground1");
@@ -915,17 +944,13 @@ public class VE extends Application {
     U.Images.load(images, "ground2N");
     initialization = "Loading Settings";
     String s;
-    try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(SL.gameSettings), U.standardChars))) {
+    try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(SL.GameSettings), U.standardChars))) {
      for (String s1; (s1 = BR.readLine()) != null; ) {
       s = s1.trim();
       if (s.startsWith("Units(metric")) {
-       Options.units = .5364466667;
-       unitName[0] = "Kph";
-       unitName[1] = "Meters";
+       Options.units = Units.metric;
       } else if (s.startsWith("Units(U.S.")) {
-       Options.units = 1 / 3.;
-       unitName[0] = "Mph";
-       unitName[1] = "Feet";
+       Options.units = Units.US;
       }
       Options.normalMapping = s.startsWith("NormalMapping(yes") || Options.normalMapping;
       Camera.shake = s.startsWith("CameraShake(yes") || Camera.shake;
@@ -934,17 +959,17 @@ public class VE extends Application {
       } catch (RuntimeException ignored) {
       }
       Options.degradedSoundEffects = s.startsWith("DegradedSoundEffects(yes") || Options.degradedSoundEffects;
-      Options.matchLength = s.startsWith("MatchLength(") ? Math.round(U.getValue(s, 0)) : Options.matchLength;
+      Options.matchLength = s.startsWith(SL.MatchLength + "(") ? Math.round(U.getValue(s, 0)) : Options.matchLength;
       Options.driverSeat = s.startsWith("DriverSeat(left") ? -1 : s.startsWith("DriverSeat(right") ? 1 : Options.driverSeat;
       vehiclesInMatch = s.startsWith("#ofPlayers(") ? Math.max(1, Math.min((int) Math.round(U.getValue(s, 0)), maxPlayers)) : vehiclesInMatch;
       Options.headsUpDisplay = s.startsWith("HUD(on") || Options.headsUpDisplay;
       Options.showInfo = s.startsWith("ShowInfo(yes") || Options.showInfo;
       VS.showModel = s.startsWith("ShowVehiclesInVehicleSelect(yes") || VS.showModel;
-      Network.userName = s.startsWith(SL.Network.findUserName) ? U.getString(s, 0) : Network.userName;
-      Network.targetHost = s.startsWith(SL.Network.findTargetHost) ? U.getString(s, 0) : Network.targetHost;
-      Network.port = s.startsWith("Port(") ? (int) Math.round(U.getValue(s, 0)) : Network.port;
-      if (s.startsWith(SL.findGameVehicles)) {
-       vehicleModels = new ArrayList<>(Arrays.asList(s.substring(SL.findGameVehicles.length(), s.length() - 1).split(",")));
+      Network.userName = s.startsWith(SL.UserName + "(") ? U.getString(s, 0) : Network.userName;
+      Network.targetHost = s.startsWith(SL.TargetHost + "(") ? U.getString(s, 0) : Network.targetHost;
+      Network.port = s.startsWith(SL.Port + "(") ? (int) Math.round(U.getValue(s, 0)) : Network.port;
+      if (s.startsWith(SL.GameVehicles + "(")) {
+       vehicleModels = new ArrayList<>(Arrays.asList(s.substring((SL.GameVehicles + "(").length(), s.length() - 1).split(",")));
       } else if (s.startsWith("UserSubmittedVehicles(")) {
        String[] models = U.regex.split(s);
        for (n = 1; n < models.length; n++) {
@@ -961,21 +986,21 @@ public class VE extends Application {
      System.out.println("Error Loading GameSettings: " + E);
     }
     initialization = "Loading Sounds";
-    Sounds.checkpoint = new Sound("checkpoint");
+    Sounds.checkpoint = new Sound(SL.checkpoint);
     Sounds.stunt = new Sound("stunt");
     TE.Bonus.sound = new Sound("bonus");
-    E.Storm.rain = new Sound("rain");
-    Tornado.sound = new Sound("tornado");
-    Tsunami.sound = new Sound("tsunami");
+    Rain.sound = new Sound(SL.rain);
+    Tornado.sound = new Sound(SL.tornado);
+    Tsunami.sound = new Sound(SL.tsunami);
     Volcano.sound = new Sound("volcano");
     Sounds.UI = new Sound("UI", 2);
     Sounds.finish = new Sound("finish", 2);
     stage.setOnCloseRequest((WindowEvent WE) -> {
      for (PrintWriter PW : Network.out) {
-      PW.println("END");
-      PW.println("END");
-      PW.println(SL.Network.cancel);
-      PW.println(SL.Network.cancel);
+      PW.println(SL.END);
+      PW.println(SL.END);
+      PW.println(SL.CANCEL);
+      PW.println(SL.CANCEL);
      }
     });
     initialization = "";
@@ -990,7 +1015,7 @@ public class VE extends Application {
 
  public void start(Stage primaryStage) {
   Thread.currentThread().setPriority(10);
-  primaryStage.setTitle("The Vehicular Epic");
+  primaryStage.setTitle("openVehicularEpic");
   try {
    primaryStage.getIcons().add(new Image(new FileInputStream(U.imageFolder + File.separator + "icon.png")));
   } catch (FileNotFoundException ignored) {
@@ -999,7 +1024,7 @@ public class VE extends Application {
   double windowSize = 1;
   boolean antiAliasing = false;
   String s;
-  try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(SL.gameSettings), U.standardChars))) {
+  try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(SL.GameSettings), U.standardChars))) {
    for (String s1; (s1 = BR.readLine()) != null; ) {
     s = s1.trim();
     antiAliasing = s.startsWith("AntiAliasing(yes") || antiAliasing;
@@ -1083,16 +1108,15 @@ public class VE extends Application {
      E.canvas.setHeight(height);
     }
     if (gamePlay || status == Status.paused || status == Status.optionsMatch) {
-     for (Vehicle vehicle : vehicles) {
-      vehicle.miscellaneous(gamePlay);
-     }
-     //*These are SPLIT so that energy towers can empower specials before the affected vehicles fire, and to make shots render correctly
-     for (Vehicle vehicle : vehicles) {
+     for (Vehicle vehicle : vehicles) {//*These are SPLIT so that energy towers can empower specials before the affected vehicles fire, and to make shots render correctly
       for (Special special : vehicle.specials) {
        if (special.type == Special.Type.energy) {
         special.run(gamePlay);//*
        }
       }
+     }
+     for (Vehicle vehicle : vehicles) {
+      vehicle.miscellaneous(gamePlay);//Energization before miscellaneous is called
      }
      if (Match.started) {
       if (gamePlay && Match.cursorDriving) {
@@ -1165,8 +1189,7 @@ public class VE extends Application {
       Match.cursorDriving = false;
       if (Network.waiting) {
        U.font(.02);
-       double color = yinYang ? 0 : 1;
-       U.fillRGB(color, color, color);
+       U.fillRGB(yinYang ? 0 : 1);
        if (vehiclesInMatch < 3) {
         U.text("..Waiting on " + playerNames[Network.mode == Network.Mode.HOST ? 1 : 0] + "..", .5, .25);
        } else {
@@ -1196,20 +1219,19 @@ public class VE extends Application {
         Network.ready[userPlayerIndex] = Network.waiting = true;
         if (Network.mode == Network.Mode.HOST) {
          for (PrintWriter PW : Network.out) {
-          PW.println("Ready0");
-          PW.println("Ready0");
+          PW.println(SL.Ready + "0");
+          PW.println(SL.Ready + "0");
          }
         } else {
-         Network.out.get(0).println(SL.Network.ready);
-         Network.out.get(0).println(SL.Network.ready);
+         Network.out.get(0).println(SL.Ready);
+         Network.out.get(0).println(SL.Ready);
         }
        }
        Keys.Space = false;
       }
       if (!Network.waiting) {
        U.font(.02);
-       double color = yinYang ? 0 : 1;
-       U.fillRGB(color, color, color);
+       U.fillRGB(yinYang ? 0 : 1);
        if (vehicles.get(vehiclePerspective).isFixed() && (vehiclesInMatch < 2 || vehiclePerspective < vehiclesInMatch >> 1)) {
         U.text("Use Arrow Keys to place your turret(s)/infrastructure, then", .2);
         if (Keys.Up || Keys.Down || Keys.Left || Keys.Right) {
@@ -1310,7 +1332,7 @@ public class VE extends Application {
     } else if (status == Status.loadLAN) {
      runLANMenu();
     } else if (status == Status.mapError) {
-     Map.runErrred();
+     Map.runErrored();
     } else if (status == Status.mapJump) {
      Map.runQuickSelect(gamePlay);
     } else if (status == Status.mapView) {
@@ -1378,20 +1400,24 @@ public class VE extends Application {
   resetGraphics();
   Sounds.clear();
   Keys.falsify();
+  for (int n = VS.chosen.length; --n >= 0; ) {//<-Prevents recursive shutout if a bugged vehicle is causing such
+   VS.chosen[n] = U.random(vehicleModels.size());
+  }
   if (Network.mode == Network.Mode.HOST) {
    for (PrintWriter PW : Network.out) {
-    PW.println(SL.Network.cancel);
-    PW.println(SL.Network.cancel);
+    PW.println(SL.CANCEL);
+    PW.println(SL.CANCEL);
    }
   } else if (Network.mode == Network.Mode.JOIN) {
-   Network.out.get(0).println(SL.Network.cancel);
-   Network.out.get(0).println(SL.Network.cancel);
+   Network.out.get(0).println(SL.CANCEL);
+   Network.out.get(0).println(SL.CANCEL);
   }
  }
 
  enum VS {//VehicleSelect
   ;
   static int index;
+  static final int[] chosen = new int[maxPlayers];
   private static boolean allSame, showModel;
 
   private static void run(boolean gamePlay) {
@@ -1400,25 +1426,25 @@ public class VE extends Application {
    if (Network.waiting) {
     U.fillRGB(1);
     if (vehiclesInMatch < 3) {
-     U.text("..Please Wait for " + playerNames[Network.mode == Network.Mode.HOST ? 1 : 0] + " to Select Vehicle..", .5, .5);
+     U.text(UI.Please_Wait_For_ + playerNames[Network.mode == Network.Mode.HOST ? 1 : 0] + " to Select Vehicle..", .5, .5);
     } else {
      U.text("..Please Wait for all other players to Select their Vehicle..", .5, .5);
     }
     if (Network.mode == Network.Mode.HOST) {
      if (timerBase20 <= 0) {
       for (PrintWriter PW : Network.out) {
-       PW.println("Vehicle0(" + vehicles.get(0).name);
+       PW.println(SL.Vehicle + "0" + "(" + vehicles.get(0).name);
       }
      }
      for (n = vehiclesInMatch; --n > 0; ) {
       String s = Network.readIn(n - 1);
-      if (s.startsWith(SL.Network.cancel)) {
+      if (s.startsWith(SL.CANCEL)) {
        escapeToLast(false);
-      } else if (s.startsWith("Vehicle(")) {
-       vehicleNumber[n] = getVehicleIndex(U.getString(s, 0));
+      } else if (s.startsWith(SL.Vehicle + "(")) {
+       chosen[n] = getVehicleIndex(U.getString(s, 0));
        if (vehiclesInMatch > 2) {
         for (PrintWriter out : Network.out) {
-         out.println("Vehicle" + n + "(" + U.getString(s, 0));
+         out.println(SL.Vehicle + n + "(" + U.getString(s, 0));
         }
        }
        Network.ready[n] = true;
@@ -1427,16 +1453,16 @@ public class VE extends Application {
      }
     } else {
      if (timerBase20 <= 0) {
-      Network.out.get(0).println("Vehicle(" + vehicles.get(0).name);
+      Network.out.get(0).println(SL.Vehicle + "(" + vehicles.get(0).name);
      }
      String s = Network.readIn(0);
-     if (s.startsWith(SL.Network.cancel)) {
+     if (s.startsWith(SL.CANCEL)) {
       escapeToLast(false);
      } else {
       for (n = vehiclesInMatch; --n >= 0; ) {
        if (n != userPlayerIndex) {
-        if (s.startsWith("Vehicle" + n + "(")) {
-         vehicleNumber[n] = getVehicleIndex(U.getString(s, 0));
+        if (s.startsWith(SL.Vehicle + n + "(")) {
+         chosen[n] = getVehicleIndex(U.getString(s, 0));
          Network.ready[n] = true;
         }
        }
@@ -1455,7 +1481,7 @@ public class VE extends Application {
     if (UI.page == 0) {
      resetGraphics();
      vehicles.clear();
-     scene3D.setFill(Color.color(0, 0, 0));
+     scene3D.setFill(U.getColor(0));
      Camera.X = Camera.Z = Camera.YZ = Camera.XY = 0;
      Camera.Y = -250;
      Camera.XZ = 180;
@@ -1463,19 +1489,19 @@ public class VE extends Application {
      Camera.setAngleTable();
      U.setTranslate(E.Ground.C, 0, 0, 0);
      U.Phong.setDiffuseRGB((PhongMaterial) E.Ground.C.getMaterial(), .1);
-     for (Raindrop.Instance raindrop : Raindrop.instances) {
+     for (Rain.Drop raindrop : Rain.raindrops) {
       U.Nodes.add(raindrop.C);
      }
      for (Snowball.Instance snowball : Snowball.instances) {
       U.Nodes.add(snowball.round, snowball.lowResolution);
      }
-     addVehicleModel(vehicleNumber[index], showModel);
+     addVehicleModel(chosen[index], showModel);
      allSame = false;
      UI.page = 1;
     }
     allSame = index <= 0 && Network.mode == Network.Mode.OFF && allSame;
     Vehicle V = vehicles.get(0);
-    U.fillRGB(1, 1, 1);
+    U.fillRGB(1);
     U.text("SELECT " + (Viewer.inUse ? "VEHICLE TO EDIT" : index > 0 ? "PLAYER #" + index : "VEHICLE"), .075);
     V.inDriverView = false;
     V.runGraphics(gamePlay);
@@ -1501,18 +1527,18 @@ public class VE extends Application {
       U.text(Network.mode == Network.Mode.OFF ? "(RED TEAM)" : "You're on the RED TEAM", .1);
      }
     }
-    U.fillRGB(1, 1, 1);
+    U.fillRGB(1);
     U.font(.02);
     //U.textR("" + V., .9, .6);
-    U.text("<-LAST", .125, .5);
-    U.text("NEXT->", .875, .5);
+    U.text(UI.last, .125, .5);
+    U.text(UI.next, .875, .5);
     U.font(.01);
     if (showModel) {
-     U.text("Meshes: " + V.parts.size(), .8);
-     U.text("Vertices: " + V.vertexQuantity, .825);
+     U.text(SL.Meshes_ + V.parts.size(), .8);
+     U.text(SL.Vertices_ + V.vertexQuantity, .825);
     }
-    U.text("Vehicles [" + (showModel ? "SHOW (can be slow--not recommended)" : "HIDE") + "]", .875);
-    U.text("CONTINUE" + (allSame ? " (with all players as " + V.name + ")" : ""), .9);
+    U.text("Vehicles [" + (showModel ? "SHOW (can be slow--not recommended)" : UI.HIDE) + "]", .875);
+    U.text(UI.CONTINUE + (allSame ? " (with all players as " + V.name + ")" : ""), .9);
     boolean singleSelection = !Viewer.inUse && (vehiclesInMatch < 2 || Network.mode != Network.Mode.OFF);
     if (singleSelection) {
      UI.selected = Math.min(1, UI.selected);
@@ -1520,73 +1546,14 @@ public class VE extends Application {
      U.text(Viewer.inUse ? "START .OBJ-to-V.E. CONVERTER" : "SELECT NEXT VEHICLE", .925);
     }
     if (yinYang) {
-     U.strokeRGB(1, 1, 1);
+     U.strokeRGB(1);
      U.drawRectangle(.5, UI.selected == 0 ? .875 : UI.selected == 1 ? .9 : .925, width, UI.selectionHeight);
     }
-    U.fillRGB(1, 1, 1);
+    U.fillRGB(1);
     if (UI.selected == 1 && !singleSelection && !Viewer.inUse) {
      U.text(allSame ? "" : "(Remaining players are picked randomly)", .95);
     }
-    if (showModel) {
-     U.font(.02);
-     U.text(V.name, .15);
-    } else {
-     U.font(.03);
-     U.text(V.name, .5);
-    }
-    U.font(.015);
-    U.text("Made by " + vehicleMaker, .2);
-    double lineLL = .1125, lineLR = .125, lineRL = 1 - lineLR, lineRR = 1 - lineLL,
-    Y0 = .725, Y1 = .75, Y2 = .775, Y3 = .8, Y4 = .825, Y5 = .85;
-    U.font(.00875);
-    U.textR("Type: ", lineLL, Y0);
-    String type =
-    V.type == Vehicle.Type.aircraft ? "Aircraft (Flying)" :
-    V.type == Vehicle.Type.turret ? "Turret (Fixed)" :
-    V.type == Vehicle.Type.supportInfrastructure ? "Support Infrastructure (Fixed)"
-    : "Vehicle (Grounded)";
-    U.textL(type, lineLR, Y0);
-    U.textR("Top Speed:", lineLL, Y1);
-    U.textL(
-    V.isFixed() ? "N/A" :
-    V.topSpeeds[1] >= Long.MAX_VALUE ? "None" :
-    V.speedBoost > 0 && V.topSpeeds[2] >= Long.MAX_VALUE ? "None (Speed Boost)" :
-    V.speedBoost > 0 ? Math.round(V.topSpeeds[2] * Options.units) + " " + unitName[0] + " (Speed Boost)" :
-    Math.round(V.topSpeeds[1] * Options.units) + " " + unitName[0], lineLR, Y1);
-    U.textR("Acceleration Phases:", lineLL, Y2);
-    U.textL(V.isFixed() ? "N/A" : "+" + V.accelerationStages[0] + ",  +" + V.accelerationStages[1], lineLR, Y2);
-    U.textR("Handling Response:", lineLL, Y3);
-    U.textL(V.turnRate == Double.POSITIVE_INFINITY ? "Instant" : String.valueOf(V.turnRate), lineLR, Y3);
-    U.textR("Stunt Response:", lineLL, Y4);
-    U.textL(V.type == Vehicle.Type.vehicle ? String.valueOf(V.airAcceleration == Double.POSITIVE_INFINITY ? "Instant" : (float) V.airAcceleration) : "N/A", lineLR, Y4);
-    U.textR("Special(s):", lineLL, Y5);
-    StringBuilder specials = new StringBuilder();
-    boolean hasForceField = false;
-    if (V.specials.isEmpty()) {
-     specials.append("None");
-    } else {
-     for (Special special : V.specials) {
-      specials.append(special.type.name()).append(", ");
-      hasForceField = special.type == Special.Type.forcefield || hasForceField;
-     }
-    }
-    U.textL(String.valueOf(specials), lineLR, Y5);
-    U.textR("Collision Damage Rating:", lineRL, Y0);
-    String damageDealt =
-    (V.type != Vehicle.Type.aircraft && V.damageDealt[U.random(4)] >= 100) || V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) ? "Instant-Kill" :
-    hasForceField || V.spinner != null ? "'Inconsistent'" :
-    String.valueOf((float) ((V.damageDealt[0] + V.damageDealt[1] + V.damageDealt[2] + V.damageDealt[3]) * .25));
-    U.textL(damageDealt, lineRR, Y0);
-    U.textR("Fragility:", lineRL, Y1);
-    U.textL(String.valueOf(V.fragility), lineRR, Y1);
-    U.textR("Self-Repair:", lineRL, Y2);
-    U.textL(String.valueOf(V.selfRepair), lineRR, Y2);
-    U.textR("Total Durability:", lineRL, Y3);
-    U.textL(String.valueOf(V.durability), lineRR, Y3);
-    U.textR("Speed Boost:", lineRL, Y4);
-    U.textL(V.speedBoost > 0 ? "Yes" : "No", lineRR, Y4);
-    U.textR("Amphibious:", lineRL, Y5);
-    U.textL(V.amphibious ? "Yes" : "No", lineRR, Y5);
+    runDrawProperties(V);
     U.font(.01);
     if (UI.selectionTimer > UI.selectionWait) {
      if (Keys.Up || Keys.Down) {
@@ -1600,20 +1567,24 @@ public class VE extends Application {
      }
      if (Keys.Right) {
       removeVehicleModel();
-      vehicleNumber[index] = ++vehicleNumber[index] >= vehicleModels.size() ? 0 : vehicleNumber[index];
+      if (++chosen[index] >= vehicleModels.size()) {
+       chosen[index] = 0;
+      }
       if (index == userPlayerIndex) {
        userRandomRGB = U.getColor(U.random(), U.random(), U.random());
       }
-      addVehicleModel(vehicleNumber[index], showModel);
+      addVehicleModel(chosen[index], showModel);
       Sounds.UI.play(0, 0);
      }
      if (Keys.Left) {
       removeVehicleModel();
-      vehicleNumber[index] = --vehicleNumber[index] < 0 ? vehicleModels.size() - 1 : vehicleNumber[index];
+      if (--chosen[index] < 0) {
+       chosen[index] = vehicleModels.size() - 1;
+      }
       if (index == userPlayerIndex) {
        userRandomRGB = U.getColor(U.random(), U.random(), U.random());
       }
-      addVehicleModel(vehicleNumber[index], showModel);
+      addVehicleModel(chosen[index], showModel);
       Sounds.UI.play(0, 0);
      }
      if (Keys.Space || Keys.Enter) {
@@ -1623,12 +1594,12 @@ public class VE extends Application {
        removeVehicleModel();
        if (UI.selected < 1) {
         showModel = !showModel;
-        addVehicleModel(vehicleNumber[index], showModel);
+        addVehicleModel(chosen[index], showModel);
        } else {
         if (Network.mode == Network.Mode.OFF) {
          index++;
          if (index < vehiclesInMatch) {
-          addVehicleModel(vehicleNumber[index], showModel);
+          addVehicleModel(chosen[index], showModel);
          }
         }
         if (index > (vehiclesInMatch * (Tournament.stage > 0 ? .5 : 1)) - 1 || UI.selected == 1) {
@@ -1640,13 +1611,11 @@ public class VE extends Application {
          } else {
           status = VE.Status.mapJump;
           if (allSame) {
-           for (n = vehicleNumber.length; --n > 0; ) {
-            vehicleNumber[n] = vehicleNumber[0];
+           for (n = chosen.length; --n > 0; ) {
+            chosen[n] = chosen[0];
            }
-          } else {
-           for (n = index; n < vehiclesInMatch; n++) {
-            vehicleNumber[n] = U.random(vehicleModels.size());
-           }
+          } else for (n = index; n < vehiclesInMatch; n++) {
+           chosen[n] = U.random(vehicleModels.size());
           }
          }
         }
@@ -1668,9 +1637,80 @@ public class VE extends Application {
     UI.selected;
    }
    U.rotate(Camera.camera, Camera.YZ, -Camera.XZ);
-   Raindrop.run();
+   Rain.run(false);
    Snowball.run();
    gameFPS = Double.POSITIVE_INFINITY;
+  }
+
+  static void runDrawProperties(Vehicle V) {
+   if (showModel) {
+    U.font(.02);
+    U.text(V.name, .15);
+   } else {
+    U.font(.03);
+    U.text(V.name, .5);
+   }
+   U.font(.015);
+   U.text(UI.Made_by_ + vehicleMaker, .2);
+   double lineLL = .1125, lineLR = .125, lineRL = 1 - lineLR, lineRR = 1 - lineLL,
+   Y0 = .725, Y1 = .75, Y2 = .775, Y3 = .8, Y4 = .825, Y5 = .85;
+   U.font(.00875);
+   U.textR("Type: ", lineLL, Y0);
+   boolean supportInfrastructure = V.type == Vehicle.Type.supportInfrastructure;
+   String type =
+   V.type == Vehicle.Type.aircraft ? "Aircraft (Flying)" :
+   V.type == Vehicle.Type.turret ? "Turret (Fixed)" :
+   supportInfrastructure ? "Support Infrastructure (Fixed)"
+   : "Vehicle (Grounded)";
+   U.textL(type, lineLR, Y0);
+   if (!supportInfrastructure) {
+    if (V.type != Vehicle.Type.turret) {
+     U.textR("Top Speed:", lineLL, Y1);
+     String topSpeed = V.topSpeeds[1] >= Long.MAX_VALUE ? SL.None :
+     V.speedBoost > 0 && V.topSpeeds[2] >= Long.MAX_VALUE ? "None (Speed Boost)" :
+     V.speedBoost > 0 ? Math.round(UI.getUnitSpeed(V.topSpeeds[2])) + " " + UI.getUnitSpeedName() + " (Speed Boost)" :
+     Math.round(UI.getUnitSpeed(V.topSpeeds[1])) + " " + UI.getUnitSpeedName();
+     U.textL(topSpeed, lineLR, Y1);
+     U.textR("Acceleration Phases:", lineLL, Y2);
+     U.textL("+" + V.accelerationStages[0] + ",  +" + V.accelerationStages[1], lineLR, Y2);
+    }
+    U.textR("Handling Response:", lineLL, Y3);
+    U.textL(V.turnRate == Double.POSITIVE_INFINITY ? SL.Instant : String.valueOf(V.turnRate), lineLR, Y3);
+    if (V.type == Vehicle.Type.vehicle) {
+     U.textR("Stunt Response:", lineLL, Y4);
+     U.textL(String.valueOf(V.airAcceleration == Double.POSITIVE_INFINITY ? SL.Instant : (float) V.airAcceleration), lineLR, Y4);
+    }
+   }
+   U.textR("Special(s):", lineLL, Y5);
+   StringBuilder specials = new StringBuilder();
+   boolean hasForceField = false;
+   if (V.specials.isEmpty()) {
+    specials.append(SL.None);
+   } else {
+    for (Special special : V.specials) {
+     specials.append(special.type.name()).append(", ");
+     hasForceField = special.type == Special.Type.forcefield || hasForceField;
+    }
+   }
+   U.textL(String.valueOf(specials), lineLR, Y5);
+   U.textR("Collision Damage Rating:", lineRL, Y0);
+   String damageDealt =
+   V.dealsMassiveDamage() || V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) ? "Instant-Kill" :
+   hasForceField || V.spinner != null ? "'Inconsistent'" :
+   String.valueOf((float) V.damageDealt);
+   U.textL(damageDealt, lineRR, Y0);
+   U.textR("Fragility:", lineRL, Y1);
+   U.textL(String.valueOf(V.fragility), lineRR, Y1);
+   U.textR("Self-Repair:", lineRL, Y2);
+   U.textL(String.valueOf(V.selfRepair), lineRR, Y2);
+   U.textR("Total Durability:", lineRL, Y3);
+   U.textL(String.valueOf(V.durability), lineRR, Y3);
+   if (!V.isFixed()) {
+    U.textR("Speed Boost:", lineRL, Y4);
+    U.textL(V.speedBoost > 0 ? UI.Yes : UI.No, lineRR, Y4);
+    U.textR("Amphibious:", lineRL, Y5);
+    U.textL(V.amphibious ? UI.Yes : UI.No, lineRR, Y5);
+   }
   }
  }
 
@@ -1713,14 +1753,14 @@ public class VE extends Application {
 
    private static void run(boolean gamePlay) {
     U.font(.03);
-    U.fillRGB(1, 1, 1);
+    U.fillRGB(1);
     U.text("Vehicle Viewer", .075);
     boolean loadModel = false;
     if (UI.page < 1) {
      resetGraphics();
      U.Nodes.remove(E.Sun.S, E.Ground.C);
      U.Nodes.Light.remove(E.Sun.light);
-     scene3D.setFill(Color.color(0, 0, 0));
+     scene3D.setFill(U.getColor(0));
      U.Nodes.Light.setRGB(E.Sun.light, 1, 1, 1);
      Camera.X = Camera.Y = Camera.Z = Camera.XZ = Camera.YZ = Camera.XY = Y = YZ = 0;
      E.viewableMapDistance = Double.POSITIVE_INFINITY;
@@ -1755,9 +1795,9 @@ public class VE extends Application {
      U.font(.02);
      U.text(vehicles.get(0).name, .1125);
      U.font(.0125);
-     U.fillRGB(1, 1, 1);
-     U.text("Meshes: " + vehicles.get(0).parts.size(), .25, .8);
-     U.text("Vertices: " + vehicles.get(0).vertexQuantity, .75, .8);
+     U.fillRGB(1);
+     U.text(SL.Meshes_ + vehicles.get(0).parts.size(), .25, .8);
+     U.text(SL.Vertices_ + vehicles.get(0).vertexQuantity, .75, .8);
      if (showCollisionBounds) {
       U.setTranslate(collisionBounds, vehicles.get(0));
       U.Nodes.add(collisionBounds);
@@ -1765,17 +1805,17 @@ public class VE extends Application {
       U.Nodes.remove(collisionBounds);
      }
     }
-    U.fillRGB(1, 1, 1);
+    U.fillRGB(1);
     U.text("Move Vehicle with the T, G, U, and J Keys. Rotate with the Arrow Keys", .95 + UI.textOffset);
     if (yinYang) {
-     U.strokeRGB(1, 1, 1);
+     U.strokeRGB(1);
      U.drawRectangle(.5, UI.selected == 0 ? .825 : UI.selected == 1 ? .85 : UI.selected == 2 ? .875 : UI.selected == 3 ? .9 : .925, width, UI.selectionHeight);
     }
     U.text("RE-LOAD VEHICLE FILE", .825 + UI.textOffset);
-    U.text("3D Lighting [" + (lighting3D ? "ON" : "OFF") + "]", .85 + UI.textOffset);
+    U.text("3D Lighting [" + (lighting3D ? UI.ON : UI.OFF) + "]", .85 + UI.textOffset);
     U.text("Draw Mode [" + (showWireframe ? "LINE" : "FILL") + "]", .875 + UI.textOffset);
-    U.text("Collision Bounds [" + (showCollisionBounds ? "SHOW" : "HIDE") + "]", .9 + UI.textOffset);
-    U.text("BACK TO MAIN MENU", .925 + UI.textOffset);
+    U.text("Collision Bounds [" + (showCollisionBounds ? "SHOW" : UI.HIDE) + "]", .9 + UI.textOffset);
+    U.text(UI.BACK_TO_MAIN_MENU, .925 + UI.textOffset);
     if (UI.selectionTimer > UI.selectionWait) {
      if (Keys.Up) {
       UI.selected = --UI.selected < 0 ? 4 : UI.selected;
@@ -1807,7 +1847,7 @@ public class VE extends Application {
       }
      } else if (UI.selected == 3) {
       showCollisionBounds = !showCollisionBounds;
-      collisionBounds.setRadius(vehicles.get(0).collisionRadius());
+      collisionBounds.setRadius(vehicles.get(0).collisionRadius);
      } else {
       status = VE.Status.mainMenu;
       removeVehicleModel();
@@ -1824,7 +1864,7 @@ public class VE extends Application {
     if (loadModel) {
      removeVehicleModel();
      userRandomRGB = U.getColor(U.random(), U.random(), U.random());
-     addVehicleModel(vehicleNumber[0], true);
+     addVehicleModel(VS.chosen[0], true);
     }
     if (!Keys.inUse) {
      UI.selected =
@@ -1842,7 +1882,7 @@ public class VE extends Application {
 
   private static void runMapViewer(boolean gamePlay) {
    U.font(.03);
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.text("Map Viewer", .075);
    if (UI.page < 1) {
     Camera.X = Camera.Z = Camera.XZ = Camera.YZ = Camera.XY = 0;
@@ -1873,12 +1913,12 @@ public class VE extends Application {
    U.fillRectangle(.5, .9, 1, .2);
    U.font(.015);
    if (yinYang) {
-    U.strokeRGB(1, 1, 1);
+    U.strokeRGB(1);
     U.drawRectangle(.5, UI.selected == 0 ? .85 : .875, width, UI.selectionHeight);
    }
    U.fillRGB(1);
    U.text("RE-LOAD MAP FILE", .85 + UI.textOffset);
-   U.text("BACK TO MAIN MENU", .875 + UI.textOffset);
+   U.text(UI.BACK_TO_MAIN_MENU, .875 + UI.textOffset);
    U.text("Move Camera with the T, G, U, and J Keys. Rotate with the Arrow Keys", .9 + UI.textOffset);
    if (UI.selectionTimer > UI.selectionWait && (Keys.Up || Keys.Down)) {
     UI.selected = UI.selected < 1 ? 1 : 0;
@@ -1911,8 +1951,8 @@ public class VE extends Application {
    status = VE.Status.mainMenu;
   } else {
    for (PrintWriter PW : Network.out) {
-    PW.println(SL.Network.cancel);
-    PW.println(SL.Network.cancel);
+    PW.println(SL.CANCEL);
+    PW.println(SL.CANCEL);
    }
    status = VE.Status.loadLAN;
   }
@@ -1964,6 +2004,7 @@ public class VE extends Application {
    U.fillRGB(UI.selected == 6 && yinYang ? .5 : 0);
    U.fillRectangle(.5, .9, .2, UI.selectionHeight);
    if (Keys.Enter || Keys.Space) {
+    Keys.inUse = true;
     if (UI.selected == 0) {
      status = VE.Status.vehicleSelect;
      UI.selected = VS.index = 0;
@@ -1984,6 +2025,7 @@ public class VE extends Application {
      vehiclesInMatch = 1;
      VS.index = 0;
      Viewer.inUse = true;
+     UI.selected = 1;
     } else if (UI.selected == 6) {
      status = VE.Status.mapJump;
      Viewer.inUse = true;
@@ -1998,26 +2040,26 @@ public class VE extends Application {
    System.exit(0);
   }
   U.font(.075);
-  U.fillRGB(.5, .5, .5);
-  U.text(SL.theVehicularEpic, .498, .173);
-  U.text(SL.theVehicularEpic, .502, .173);
-  U.text(SL.theVehicularEpic, .498, .177);
-  U.text(SL.theVehicularEpic, .502, .177);
+  U.fillRGB(.5);
+  U.text(SL.OPEN_VEHICULAR_EPIC, .498, .173);
+  U.text(SL.OPEN_VEHICULAR_EPIC, .502, .173);
+  U.text(SL.OPEN_VEHICULAR_EPIC, .498, .177);
+  U.text(SL.OPEN_VEHICULAR_EPIC, .502, .177);
   U.fillRGB(1);
-  U.text(SL.theVehicularEpic, .499, .174);
-  U.text(SL.theVehicularEpic, .501, .174);
-  U.text(SL.theVehicularEpic, .499, .176);
-  U.text(SL.theVehicularEpic, .501, .176);
+  U.text(SL.OPEN_VEHICULAR_EPIC, .499, .174);
+  U.text(SL.OPEN_VEHICULAR_EPIC, .501, .174);
+  U.text(SL.OPEN_VEHICULAR_EPIC, .499, .176);
+  U.text(SL.OPEN_VEHICULAR_EPIC, .501, .176);
   U.fillRGB(.75, .75, .75);
-  U.text(SL.theVehicularEpic, .175);
+  U.text(SL.OPEN_VEHICULAR_EPIC, .175);
   U.font(.015);
   U.fillRGB(1);
   if (loaded) {
    U.text("NEW GAME", .6 + UI.textOffset);
    U.text("MULTIPLAYER GAME", .65 + UI.textOffset);
-   U.text("HOW TO PLAY", .7 + UI.textOffset);
+   U.text(UI.HOW_TO_PLAY, .7 + UI.textOffset);
    U.text("CREDITS", .75 + UI.textOffset);
-   U.text(SL.options, .8 + UI.textOffset);
+   U.text(SL.OPTIONS, .8 + UI.textOffset);
    U.text("VEHICLE VIEWER", .85 + UI.textOffset);
    U.text("MAP VIEWER", .9 + UI.textOffset);
    if (!error.isEmpty()) {
@@ -2097,8 +2139,8 @@ public class VE extends Application {
     int n;
     if (Network.mode == Network.Mode.HOST) {
      for (PrintWriter PW : Network.out) {
-      PW.println("END");
-      PW.println("END");
+      PW.println(SL.END);
+      PW.println(SL.END);
      }
     }
     if (Network.hostLeftMatch || Network.mode == Network.Mode.HOST) {
@@ -2151,9 +2193,9 @@ public class VE extends Application {
   double extraY = .01;
   U.text("RESUME", .45 + extraY);
   U.text("REPLAY", .475 + extraY);
-  U.text(SL.options, .5 + extraY);
-  U.text("HOW TO PLAY", .525 + extraY);
-  U.text(Tournament.stage > 0 ? (Match.timeLeft > 0 ? "CANCEL TOURNAMENT" : Tournament.finished ? "BACK TO MAIN MENU" : "NEXT ROUND") : Network.mode == Network.Mode.JOIN && !Network.hostLeftMatch ? "Please Wait for Host to exit Match first" : "END MATCH", .55 + extraY);
+  U.text(SL.OPTIONS, .5 + extraY);
+  U.text(UI.HOW_TO_PLAY, .525 + extraY);
+  U.text(Tournament.stage > 0 ? (Match.timeLeft > 0 ? "CANCEL TOURNAMENT" : Tournament.finished ? UI.BACK_TO_MAIN_MENU : "NEXT ROUND") : Network.mode == Network.Mode.JOIN && !Network.hostLeftMatch ? "Please Wait for Host to exit Match first" : "END MATCH", .55 + extraY);
   if (!Keys.inUse) {
    UI.selected =
    Math.abs(.45 + UI.baseClickOffset - Mouse.Y) < UI.clickRangeY ? 0 :
@@ -2196,72 +2238,23 @@ public class VE extends Application {
    TE.Arrow.MV.setVisible(Options.headsUpDisplay);
    Vehicle V = vehicles.get(vehiclePerspective);
    if (Options.headsUpDisplay) {
-    if (timeLeft <= 0) {
-     double titleHeight = .12625;
-     if (vehiclesInMatch > 1) {
-      String[] formatFinal = {U.DF.format(finalScore[0]), U.DF.format(finalScore[1])};
-      if (formatFinal[0].equals(formatFinal[1])) {
-       U.font(.025);
-       U.fillRGB(0, 0, 0);
-       U.text("IT'S A TIE!", titleHeight - .001);
-       U.text("IT'S A TIE!", titleHeight + .001);
-       U.fillRGB(1, 1, 1);
-       U.text("IT'S A TIE!", titleHeight);
-      } else {
-       String announce = Tournament.stage > 0 && !Tournament.finished ? "ROUND " + Tournament.stage + " OVER" : (finalScore[0] > finalScore[1] ? "GREEN" : "RED") + " TEAM WINS" + (Tournament.finished ? " THE TOURNAMENT!" : "!");
-       U.font(.025);
-       U.fillRGB(0, 0, 0);
-       U.text(announce, titleHeight - .001);
-       U.text(announce, titleHeight + .001);
-       U.fillRGB(1, 1, 1);
-       U.text(announce, titleHeight);
-      }
-      U.fillRGB(E.Ground.RGB.invert());
-      U.font(.0175);
-      U.fillRGB(0, 0, 0);
-      if (yinYang) {
-       U.fillRGB(.5, .5, .5);
-      }
-      U.text((Tournament.stage < 1 || Tournament.finished ? "FINAL " : "") + "SCORES:", .225);
-      if (yinYang) {
-       U.fillRGB(0, 1, 0);
-      }
-      U.text(vehiclesInMatch > 2 ? "GREEN TEAM" : playerNames[0], .3, .225);
-      U.text(String.valueOf(Tournament.stage > 0 ? Long.valueOf(Tournament.wins[0]) : formatFinal[0]), .3, .25);
-      if (yinYang) {
-       U.fillRGB(1, 0, 0);
-      }
-      U.text(vehiclesInMatch > 2 ? "RED TEAM" : playerNames[1], .7, .225);
-      U.text(String.valueOf(Tournament.stage > 0 ? Long.valueOf(Tournament.wins[1]) : formatFinal[1]), .7, .25);
+    runMatchEndInfo();
+    if (V.destroyed && V.explosionType != Vehicle.ExplosionType.maxnuclear) {
+     U.font(.02);
+     if (yinYang) {
+      U.fillRGB(1);
+      U.text(".. REVIVING.. ", .275);
      } else {
-      U.font(.025);
-      U.fillRGB(0, 0, 0);
-      U.text("TIME'S UP!", titleHeight - .001);
-      U.text("TIME'S UP!", titleHeight + .001);
-      U.fillRGB(1, 1, 1);
-      U.text("TIME'S UP!", titleHeight);
-      U.fillRGB(E.Ground.RGB.invert());
-      U.font(.0175);
-      double color = yinYang ? .5 : 0;
-      U.fillRGB(color);
-      U.text("FINAL SCORE: " + finalScore[1], .225);
-     }
-    }
-    if (V.destroyed) {
-     if (V.explosionType != Vehicle.ExplosionType.maxnuclear) {
-      U.font(.02);
-      if (yinYang) {
-       U.fillRGB(1, 1, 1);
-       U.text(".. REVIVING.. ", .275);
-      } else {
-       U.fillRGB(0, 0, 0);
-       U.text(" ..REVIVING ..", .275);
-      }
+      U.fillRGB(0);
+      U.text(" ..REVIVING ..", .275);
      }
     }
     U.font(.01);
     TE.Arrow.run();
-    //U.textR(String.valueOf(V.AI.behavior.name()), .9, .5);//U.textR(String.valueOf(V.drive2), .9, .525);//U.textR(String.valueOf(V.reverse), .9, .55);//U.textR(String.valueOf(V.reverse2), .9, .575);
+    //U.textR(String.valueOf(V.wheels.get(0).Y), .9, .5);
+    //U.textR(String.valueOf(V.wheels.get(1).Y), .9, .525);
+    //U.textR(String.valueOf(V.wheels.get(2).Y), .9, .55);
+    //U.textR(String.valueOf(V.wheels.get(3).Y), .9, .575);
     U.fillRGB(0, 0, 0, UI.drawOpacity.minimal);
     U.fillRectangle(.025, .8, .05, .425);
     U.fillRectangle(.975, .8, .05, .425);
@@ -2269,18 +2262,16 @@ public class VE extends Application {
     runHUDBlocks(V);
     if (Network.mode == Network.Mode.JOIN && Network.hostLeftMatch) {
      U.font(.02);
-     double color = yinYang ? 1 : .5;
-     U.fillRGB(color, color, color);
+     U.fillRGB(yinYang ? 1 : .5);
      U.text("The Host has left match--hit Enter to start another match", .9);
-    } else if (V.P.mode == Physics.Mode.fly && E.gravity != 0 && U.sin(V.YZ) > 0 && V.P.netSpeedY + V.P.stallSpeed > 0) {
-     U.fillRGB(E.skyRGB.invert());
+    } else if (V.P.mode == Physics.Mode.fly && E.gravity != 0 && U.sin(V.YZ) > 0 && V.P.speedY + V.P.stallSpeed > 0) {
+     U.fillRGB(yinYang ? 1 : 0);
      U.text("STALL", .95);
     }
     if (printTimer > 0) {
      if (timeLeft > 0) {
       U.font(.01);
-      double color = yinYang ? 0 : 1;
-      U.fillRGB(color, color, color);
+      U.fillRGB(yinYang ? 0 : 1);
       U.text(print, .125);
      }
      printTimer -= gamePlay ? tick : 0;
@@ -2290,9 +2281,8 @@ public class VE extends Application {
     U.font(.0125);
     if (!DestructionLog.inUse) {
      if (V.P.flipped && V.P.flipTimer > 0) {
-      if (V.P.mode.name().startsWith(Physics.Mode.drive.name())) {
-       double color = yinYang ? 0 : 1;
-       U.fillRGB(color, color, color);
+      if (V.P.mode.name().startsWith(SL.drive)) {
+       U.fillRGB(yinYang ? 0 : 1);
        U.text("Bad Landing", .075);
       }
      } else if (stuntTimer > 0) {
@@ -2302,10 +2292,12 @@ public class VE extends Application {
     }
     stuntTimer -= gamePlay ? tick : 0;
    }
-   long scoreStunt0 = 1 + Math.round(scoreStunt[0] * .0005),
+   long
+   scoreStunt0 = 1 + Math.round(scoreStunt[0] * .0005),
    scoreStunt1 = 1 + Math.round(scoreStunt[1] * .0005);
-   double scoreDamage0 = 1 + scoreDamage[0] * .000125,
-   scoreDamage1 = 1 + scoreDamage[1] * .000125;
+   double
+   scoreDamage0 = 1 + scoreDamage[0] * .00125,
+   scoreDamage1 = 1 + scoreDamage[1] * .00125;
    double[] score = {
    scoreCheckpoint[0] * scoreLap[0] * scoreStunt0 * scoreDamage0 * scoreKill[0],
    scoreCheckpoint[1] * scoreLap[1] * scoreStunt1 * scoreDamage1 * scoreKill[1]};
@@ -2316,11 +2308,13 @@ public class VE extends Application {
     U.font(.00875);
     U.fillRGB(0, 0, 0, UI.drawOpacity.minimal);
     U.fillRectangle(.9375, .26, .125, .2);
+    String bonus = "BONUS (Player ", currentScore = "Current Score: ",
+    checkpoints = "Checkpoints: ", laps = "Laps: ", stunts = "Stunts: ", damageDealt = "Damage Dealt: ", kills = "Kills: ";
     if (vehiclesInMatch > 1) {
      U.fillRectangle(.0625, .26, .125, .2);
      //GREEN
      U.fillRGB(0, 1, 0);
-     U.textL(vehiclesInMatch > 2 ? "GREEN TEAM" : playerNames[0], .0125, .175);
+     U.textL(vehiclesInMatch > 2 ? UI.GREEN_TEAM : playerNames[0], .0125, .175);
      if (bonusHolder > -1 && bonusHolder < vehiclesInMatch >> 1) {
       U.textL("(Player " + bonusHolder + ") BONUS", .0125, .325);
      }
@@ -2339,37 +2333,37 @@ public class VE extends Application {
      U.textL(scoreKill[0] + " :Kills", .0125, .3);
      //RED
      U.fillRGB(1, 0, 0);
-     U.textR(vehiclesInMatch > 2 ? "RED TEAM" : playerNames[1], .9875, .175);
+     U.textR(vehiclesInMatch > 2 ? UI.RED_TEAM : playerNames[1], .9875, .175);
      if (bonusHolder >= vehiclesInMatch >> 1) {
-      U.textR("BONUS (Player " + bonusHolder + ")", .9875, .325);
+      U.textR(bonus + bonusHolder + ")", .9875, .325);
      }
-     U.textR("Current Score: " + U.DF.format(score[1]), .9875, .35);
+     U.textR(currentScore + U.DF.format(score[1]), .9875, .35);
      if (!TE.checkpoints.isEmpty()) {
       U.fillRGB(1, 0, 0, yinYang || scoreCheckpoint[1] >= scoreCheckpoint[0] ? 1 : .5);
-      U.textR("Checkpoints: " + scoreCheckpoint[1], .9875, .2);
+      U.textR(checkpoints + scoreCheckpoint[1], .9875, .2);
       U.fillRGB(1, 0, 0, yinYang || scoreLap[1] >= scoreLap[0] ? 1 : .5);
-      U.textR("Laps: " + scoreLap[1], .9875, .225);
+      U.textR(laps + scoreLap[1], .9875, .225);
      }
      U.fillRGB(1, 0, 0, yinYang || scoreStunt[1] >= scoreStunt[0] ? 1 : .5);
-     U.textR("Stunts: " + scoreStunt1, .9875, .25);
+     U.textR(stunts + scoreStunt1, .9875, .25);
      U.fillRGB(1, 0, 0, yinYang || scoreDamage1 >= scoreDamage0 ? 1 : .5);
-     U.textR("Damage Dealt: " + U.DF.format(scoreDamage1), .9875, .275);
+     U.textR(damageDealt + U.DF.format(scoreDamage1), .9875, .275);
      U.fillRGB(1, 0, 0, yinYang || scoreKill[1] >= scoreKill[0] ? 1 : .5);
-     U.textR("Kills: " + scoreKill[1], .9875, .3);
+     U.textR(kills + scoreKill[1], .9875, .3);
     } else {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
      U.textR("YOU", .9875, .175);
      if (!TE.checkpoints.isEmpty()) {
-      U.textR("Checkpoints: " + scoreCheckpoint[1], .9875, .2);
-      U.textR("Laps: " + scoreLap[1], .9875, .225);
+      U.textR(checkpoints + scoreCheckpoint[1], .9875, .2);
+      U.textR(laps + scoreLap[1], .9875, .225);
      }
-     U.textR("Stunts: " + scoreStunt1, .9875, .25);
-     U.textR("Damage Dealt: " + scoreDamage1, .9875, .275);
-     U.textR("Kills: " + scoreKill[1], .9875, .3);
+     U.textR(stunts + scoreStunt1, .9875, .25);
+     U.textR(damageDealt + U.DF.format(scoreDamage1), .9875, .275);
+     U.textR(kills + scoreKill[1], .9875, .3);
      if (bonusHolder >= vehiclesInMatch >> 1) {
-      U.textR("BONUS (Player " + bonusHolder + ")", .9875, .325);
+      U.textR(bonus + bonusHolder + ")", .9875, .325);
      }
-     U.textR("Current Score: " + U.DF.format(score[1]), .9875, .35);
+     U.textR(currentScore + U.DF.format(score[1]), .9875, .35);
     }
    }
    if (timeLeft < 0) {
@@ -2382,7 +2376,11 @@ public class VE extends Application {
       Sounds.finish.play(0, 0);
       Sounds.finish.play(1, 0);
      } else {
-      Sounds.finish.play((score[0] > score[1] && vehiclePerspective < vehiclesInMatch >> 1) || (score[1] > score[0] && vehiclePerspective >= vehiclesInMatch >> 1) ? 0 : 1, 0);
+      long side =
+      (score[0] > score[1] && vehiclePerspective < vehiclesInMatch >> 1) ||
+      (score[1] > score[0] && vehiclePerspective >= vehiclesInMatch >> 1) ? 0 :
+      1;
+      Sounds.finish.play(side, 0);
      }
     }
     if (!matchTie) {
@@ -2398,26 +2396,26 @@ public class VE extends Application {
    if (!V.isFixed()) {
     U.fillRGB(.75, .75, .75);
     U.fillRectangle(.025, .7, .01, Math.min(.2, .2 * (Math.abs(V.P.speed) / V.topSpeeds[1])));
-    U.fillRGB(1, 1, 1);
+    U.fillRGB(1);
     U.fillRectangle(.025, .6, .02, .001);
     U.fillRectangle(.025, .8, .02, .001);
-    U.text(Math.abs(V.P.speed) >= 10000 ? U.DF.format(V.P.speed) : String.valueOf(Math.round(V.P.speed * Options.units)), .025, .7);
-    U.text(unitName[0], .025, .825);
+    double speed = UI.getUnitSpeed(V.P.speed);
+    U.text(Math.abs(speed) >= 10000 ? U.DF.format(speed) : String.valueOf(Math.round(speed)), .025, .7);
+    U.text(UI.getUnitSpeedName(), .025, .825);
    }
-   U.fillRGB(1, 1, 1);
-   U.font(.01);
-   double converted = Options.units == .5364466667 ? .0175 : Options.units == 1 / 3. ? .0574147 : 1;
+   U.fillRGB(1);
    U.font(.0075);
-   U.text("(" + unitName[1] + ")", .025, .875);
-   U.textL("X: " + U.DF.format(V.X * converted), .00625, .9);
-   U.textL("Y: " + U.DF.format(V.Y * converted), .00625, .925);
-   U.textL("Z: " + U.DF.format(V.Z * converted), .00625, .95);
+   U.text("(" + UI.getUnitName() + ")", .025, .875);
+   double distanceConverted = UI.getUnitDistance(1);
+   U.textL("X: " + U.DF.format(V.X * distanceConverted), .00625, .9);
+   U.textL("Y: " + U.DF.format(V.Y * distanceConverted), .00625, .925);
+   U.textL("Z: " + U.DF.format(V.Z * distanceConverted), .00625, .95);
    U.font(.015);
    //RIGHT HUD BLOCK
    double damage = V.getDamage(true);
    U.fillRGB(1, 1 - damage, 0);
    U.fillRectangle(.975, .7, .01, Math.min(.2, .2 * damage));
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.fillRectangle(.975, .6, .02, .001);
    U.fillRectangle(.975, .8, .02, .001);
    U.text(Math.round(100 * damage) + "%", .975, .7);
@@ -2435,7 +2433,7 @@ public class VE extends Application {
     U.font(.01);
     U.text(vehiclePerspective + (vehiclePerspective == userPlayerIndex ? " (You)" : ""), .975, .89);
    }
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.font(.01);
    U.text("Time", .975, .925);
    U.text("Left:", .975, .94);
@@ -2443,26 +2441,82 @@ public class VE extends Application {
    U.text(String.valueOf(Math.round(timeLeft)), .975, .965);
   }
 
+  static void runMatchEndInfo() {
+   if (timeLeft <= 0) {
+    double titleHeight = .12625;
+    if (vehiclesInMatch > 1) {
+     String[] formatFinal = {U.DF.format(finalScore[0]), U.DF.format(finalScore[1])};
+     if (formatFinal[0].equals(formatFinal[1])) {
+      U.font(.025);
+      U.fillRGB(0);
+      String tie = "IT'S A TIE!";
+      U.text(tie, titleHeight - .001);
+      U.text(tie, titleHeight + .001);
+      U.fillRGB(1);
+      U.text(tie, titleHeight);
+     } else {
+      String announce = Tournament.stage > 0 && !Tournament.finished ? "ROUND " + Tournament.stage + " OVER" : (finalScore[0] > finalScore[1] ? "GREEN" : "RED") + " TEAM WINS" + (Tournament.finished ? " THE TOURNAMENT!" : "!");
+      U.font(.025);
+      U.fillRGB(0);
+      U.text(announce, titleHeight - .001);
+      U.text(announce, titleHeight + .001);
+      U.fillRGB(1);
+      U.text(announce, titleHeight);
+     }
+     U.fillRGB(E.Ground.RGB.invert());
+     U.font(.0175);
+     U.fillRGB(0);
+     if (yinYang) {
+      U.fillRGB(.5);
+     }
+     U.text((Tournament.stage < 1 || Tournament.finished ? "FINAL " : "") + "SCORES:", .225);
+     if (yinYang) {
+      U.fillRGB(0, 1, 0);
+     }
+     U.text(vehiclesInMatch > 2 ? UI.GREEN_TEAM : playerNames[0], .3, .225);
+     U.text(String.valueOf(Tournament.stage > 0 ? Long.valueOf(Tournament.wins[0]) : formatFinal[0]), .3, .25);
+     if (yinYang) {
+      U.fillRGB(1, 0, 0);
+     }
+     U.text(vehiclesInMatch > 2 ? UI.RED_TEAM : playerNames[1], .7, .225);
+     U.text(String.valueOf(Tournament.stage > 0 ? Long.valueOf(Tournament.wins[1]) : formatFinal[1]), .7, .25);
+    } else {
+     U.font(.025);
+     U.fillRGB(0);
+     String timeUp = "TIME'S UP!";
+     U.text(timeUp, titleHeight - .001);
+     U.text(timeUp, titleHeight + .001);
+     U.fillRGB(1);
+     U.text(timeUp, titleHeight);
+     U.fillRGB(E.Ground.RGB.invert());
+     U.font(.0175);
+     U.fillRGB(yinYang ? .5 : 0);
+     U.text("FINAL SCORE: " + U.DF.format(finalScore[1]), .225);
+    }
+   }
+  }
+
   public static void processStunt(Vehicle V) {
    if (V.index == vehiclePerspective && V.P.stuntTimer > V.P.stuntLandWaitTime && V.P.stuntReward > 0) {
     String stuntSpins = "", stuntRolls = "", stuntFlips = "";
     long computeStuntYZ = 0, computeStuntXY = 0, computeStuntXZ = 0;
     while (computeStuntYZ < Math.abs(V.P.stuntYZ) - 45) computeStuntYZ += 360;
-    stuntFlips = computeStuntYZ > 0 ? (V.flipCheck[0] && V.flipCheck[1] ? SL.biDirectional : "") + computeStuntYZ + "-Flip" :
+    stuntFlips = computeStuntYZ > 0 ? (V.flipCheck[0] && V.flipCheck[1] ? SL.BiDirectional : "") + computeStuntYZ + "-Flip" :
     V.flipCheck[0] || V.flipCheck[1] ? "Half-Flip" : stuntFlips;
     while (computeStuntXY < Math.abs(V.P.stuntXY) - 45) computeStuntXY += 360;
-    stuntRolls = computeStuntXY > 0 ? (V.rollCheck[0] && V.rollCheck[1] ? SL.biDirectional : "") + computeStuntXY + "-Roll" :
+    stuntRolls = computeStuntXY > 0 ? (V.rollCheck[0] && V.rollCheck[1] ? SL.BiDirectional : "") + computeStuntXY + "-Roll" :
     V.rollCheck[0] || V.rollCheck[1] ? (stuntFlips.isEmpty() ? "Half-Roll" : "Flipside") : stuntRolls;
     while (computeStuntXZ < Math.abs(V.P.stuntXZ) - 45) computeStuntXZ += 180;
-    stuntSpins = computeStuntXZ > 0 ? (V.spinCheck[0] && V.spinCheck[1] ? SL.biDirectional : "") + computeStuntXZ + "-Spin" :
+    stuntSpins = computeStuntXZ > 0 ? (V.spinCheck[0] && V.spinCheck[1] ? SL.BiDirectional : "") + computeStuntXZ + "-Spin" :
     V.spinCheck[0] || V.spinCheck[1] ? "Half-Spin" : stuntSpins;
     stuntTimer = (stuntFlips.isEmpty() ? 0 : 25) + (stuntRolls.isEmpty() ? 0 : 25) + (stuntSpins.isEmpty() ? 0 : 25) + (V.offTheEdge ? 25 : 0);
     if (status == VE.Status.play || status == VE.Status.replay) {
      if (Options.headsUpDisplay && !DestructionLog.inUse) {
       Sounds.stunt.play(0);
      }
-     String by1 = !stuntFlips.isEmpty() && !stuntRolls.isEmpty() ? " by " : "",
-     by2 = !stuntSpins.isEmpty() && (!stuntFlips.isEmpty() || !stuntRolls.isEmpty()) ? " by " : "";
+     String by = " by ",
+     by1 = !stuntFlips.isEmpty() && !stuntRolls.isEmpty() ? by : "",
+     by2 = !stuntSpins.isEmpty() && (!stuntFlips.isEmpty() || !stuntRolls.isEmpty()) ? by : "";
      stuntPrint = "Landed " + (V.offTheEdge ? "an off-the-edge " : "a ") + stuntFlips + by1 + stuntRolls + by2 + stuntSpins + "!";
     }
     V.P.stuntReward = 0;
@@ -2481,7 +2535,7 @@ public class VE extends Application {
     U.font(.00875);
     double x1 = .4725, x2 = .5275, y1 = .0375, y2 = .05, y3 = .0625, y4 = .075, y5 = .0875;
     U.fillRectangle(.5, .05, .4, .08);
-    U.fillRGB(1, 1, 1);
+    U.fillRGB(1);
     U.text(SL.destroyed, y1);
     U.text(SL.destroyed, y2);
     U.text(SL.destroyed, y3);
@@ -2575,12 +2629,12 @@ public class VE extends Application {
     }
     U.fillRectangle(.5, UI.selected == 1 ? .5 : .45, .25, UI.selectionHeight);
     String s;
-    try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(SL.gameSettings), U.standardChars))) {
+    try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(SL.GameSettings), U.standardChars))) {
      for (String s1; (s1 = BR.readLine()) != null; ) {
       s = s1.trim();
-      Network.userName = s.startsWith(SL.Network.findUserName) ? U.getString(s, 0) : Network.userName;
-      Network.targetHost = s.startsWith(SL.Network.findTargetHost) ? U.getString(s, 0) : Network.targetHost;
-      Network.port = s.startsWith("Port(") ? (int) Math.round(U.getValue(s, 0)) : Network.port;
+      Network.userName = s.startsWith(SL.UserName + "(") ? U.getString(s, 0) : Network.userName;
+      Network.targetHost = s.startsWith(SL.TargetHost + "(") ? U.getString(s, 0) : Network.targetHost;
+      Network.port = s.startsWith(SL.Port + "(") ? (int) Math.round(U.getValue(s, 0)) : Network.port;
      }
     } catch (IOException e) {
      System.out.println("Problem updating Online settings: " + e);
@@ -2589,7 +2643,7 @@ public class VE extends Application {
    if (Network.mode == Network.Mode.HOST && !Network.out.isEmpty()) {
     for (n = 0; n < Network.out.size(); n++) {
      String s = Network.readIn(n);
-     if (s.startsWith(SL.Network.cancel)) {
+     if (s.startsWith(SL.CANCEL)) {
       escapeToLast(false);
      }
     }
@@ -2608,10 +2662,10 @@ public class VE extends Application {
     Keys.Enter = Keys.Space = false;
    }
    U.font(.075);
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.text(vehiclesInMatch + "-PLAYER GAME", .175);
    U.font(.01);
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    if (Network.mode == Network.Mode.OFF) {
     U.text("HOST GAME", .45);
     U.text("JOIN GAME", .5);
@@ -2655,11 +2709,11 @@ public class VE extends Application {
   UI.page = Math.max(UI.page, 1);
   U.fillRGB(0, 0, 0, UI.drawOpacity.maximal);
   U.fillRectangle(.5, .5, 1, 1);
-  U.fillRGB(1, 1, 1);
+  U.fillRGB(1);
   U.font(.03);
-  U.text("<-LAST", .1, .75);
-  U.text("NEXT->", .9, .75);
-  U.text("RETURN", .5, .95);
+  U.text(UI.last, .1, .75);
+  U.text(UI.next, .9, .75);
+  U.text(UI.RETURN, .5, .95);
   if (UI.page == 1) {
    U.font(.03);
    U.text("All Vehicle Controls", .15);
@@ -2681,7 +2735,7 @@ public class VE extends Application {
    U.fillRectangle(.575, .3, keySizeX, keySizeY);//P
    U.fillRectangle(.6, .225, keySizeX, keySizeY);//MINUS
    U.fillRectangle(.65, .225, keySizeX, keySizeY);//PLUS
-   U.fillRGB(0, 0, 0);
+   U.fillRGB(0);
    U.text("UP", .85, .375);
    U.font(.0125);
    U.text("DOWN", .85, .45);
@@ -2698,21 +2752,21 @@ public class VE extends Application {
    U.text("P", .575, .3);
    U.text("-", .6, .225);
    U.text("+", .65, .225);
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.text("While Driving on the GROUND, Spacebar is the Handbrake", .5);
    U.text("For standard CARS and TRUCKS, press Spacebar to perform Stunts for points", .525);
    U.text("When on the ground and using a flying vehicle, press W + Down Arrow to Take-off at any time", .55);
    U.text("While FLYING, hold Spacebar to yaw-steer instead of steer by banking, and use W and S to control throttle", .575);
-   U.text("For GROUNDED TURRETS, Spacebar enables finer Precision while Aiming", .6);
+   U.text("For FIXED TURRETS, Spacebar enables finer Precision while Aiming", .6);
    U.text("B = Boost Speed/Change Aerial Velocity (if available)", .625);
    U.text("V and/or F = Use weapon(s)/specials if your vehicle has them", .65);
    U.text("For TANKS, control the turret with the W/A/S/D keys", .675);
-   U.text("(You can also fire the tank cannon by pressing A and D simultaneously)", .7);
+   U.text("(It is recommended to fire the tank cannon by pressing A and D simultaneously)", .7);
    U.text("+ and - = Adjust Vehicle Light Brightness", .725);
    U.text("P = Pass bonus to a teammate (if crossing paths)", .75);
    U.fillRGB(.5, 1, .5);
    U.text("----------Cursor Controls----------", .8);
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.text("Raise the cursor to go forward, lower it to Reverse", .825);
    U.text("Move the Cursor Left and Right to Turn", .85);
    U.text("Click to engage Handbrake/perform Stunts", .875);
@@ -2730,7 +2784,7 @@ public class VE extends Application {
    U.text("And last but not least--the Bonus", .4);
    U.fillRGB(U.random(), U.random(), U.random());
    graphicsContext.fillOval((width * .5) - 50, (height * .5) - 50, 100, 100);
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.text("Grab the bonus by driving into it--turrets can also get the bonus by shooting it.", .6);
    U.text("Being in possession of the Bonus when time's up will DOUBLE you/your team's score!", .625);
    U.text("All these factors get multiplied together. When time's up, the player/team with the higher score wins!", .65);
@@ -2753,7 +2807,7 @@ public class VE extends Application {
    U.fillRGB(0, 1, 1);
    U.text("Some Maps have special environments or may be less straightforward.", .55);
    U.text("There may be an extra learning curve to such maps.", .575);
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.text("Some vehicles have Guided weaponry.", .625);
    U.text("When fired, these weapons will intercept the nearest opponent automatically.", .65);
   } else if (UI.page == 4) {
@@ -2763,18 +2817,18 @@ public class VE extends Application {
    U.text("Z or X = To look around/behind you while driving (for Views 1-4)", .275);
    U.fillRGB(.5, 1, .5);
    U.text("(Press Z and X simultaneously to look forward again)", .3);
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.text("Enter or Escape = Pause/exit out of Match", .325);
    U.text("M = Mute Sound", .35);
    U.text("< and > = Music Volume", .375);
    U.text("Control and Shift = Adjust Zoom", .4);
    U.fillRGB(.5, 1, .5);
    U.text("(Press Control and Shift simultaneously to restore Zoom)", .425);
-   U.fillRGB(1, 1, 1);
-   U.text("E or R = Change Player Perspective (See what the other players are doing)", .45);
+   U.fillRGB(1);
+   U.text("E or R = Change Player Perspective (and set turrets/infrastructure before starting a match)", .45);
    U.fillRGB(.5, 1, .5);
    U.text("(Press E and R simultaneously to view yourself again)", .475);
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.text("H = Heads-up Display ON/OFF", .5);
    U.text("L = Destruction Log ON/OFF", .525);
    U.text("I = Show/Hide Application Info", .55);
@@ -2816,7 +2870,7 @@ public class VE extends Application {
  public enum Options {
   ;
   public static long driverSeat, matchLength;
-  public static double units = 1;
+  static Units units = Units.VEs;
   public static boolean normalMapping, headsUpDisplay = true;
   static boolean degradedSoundEffects;
   private static boolean showInfo;
@@ -2824,21 +2878,21 @@ public class VE extends Application {
   private static void run() {
    boolean fromMenu = status == VE.Status.optionsMenu;
    if (fromMenu) {
-    U.fillRGB(0, 0, 0);
+    U.fillRGB(0);
     U.fillRectangle(.5, .5, 1, 1);
    }
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.font(.05);
-   U.text(SL.options, .15);
+   U.text(SL.OPTIONS, .15);
    U.font(.015);
-   U.text("RETURN", .875 + UI.textOffset);
-   U.fillRGB(1, 1, 1);
+   U.text(UI.RETURN, .875 + UI.textOffset);
+   U.fillRGB(1);
    U.text("DriverSeat [" + (driverSeat > 0 ? "RIGHT->" : driverSeat < 0 ? "<-LEFT" : "CENTER") + "]", .3 + UI.textOffset);
-   U.text("Units [" + (units == .5364466667 ? "METRIC" : units == 1 / 3. ? "U.S." : "VEs") + "]", .35 + UI.textOffset);
+   U.text("Units [" + (units == Units.metric ? "METRIC" : units == Units.US ? "U.S." : Units.VEs.name()) + "]", .35 + UI.textOffset);
    U.text("Limit FPS to [" + (userFPS > U.refreshRate ? "JavaFX Default" : Long.valueOf(userFPS)) + "]", .4 + UI.textOffset);
-   U.text("Camera-Shake Effects [" + (Camera.shake ? "ON" : "OFF") + "]", .45 + UI.textOffset);
+   U.text("Camera-Shake Effects [" + (Camera.shake ? UI.ON : UI.OFF) + "]", .45 + UI.textOffset);
    if (fromMenu) {
-    U.text("Normal-Mapping [" + (normalMapping ? "ON" : "OFF") + "]", .5 + UI.textOffset);
+    U.text("Normal-Mapping [" + (normalMapping ? UI.ON : UI.OFF) + "]", .5 + UI.textOffset);
     U.text("Match Length [" + matchLength + "]", .55 + UI.textOffset);
     U.text("Game Mode [" + (Tournament.stage > 0 ? "TOURNAMENT" : "NORMAL") + "]", .6 + UI.textOffset);
     U.text("# of Players [" + vehiclesInMatch + "]", .65 + UI.textOffset);
@@ -2857,10 +2911,9 @@ public class VE extends Application {
      Sounds.UI.play(0, 0);
     }
    }
-   double color = yinYang ? 1 : 0;
-   U.strokeRGB(color, color, color);
+   U.strokeRGB(yinYang ? 1 : 0);
    U.drawRectangle(.5, UI.selected == 0 ? .875 : .25 + (.05 * UI.selected), width, UI.selectionHeight);
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    boolean isAdjustFunction = false;
    if (UI.selected == 1) {
     isAdjustFunction = true;
@@ -2878,17 +2931,12 @@ public class VE extends Application {
    } else if (UI.selected == 2) {
     U.text("Switch between Metric, U.S., or the game's raw units (VEs)", .75);
     if ((Keys.Enter || Keys.Space) && UI.selectionReady()) {
-     if (units == 1) {
-      units = .5364466667;
-      unitName[0] = "Kph";
-      unitName[1] = "Meters";
-     } else if (units == .5364466667) {
-      units = 1 / 3.;
-      unitName[0] = "Mph";
-      unitName[1] = "Feet";
-     } else if (units == 1 / 3.) {
-      units = 1;
-      unitName[0] = unitName[1] = "VEs";
+     if (units == Units.VEs) {
+      units = Units.metric;
+     } else if (units == Units.metric) {
+      units = Units.US;
+     } else if (units == Units.US) {
+      units = Units.VEs;
      }
     }
    } else if (UI.selected == 3) {
@@ -2963,7 +3011,7 @@ public class VE extends Application {
      UI.selected++;
     }
    }
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.text(UI.selected > 0 ? isAdjustFunction ? "Use Left and Right arrow keys to Adjust" : "Click or hit Enter/Space to Change" : "", .8);
    if ((Keys.Enter || Keys.Space) && UI.selectionReady()) {
     status = UI.selected == 0 ? fromMenu ? VE.Status.mainMenu : VE.Status.paused : status;
@@ -2998,7 +3046,7 @@ public class VE extends Application {
   }
  }
 
- enum Credits {
+ private enum Credits {
   ;
   private static boolean direction;
   private static double quantity;
@@ -3008,88 +3056,85 @@ public class VE extends Application {
     Sounds.finish.play(U.random() < .5 ? 0 : 1, 0);
     UI.page = 1;
    }
-   U.fillRGB(0, 0, 0);
+   U.fillRGB(0);
    U.fillRectangle(.5, .5, 1, 1);
-   Image RA = U.Images.get("RA");
-   graphicsContext.drawImage(RA, width * .2 - (RA.getWidth() * .5), height * .5 - (RA.getHeight() * .5));
-   graphicsContext.drawImage(RA, width * .8 - (RA.getWidth() * .5), height * .5 - (RA.getHeight() * .5));
    if (UI.page == 1) {
+    Image RA = U.Images.get(SL.RA);
+    graphicsContext.drawImage(RA, width * .2 - (RA.getWidth() * .5), height * .5 - (RA.getHeight() * .5));
+    graphicsContext.drawImage(RA, width * .8 - (RA.getWidth() * .5), height * .5 - (RA.getHeight() * .5));
     quantity = Math.round(quantity);
     quantity += direction ? -1 : 1;
-    direction = !(quantity < 2) && (quantity > 13 || direction);
-    U.font(.075);
-    U.fillRGB(.5, .5, .5);
+    direction = !(quantity < 2) && (quantity > 12 || direction);
+    U.fillRGB(.5);
     if (quantity == 1) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
-    U.text(SL.theVehicularEpic, .15);
+    U.font(.075);
+    U.text(SL.OPEN_VEHICULAR_EPIC, .15);
     U.font(.015);
-    U.fillRGB(.5, .5, .5);
+    U.fillRGB(.5);
     if (quantity == 2) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
     U.text("an open-source project maintained by", .2);
-    U.fillRGB(.5, .5, .5);
+    U.fillRGB(.5);
     if (quantity == 3) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
-    U.text("Ryan Albano", .25);
-    U.fillRGB(.5, .5, .5);
+    U.font(.0175);
+    U.text("Ryan Albano (RyanAlbano1@gmail.com)", .275);
+    U.font(.015);
+    U.fillRGB(.5);
     if (quantity == 4) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
     U.text("Other Credits:", .35);
-    U.fillRGB(.5, .5, .5);
+    U.fillRGB(.5);
     if (quantity == 5) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
     U.text("Vitor Macedo (VitorMac) and Dany Fernández Diaz--for programming assistance", .4);
-    U.fillRGB(.5, .5, .5);
+    U.fillRGB(.5);
     if (quantity == 6) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
     U.text("Max Place--for composing some map soundtracks", .45);
-    U.fillRGB(.5, .5, .5);
+    U.fillRGB(.5);
     if (quantity == 7) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
     U.text("Rory McHenry--for teaching IDE/Java basics", .5);
-    U.fillRGB(.5, .5, .5);
+    U.fillRGB(.5);
     if (quantity == 8) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
     U.text("Omar Waly--his Java work (Need for Madness and Radical Aces) have served as a design 'template' for V.E.", .55);
-    U.fillRGB(.5, .5, .5);
+    U.fillRGB(.5);
     if (quantity == 9) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
-    U.text("The OpenJavaFX team/community--for their hard work making V.E.'s graphics engine possible", .6);
-    U.fillRGB(.5, .5, .5);
+    U.text("The OpenJavaFX team/community--for JavaFX, of course", .6);
+    U.fillRGB(.5);
     if (quantity == 10) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
     U.text("The FXyz library--for additional shape/geometry support", .65);
-    U.fillRGB(.5, .5, .5);
+    U.fillRGB(.5);
     if (quantity == 11) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
     U.text("JavaZoom--for JLayer (a Java .mp3 player)", .7);
-    U.fillRGB(.5, .5, .5);
+    U.fillRGB(.5);
     if (quantity == 12) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
     U.text("Everyone who suggested or submitted content!", .75);
-    U.fillRGB(.5, .5, .5);
+    U.fillRGB(.5);
     if (quantity == 13) {
-     U.fillRGB(1, 1, 1);
+     U.fillRGB(1);
     }
-    U.font(.03);
-    U.text("And thank YOU for playing", .85);
-    U.fillRGB(.5, .5, .5);
-    if (quantity == 14) {
-     U.fillRGB(1, 1, 1);
-    }
-    U.text("and supporting independent gaming!", .9);
+    U.font(.04);
+    U.text("And thank YOU for playing!", .9);
    } else if (UI.page == 2) {
     quantity *= direction ? .99 : 1.01;
     if (quantity < 2) {
@@ -3098,16 +3143,19 @@ public class VE extends Application {
     } else if (quantity > 2000) {
      direction = true;
     }
+    U.font(.2);
+    U.fillRGB(.5);
+    U.text("OP     EN", .6);//<-Just the right number of spaces
     double[] clusterX = new double[(int) quantity],
     clusterY = new double[(int) quantity];
     for (int n = (int) quantity; --n >= 0; ) {
      clusterX[n] = (width * .5) + StrictMath.pow(U.random(90000000000.), .25) - StrictMath.pow(U.random(90000000000.), .25);
      clusterY[n] = (height * .5) + StrictMath.pow(U.random(60000000000.), .25) - StrictMath.pow(U.random(60000000000.), .25);
     }
-    U.fillRGB(1, 1, 1);
+    U.fillRGB(1);
     graphicsContext.fillPolygon(clusterX, clusterY, (int) quantity);
     U.font(.05);
-    U.fillRGB(0, 0, 0);
+    U.fillRGB(0);
     U.text("VEHICULAR", .45);
     U.text("EPIC", .55);
    }
@@ -3139,10 +3187,10 @@ public class VE extends Application {
     Keys.Escape = false;
     Sounds.UI.play(1, 0);
    }
-   U.fillRGB(1, 1, 1);
+   U.fillRGB(1);
    U.font(.03);
-   U.text("<-LAST", .1, .75);
-   U.text("NEXT->", .9, .75);
+   U.text(UI.last, .1, .75);
+   U.text(UI.next, .9, .75);
    gameFPS = Double.POSITIVE_INFINITY;
   }
  }

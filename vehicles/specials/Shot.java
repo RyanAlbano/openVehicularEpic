@@ -3,6 +3,7 @@ package ve.vehicles.specials;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 import ve.Core;
+import ve.Sound;
 import ve.VE;
 import ve.environment.E;
 import ve.utilities.SL;
@@ -11,7 +12,7 @@ import ve.vehicles.Vehicle;
 
 public class Shot extends Core {
 
- private final MeshView MV;
+ public final MeshView MV;
  private MeshView thrust;
  public double behindX, behindY, behindZ;
  public double stage;
@@ -66,7 +67,7 @@ public class Shot extends Core {
   PhongMaterial PM = new PhongMaterial();
   if (special.type == Special.Type.raygun || special.type.name().contains(Special.Type.blaster.name()) || special.type == Special.Type.forcefield || special.type == Special.Type.thewrath) {
    U.Phong.setSpecularRGB(PM, 0);
-   PM.setSelfIlluminationMap(U.Images.get(SL.Images.white));
+   PM.setSelfIlluminationMap(U.Images.get(SL.white));
   } else {
    U.Phong.setDiffuseRGB(PM, .5);
    U.Phong.setSpecularRGB(PM, 1);//<-E.Specular.Shiny not called, since it's not really a 'shiny' object
@@ -92,7 +93,7 @@ public class Shot extends Core {
    U.setMaterialSecurely(thrust, new PhongMaterial());
    thrust.setVisible(false);
   }
-  U.Nodes.add(MV, thrust);
+  U.Nodes.add(thrust);//MV added with transparent Nodes (for flamethrower)
   MV.setVisible(false);
   if (special.type == Special.Type.forcefield) {
    doneDamaging = new boolean[VE.vehiclesInMatch];
@@ -159,13 +160,13 @@ public class Shot extends Core {
      if (special.type == Special.Type.shell || special.type == Special.Type.missile || special.type == Special.Type.bomb) {
       V.explosions.get(V.currentExplosion).deploy(X, Y, Z, null);
       V.currentExplosion = ++V.currentExplosion >= E.explosionQuantity ? 0 : V.currentExplosion;
-      V.VA.hitExplosive.play(Double.NaN, Math.sqrt(U.distance(this)) * .08);
+      V.VA.hitExplosive.play(Double.NaN, Math.sqrt(U.distance(this)) * Sound.standardDistance(1));
      } else if (special.type == Special.Type.powershell || special.type == Special.Type.mine) {
       for (int i = 6; --i >= 0; ) {
        V.explosions.get(V.currentExplosion).deploy(((X + behindX) * .5) + U.randomPlusMinus(2000.), ((Y + behindY) * .5) + U.randomPlusMinus(2000.), ((Z + behindZ) * .5) + U.randomPlusMinus(2000.), null);
        V.currentExplosion = ++V.currentExplosion >= E.explosionQuantity ? 0 : V.currentExplosion;
       }
-      double shotToCameraSoundDistance = Math.sqrt(U.distance(this)) * .08;
+      double shotToCameraSoundDistance = Math.sqrt(U.distance(this)) * Sound.standardDistance(1);
       V.VA.hitExplosive.play(Double.NaN, shotToCameraSoundDistance);
       V.VA.hitExplosive.play(Double.NaN, shotToCameraSoundDistance);
       V.VA.hitExplosive.play(Double.NaN, shotToCameraSoundDistance);
@@ -185,7 +186,7 @@ public class Shot extends Core {
     double r = Math.max(0, 1 - (stage * .015625)),
     g = Math.max(0, 1 - (stage * .03125)),
     b = Math.max(0, 1 - (stage * .0625));
-    U.Phong.setDiffuseRGB((PhongMaterial) MV.getMaterial(), r, g, b);
+    U.Phong.setDiffuseRGB((PhongMaterial) MV.getMaterial(), r, g, b, .25);
     U.Phong.setSpecularRGB((PhongMaterial) MV.getMaterial(), r, g, b);
    }
    U.setTranslate(MV, this);
@@ -201,7 +202,7 @@ public class Shot extends Core {
     U.randomRotate(thrust);
     U.Phong.setDiffuseRGB((PhongMaterial) thrust.getMaterial(), 0);
     U.Phong.setSpecularRGB((PhongMaterial) thrust.getMaterial(), 0);
-    ((PhongMaterial) thrust.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.Images.fireLight + U.random(3)));
+    ((PhongMaterial) thrust.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
    }
   } else {
    MV.setVisible(false);

@@ -9,12 +9,12 @@ import ve.VE;
 import ve.utilities.SL;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
-import ve.vehicles.VehicleAudio;
 
 public class EnergyBolt extends MeshView {
  private final Vehicle V;
  private final Special S;
- public int target;
+ private int target;
+ private long render;
 
  EnergyBolt(Vehicle vehicle, Special special) {
   V = vehicle;
@@ -22,16 +22,19 @@ public class EnergyBolt extends MeshView {
   PhongMaterial PM = new PhongMaterial();
   U.Phong.setDiffuseRGB(PM, 0);
   U.Phong.setSpecularRGB(PM, 0);
-  PM.setSelfIlluminationMap(U.Images.get(SL.Images.white));
+  PM.setSelfIlluminationMap(U.Images.get(SL.white));
   U.setMaterialSecurely(this, PM);
   TriangleMesh TM = new TriangleMesh();
   TM.getPoints().setAll(
+  0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0);
   TM.getTexCoords().setAll(0, 0);
   TM.getFaces().setAll(
   0, 0, 1, 0, 2, 0,
-  2, 0, 3, 0, 0, 0);
+  1, 0, 2, 0, 3, 0,
+  2, 0, 3, 0, 4, 0,
+  3, 0, 4, 0, 5, 0);
   setMesh(TM);
   setCullFace(CullFace.NONE);
   U.Nodes.add(this);
@@ -39,7 +42,8 @@ public class EnergyBolt extends MeshView {
 
  void run(boolean gamePlay) {
   if (V.destroyed) {
-   setVisible(false);
+   render = 0;
+   S.sound.stop();
   } else {
    target = V.index;
    double compareDistance = Double.POSITIVE_INFINITY;
@@ -50,27 +54,44 @@ public class EnergyBolt extends MeshView {
      compareDistance = U.distance(V, vehicle);
     }
    }
-   if (VE.Match.started) {
+   if (VE.Match.started && gamePlay) {
     VE.vehicles.get(target).energyMultiple *= 2;
    }
+   if (S.sound.running()) {
+    render++;
+   } else {//It's a bit unusual that the shock graphics depend on the audio timing (as opposed to vice-versa)
+    render = 0;
+    if (gamePlay) {
+     S.sound.play(Double.NaN, Math.min(V.VA.distanceVehicleToCamera, VE.vehicles.get(target).VA.distanceVehicleToCamera));
+    }
+   }
   }
-  VehicleAudio.runEnergyBolt(S, gamePlay);
  }
 
  public void renderMesh() {
-  if (!V.destroyed) {
+  if (!V.destroyed && render > 3) {//<-Not sure why 'render' check must be this high
    Vehicle targetV = VE.vehicles.get(target);
-   double sourceRandom = V.absoluteRadius * .05,
-   targetRandom = targetV.absoluteRadius * .05,
+   double sizeAtSource = V.absoluteRadius * .05,
+   sizeAtTarget = targetV.absoluteRadius * .05,
+   sizeAtMidpoint = (sizeAtSource + sizeAtTarget) * .5,
+   sourceY = V.Y - V.renderRadius,
+   mixX = (V.X + targetV.X) * .5, mixZ = (V.Z + targetV.Z) * .5, mixY = (sourceY + targetV.Y) * .5,
+   mixPulse = targetV.absoluteRadius * .25,
+   mixPulseX = U.randomPlusMinus(mixPulse), mixPulseY = U.randomPlusMinus(mixPulse), mixPulseZ = U.randomPlusMinus(mixPulse),
    X = Camera.X, Y = Camera.Y, Z = Camera.Z;//This implementation is ugly, but trying to set Node translate would probably be less accurate
    ((TriangleMesh) getMesh()).getPoints().setAll(
    //SOURCE
-   (float) (V.X + U.randomPlusMinus(sourceRandom) - X), (float) (V.Y - V.renderRadius + U.randomPlusMinus(sourceRandom) - Y), (float) (V.Z + U.randomPlusMinus(sourceRandom) - Z),
-   (float) (V.X + U.randomPlusMinus(sourceRandom) - X), (float) (V.Y - V.renderRadius + U.randomPlusMinus(sourceRandom) - Y), (float) (V.Z + U.randomPlusMinus(sourceRandom) - Z),
+   (float) (V.X + U.randomPlusMinus(sizeAtSource) - X), (float) (sourceY + U.randomPlusMinus(sizeAtSource) - Y), (float) (V.Z + U.randomPlusMinus(sizeAtSource) - Z),
+   (float) (V.X + U.randomPlusMinus(sizeAtSource) - X), (float) (sourceY + U.randomPlusMinus(sizeAtSource) - Y), (float) (V.Z + U.randomPlusMinus(sizeAtSource) - Z),
+   //MIDPOINT
+   (float) (mixX + U.randomPlusMinus(sizeAtMidpoint) + mixPulseX - X), (float) (mixY + U.randomPlusMinus(sizeAtMidpoint) + mixPulseY - Y), (float) (mixZ + U.randomPlusMinus(sizeAtMidpoint) + mixPulseZ - Z),
+   (float) (mixX + U.randomPlusMinus(sizeAtMidpoint) + mixPulseX - X), (float) (mixY + U.randomPlusMinus(sizeAtMidpoint) + mixPulseY - Y), (float) (mixZ + U.randomPlusMinus(sizeAtMidpoint) + mixPulseZ - Z),
    //TARGET
-   (float) (targetV.X + U.randomPlusMinus(targetRandom) - X), (float) (targetV.Y + U.randomPlusMinus(targetRandom) - Y), (float) (targetV.Z + U.randomPlusMinus(targetRandom) - Z),
-   (float) (targetV.X + U.randomPlusMinus(targetRandom) - X), (float) (targetV.Y + U.randomPlusMinus(targetRandom) - Y), (float) (targetV.Z + U.randomPlusMinus(targetRandom) - Z));
+   (float) (targetV.X + U.randomPlusMinus(sizeAtTarget) - X), (float) (targetV.Y + U.randomPlusMinus(sizeAtTarget) - Y), (float) (targetV.Z + U.randomPlusMinus(sizeAtTarget) - Z),
+   (float) (targetV.X + U.randomPlusMinus(sizeAtTarget) - X), (float) (targetV.Y + U.randomPlusMinus(sizeAtTarget) - Y), (float) (targetV.Z + U.randomPlusMinus(sizeAtTarget) - Z));
    setVisible(true);
+  } else {
+   setVisible(false);
   }
  }
 }

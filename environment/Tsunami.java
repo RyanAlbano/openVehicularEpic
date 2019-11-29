@@ -7,16 +7,17 @@ import ve.Core;
 import ve.Sound;
 import ve.VE;
 import ve.utilities.U;
+import ve.vehicles.Vehicle;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public enum Tsunami {
  ;
- public static double X;
- public static double Z;
- public static long speed;
- public static double speedX, speedZ;
+ public static boolean exists;
+ public static double X, Z;
+ private static long speed;
+ private static double speedX, speedZ;
  private static double globalSize;
  public static Direction direction;
  public static final List<Part> parts = new ArrayList<>();
@@ -32,6 +33,7 @@ public enum Tsunami {
 
  public static void load(String s) {
   if (s.startsWith("tsunami(")) {
+   exists = true;
    for (int n = 0; n < 200; n++) {
     parts.add(new Part(U.getValue(s, 0)));
    }
@@ -50,8 +52,8 @@ public enum Tsunami {
  }
 
  static void run(boolean update, boolean updateIfMatchBegan) {
-  if (!parts.isEmpty()) {
-   if (VE.status == VE.Status.play) {
+  if (exists) {
+   if (VE.status != VE.Status.replay) {//<-Still executes if in map viewer--using 'VE.Status.play' does not
     if (updateIfMatchBegan && Math.abs(direction == Tsunami.Direction.left || direction == Tsunami.Direction.right ? X : Z) > globalSize) {
      wrap();
     }
@@ -84,7 +86,7 @@ public enum Tsunami {
     for (Tsunami.Part tsunamiPart : parts) {
      soundDistance = Math.min(soundDistance, U.distance(tsunamiPart));
     }
-    sound.loop(Math.sqrt(soundDistance) * .04);
+    sound.loop(Math.sqrt(soundDistance) * Sound.standardDistance(.5));
    } else {
     sound.stop();
    }
@@ -102,32 +104,28 @@ public enum Tsunami {
   }
  }
 
- /*private void vehicleInteract(Vehicle V) {
-  //* Turrets automatically have getsPushed/Lifted set to -1
-  for (Tsunami.Part tsunamiPart : Tsunami.parts) {
+ public static void vehicleInteract(Vehicle V) {
+  for (Tsunami.Part tsunamiPart : parts) {
    if (U.distance(V, tsunamiPart) < V.collisionRadius + tsunamiPart.C.getRadius()) {
-    if (V.getsPushed >= 0) {//*
-     for (Wheel wheel : V.wheels) {
-      wheel.speedX += Tsunami.speedX * .5 * VE.tick;
-      wheel.speedZ += Tsunami.speedZ * .5 * VE.tick;
-     }
+    if (V.getsPushed >= 0) {
+     V.P.speedX += speedX * .5 * VE.tick;
+     V.P.speedZ += speedZ * .5 * VE.tick;
     }
-    if (V.getsLifted >= 0) {//*
-     for (Wheel wheel : V.wheels) {
-      wheel.speedY += E.gravity * VE.tick * (V.Y < tsunamiPart.Y ? 4 : V.Y > tsunamiPart.Y ? -4 : 0);
-     }
+    if (V.getsLifted >= 0) {
+     V.P.speedY += E.gravity * VE.tick * 4 * Double.compare(tsunamiPart.Y, V.Y);
     }
     for (int n1 = 20; --n1 >= 0; ) {
-     V.splashes.get(V.currentSplash).deploy(V.wheels.get(U.random(4)), U.random(V.absoluteRadius * .05),//<-Why did 'deploy' fail?
-     Tsunami.speedX + U.randomPlusMinus(Math.max(Tsunami.speed, V.netSpeed)),
-     U.randomPlusMinus(Math.max(Tsunami.speed, V.netSpeed)),
-     Tsunami.speedZ + U.randomPlusMinus(Math.max(Tsunami.speed, V.netSpeed)));
-     V. currentSplash = ++V.currentSplash >= E.splashQuantity ? 0 : V.currentSplash;
+     V.splashes.get(V.currentSplash).deploy(V.wheels.get(U.random(4)), U.random(V.absoluteRadius * .05),
+     speedX + U.randomPlusMinus(Math.max(speed, V.P.netSpeed)),
+     U.randomPlusMinus(Math.max(speed, V.P.netSpeed)),
+     speedZ + U.randomPlusMinus(Math.max(speed, V.P.netSpeed)));
+     V.currentSplash = ++V.currentSplash >= E.splashQuantity ? 0 : V.currentSplash;
     }
     V.VA.tsunamiSplash.playIfNotPlaying(V.VA.distanceVehicleToCamera);
    }
   }
- }*/
+ }
+
  public static class Part extends Core {
   public final Cylinder C;
 

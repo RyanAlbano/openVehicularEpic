@@ -132,9 +132,9 @@ public enum Volcano {
       U.Phong.setDiffuseRGB(PM, 0);
       U.Phong.setSpecularRGB(PM, 0);
      } else {
-      PM.setDiffuseMap(U.Images.get("rock"));
-      PM.setSpecularMap(U.Images.get("rock"));
-      PM.setBumpMap(U.Images.getNormalMap("rock"));
+      PM.setDiffuseMap(U.Images.get(SL.rock));
+      PM.setSpecularMap(U.Images.get(SL.rock));
+      PM.setBumpMap(U.Images.getNormalMap(SL.rock));
      }
      U.setMaterialSecurely(rocks.get(n).S, PM);
      isLava = !isLava;
@@ -174,7 +174,7 @@ public enum Volcano {
       volcanoRock.deploy();
      }
      eruptionStage = 1;
-     sound.play(Math.sqrt(U.distance(Camera.X, X, Camera.Y, -50000, Camera.Z, Z)) * .02);
+     sound.play(Math.sqrt(U.distance(Camera.X, X, Camera.Y, -50000, Camera.Z, Z)) * Sound.standardDistance(.25));
     }
     for (Volcano.Rock volcanoRock : rocks) {
      volcanoRock.run();
@@ -186,8 +186,8 @@ public enum Volcano {
  public static void rockVehicleInteract(Vehicle V) {
   for (Volcano.Rock volcanoRock : rocks) {
    double vehicleVolcanoRockDistance = U.distance(V, volcanoRock);
-   if (vehicleVolcanoRockDistance < (V.collisionRadius() + volcanoRock.S.getRadius()) * 1.5) {
-    V.addDamage(V.durability * .5 + (vehicleVolcanoRockDistance < V.collisionRadius() + volcanoRock.S.getRadius() ? V.durability : 0));
+   if (vehicleVolcanoRockDistance < (V.collisionRadius + volcanoRock.S.getRadius()) * 1.5) {
+    V.addDamage(V.durability * .5 + (vehicleVolcanoRockDistance < V.collisionRadius + volcanoRock.S.getRadius() ? V.durability : 0));
     for (VehiclePart part : V.parts) {
      part.deform();
      part.throwChip(U.randomPlusMinus(U.netValue(volcanoRock.speedX, volcanoRock.speedY, volcanoRock.speedZ)));
@@ -224,7 +224,7 @@ public enum Volcano {
    if (U.render(this, -S.getRadius())) {
     U.rotate(S, rotation[0] * eruptionStage, rotation[1] * eruptionStage);
     if (isLava) {
-     ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.Images.fireLight + U.random(3)));
+     ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
     }
     U.setTranslate(S, this);
     S.setVisible(true);

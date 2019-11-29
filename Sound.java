@@ -10,6 +10,10 @@ import javax.sound.sampled.*;
 public class Sound {
  private int currentIndex;
 
+ public static double standardDistance(double in) {
+  return in * .08;
+ }
+
  static class ClipVE {
 
   Clip clip;

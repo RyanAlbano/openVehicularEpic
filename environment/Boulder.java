@@ -6,6 +6,7 @@ import javafx.scene.shape.Sphere;
 import ve.Core;
 import ve.Sound;
 import ve.VE;
+import ve.utilities.SL;
 import ve.utilities.U;
 import ve.effects.Dust;
 
@@ -47,15 +48,18 @@ public enum Boulder {
    Y = -S.getRadius();
    U.Phong.setDiffuseRGB(PM, 1);
    U.Phong.setSpecularRGB(PM, E.Specular.Colors.standard);
-   PM.setDiffuseMap(U.Images.get("rock"));
-   PM.setSpecularMap(U.Images.get("rock"));
-   PM.setBumpMap(U.Images.getNormalMap("rock"));
+   PM.setDiffuseMap(U.Images.get(SL.rock));
+   PM.setSpecularMap(U.Images.get(SL.rock));
+   PM.setBumpMap(U.Images.getNormalMap(SL.rock));
    U.setMaterialSecurely(S, PM);
    U.Nodes.add(S);
+   sound = new Sound(SL.boulder, Double.POSITIVE_INFINITY);
+  }
+
+  public void addTransparentNodes() {
    for (int n = E.dustQuantity; --n >= 0; ) {
     dusts.add(new Dust());
    }
-   sound = new Sound("boulder", Double.POSITIVE_INFINITY);
   }
 
   void run(boolean update) {
@@ -86,7 +90,7 @@ public enum Boulder {
     S.setVisible(false);
    }
    if (!VE.Match.muteSound && update) {
-    sound.loop(Math.sqrt(U.distance(this)) * .08);
+    sound.loop(Math.sqrt(U.distance(this)) * Sound.standardDistance(1));
    } else {
     sound.stop();
    }

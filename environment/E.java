@@ -34,8 +34,7 @@ public enum E {//<-Static content for V.E.'s Environment
  public static long lightsAdded;
  public static final AmbientLight ambientLight = new AmbientLight();
  public static final PointLight mapViewerLight = new PointLight();
- public static final PhongMaterial phantomPM = new PhongMaterial();
- public static final PhongMaterial repairSpherePM = new PhongMaterial();
+ public static final PhongMaterial phantomPM = new PhongMaterial(), repairSpherePM = new PhongMaterial();
  public static double renderLevel;
  public static RenderType renderType = RenderType.standard;
  public static double viewableMapDistance = Double.POSITIVE_INFINITY;
@@ -74,7 +73,7 @@ public enum E {//<-Static content for V.E.'s Environment
     RGB = U.getColor(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
     U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), RGB);
     Terrain.RGB = U.getColor(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
-    if (!VE.Map.name.equals("Phantom Cavern")) {
+    if (!VE.Map.name.equals(SL.MN.phantomCavern)) {
      U.Nodes.add(C);
     }
    }
@@ -91,10 +90,10 @@ public enum E {//<-Static content for V.E.'s Environment
   public static void load(String s) {
    if (s.startsWith("terrain(")) {
     terrain = " " + U.getString(s, 0) + " ";
-    vehicleDefaultTerrain = terrain + (U.contains(terrain, " paved ", " rock ", " grid ", " metal ", " brightmetal") ? " hard " : " ground ");
+    vehicleDefaultTerrain = terrain + (U.contains(terrain, SL.Thicks.paved, SL.Thicks.rock, SL.Thicks.grid, SL.Thicks.metal, SL.Thicks.brightmetal) ? SL.Thicks.hard : SL.Thicks.ground);
     ((PhongMaterial) Ground.C.getMaterial()).setSpecularMap(U.Images.get(terrain.trim()));
     if (!U.getString(s, 0).isEmpty() && (RGB.getRed() > 0 || RGB.getGreen() > 0 || RGB.getBlue() > 0)) {
-     for (long n = terrain.contains(" rock ") ? Long.MAX_VALUE : 4000; --n >= 0; ) {
+     for (long n = terrain.contains(SL.Thicks.rock) ? Long.MAX_VALUE : 4000; --n >= 0; ) {
       if (RGB.getRed() < 1 && RGB.getGreen() < 1 && RGB.getBlue() < 1) {
        RGB = U.getColor(RGB.getRed() * 1.0001, RGB.getGreen() * 1.0001, RGB.getBlue() * 1.0001);
       } else {
@@ -104,7 +103,7 @@ public enum E {//<-Static content for V.E.'s Environment
     }
     lowResolution[0] = U.Images.getLowResolution(U.Images.get(terrain.trim()));
     lowResolution[1] = U.Images.getLowResolution(U.Images.getNormalMap(terrain.trim()));
-    universal.setSpecularPower(/*sloppy but works->*/vehicleDefaultTerrain.contains(" hard ") ? Specular.Powers.standard : Specular.Powers.dull);
+    universal.setSpecularPower(/*sloppy but works->*/vehicleDefaultTerrain.contains(SL.Thicks.hard) ? Specular.Powers.standard : Specular.Powers.dull);
     universal.setDiffuseMap(U.Images.get(terrain.trim()));
     universal.setSpecularMap(U.Images.get(terrain.trim()));
     universal.setBumpMap(U.Images.getNormalMap(terrain.trim()));
@@ -162,6 +161,20 @@ public enum E {//<-Static content for V.E.'s Environment
   ;
   public static double left, right, forward, backward, Y;
   public static boolean slowVehicles;
+
+  public static void slowVehicle(Vehicle V) {
+   if (slowVehicles) {
+    if (V.Z > forward || V.Z < backward || V.X > right || V.X < left) {
+     V.P.speedX *= .5;
+     V.P.speedZ *= .5;
+     V.P.speed *= .95;
+    }
+    if (Math.abs(V.Y) > Math.abs(Y)) {
+     V.P.speedY *= .5;
+     V.P.speed *= .95;
+    }
+   }
+  }
  }
 
  public enum Pool {
@@ -202,7 +215,7 @@ public enum E {//<-Static content for V.E.'s Environment
      R = B = .25;
      G = 1;
     }
-    PM.setDiffuseMap(U.Images.get("water"));
+    PM.setDiffuseMap(U.Images.get(SL.water));
     U.Phong.setDiffuseRGB(PM, R, G, B);
     U.Phong.setSpecularRGB(PM, Specular.Colors.shiny);
     exists = true;
@@ -227,7 +240,7 @@ public enum E {//<-Static content for V.E.'s Environment
   ;
   private static final Sphere stormCloud = new Sphere(200000);
   public static double stormCloudY;
-  public static Sound rain, thunder;
+  public static Sound thunder;
 
   static {
    stormCloud.setScaleY(.1);
@@ -241,13 +254,13 @@ public enum E {//<-Static content for V.E.'s Environment
     U.setMaterialSecurely(stormCloud, PM);
     stormCloudY = U.getValue(s, 3);
     U.Nodes.add(stormCloud);
-    Raindrop.load(s);
+    Rain.load(s);
     if (s.contains("lightning")) {
-     Storm.Lightning.exists = true;
-     Storm.Lightning.runLightning();//<-Must run first or mesh wil not load
-     U.Nodes.add(Storm.Lightning.MV);
+     Lightning.exists = true;
+     Lightning.runMesh();//<-Must run first or mesh wil not load
+     U.Nodes.add(Lightning.MV);
      for (int n = 75; --n >= 0; ) {
-      Storm.Lightning.groundBursts.add(new GroundBurst());
+      Lightning.groundBursts.add(new GroundBurst());
      }
      thunder = new Sound("thunder", Double.POSITIVE_INFINITY);
     }
@@ -257,50 +270,8 @@ public enum E {//<-Static content for V.E.'s Environment
   static void run(Collection<Node> theChildren, boolean update) {
    if (theChildren.contains(stormCloud)) {
     stormCloud.setTranslateY(stormCloudY - Camera.Y);
-    if (!Raindrop.instances.isEmpty()) {
-     Raindrop.run();
-     if (!VE.Match.muteSound && update) {
-      rain.loop(Math.sqrt(U.distance(0, 0, Camera.Y, 0, 0, 0)) * .08);
-     } else {
-      rain.stop();
-     }
-    }
-    if (Storm.Lightning.exists) {
-     U.Nodes.Light.remove(Storm.Lightning.light[0]);
-     if (Storm.Lightning.strikeStage < 8) {
-      Storm.Lightning.runLightning();
-      U.setTranslate(Storm.Lightning.MV, Storm.Lightning.X, 0, Storm.Lightning.Z);
-      if (Storm.Lightning.strikeStage < 4) {
-       U.setTranslate(Storm.Lightning.light[0], Storm.Lightning.X, 0, Storm.Lightning.Z);
-       U.Nodes.Light.add(Storm.Lightning.light[0]);
-       if (Storm.Lightning.strikeStage < 1) {
-        Storm.Lightning.MV.setVisible(true);
-        for (int n = 25; --n >= 0; ) {
-         Storm.Lightning.groundBursts.get(Storm.Lightning.currentBurst).deploy(Storm.Lightning.X, Storm.Lightning.Z);
-         Storm.Lightning.currentBurst = ++Storm.Lightning.currentBurst >= Storm.Lightning.groundBursts.size() ? 0 : Storm.Lightning.currentBurst;
-        }
-        if (update) {
-         thunder.play(Double.NaN, Math.sqrt(U.distance(Camera.X, Storm.Lightning.X, Camera.Y, 0, Camera.Z, Storm.Lightning.Z)) * .04);
-        }
-       }
-      }
-      U.setTranslate(Storm.Lightning.light[1], Storm.Lightning.X, 0, Storm.Lightning.Z);
-      U.Nodes.Light.add(Storm.Lightning.light[1]);
-      U.fillRGB(graphicsContext, 1, 1, 1, U.random(.5));
-      U.fillRectangle(graphicsContext, .5, .5, 1, 1);
-     } else {
-      Storm.Lightning.MV.setVisible(false);
-      U.Nodes.Light.remove(Storm.Lightning.light[1]);
-     }
-     if (++Storm.Lightning.strikeStage > U.random(13000.)) {//<-Progress strike stage using tick?
-      Storm.Lightning.X = Camera.X + U.randomPlusMinus(200000.);
-      Storm.Lightning.Z = Camera.Z + U.randomPlusMinus(200000.);
-      Storm.Lightning.strikeStage = 0;
-     }
-     for (GroundBurst burst : Storm.Lightning.groundBursts) {
-      burst.run();
-     }
-    }
+    Rain.run(update);
+    Lightning.run(update);
    }
   }
 
@@ -325,7 +296,7 @@ public enum E {//<-Static content for V.E.'s Environment
     MV.setMesh(lightningTM);
     MV.setCullFace(CullFace.NONE);
     PhongMaterial lightningPM = new PhongMaterial();
-    lightningPM.setSelfIlluminationMap(U.Images.get(SL.Images.white));
+    lightningPM.setSelfIlluminationMap(U.Images.get(SL.white));
     U.setMaterialSecurely(MV, lightningPM);
     for (int n = light.length; --n >= 0; ) {
      light[n] = new PointLight();
@@ -333,14 +304,54 @@ public enum E {//<-Static content for V.E.'s Environment
     }
    }
 
-   private static void runLightning() {
+   private static void runMesh() {
     double randomX = U.randomPlusMinus(3000.), randomZ = U.randomPlusMinus(3000.);
-    ((TriangleMesh) MV.getMesh()).getPoints().setAll((float) U.randomPlusMinus(1000.), (float) stormCloudY, (float) U.randomPlusMinus(1000.),
+    ((TriangleMesh) MV.getMesh()).getPoints().setAll(
+    (float) U.randomPlusMinus(1000.), (float) stormCloudY, (float) U.randomPlusMinus(1000.),
     (float) U.randomPlusMinus(1000.), (float) stormCloudY, (float) U.randomPlusMinus(1000.),
     (float) (U.randomPlusMinus(1000.) + randomX), (float) (stormCloudY * .5), (float) (U.randomPlusMinus(1000.) + randomZ),
     (float) (U.randomPlusMinus(1000.) + randomX), (float) (stormCloudY * .5), (float) (U.randomPlusMinus(1000.) + randomZ),
     (float) U.randomPlusMinus(1000.), 0, (float) U.randomPlusMinus(1000.),
     (float) U.randomPlusMinus(1000.), 0, (float) U.randomPlusMinus(1000.));
+   }
+
+   static void run(boolean update) {
+    if (exists) {
+     U.Nodes.Light.remove(light[0]);
+     if (strikeStage < 8) {
+      runMesh();
+      U.setTranslate(MV, X, 0, Z);
+      if (strikeStage < 4) {
+       U.setTranslate(light[0], X, 0, Z);
+       U.Nodes.Light.add(light[0]);
+       if (strikeStage < 1) {//<-May call more than once if strikeStage progresses using 'tick'!
+        MV.setVisible(true);
+        for (int n = 25; --n >= 0; ) {
+         groundBursts.get(currentBurst).deploy(X, Z);
+         currentBurst = ++currentBurst >= groundBursts.size() ? 0 : currentBurst;
+        }
+        if (update) {
+         thunder.play(Double.NaN, Math.sqrt(U.distance(Camera.X, X, Camera.Y, 0, Camera.Z, Z)) * Sound.standardDistance(.5));
+        }
+       }
+      }
+      U.setTranslate(light[1], X, 0, Z);
+      U.Nodes.Light.add(light[1]);
+      U.fillRGB(graphicsContext, 1, 1, 1, U.random(.5));
+      U.fillRectangle(graphicsContext, .5, .5, 1, 1);
+     } else {
+      MV.setVisible(false);
+      U.Nodes.Light.remove(light[1]);
+     }
+     if (VE.status != VE.Status.replay && ++strikeStage > U.random(13000.)) {//<-Progress strike stage using tick?
+      X = Camera.X + U.randomPlusMinus(200000.);
+      Z = Camera.Z + U.randomPlusMinus(200000.);
+      strikeStage = 0;
+     }
+     for (GroundBurst burst : groundBursts) {
+      burst.run();
+     }
+    }
    }
   }
  }
@@ -373,7 +384,6 @@ public enum E {//<-Static content for V.E.'s Environment
  public static void loadSky(String s) {
   if (s.startsWith("sky(")) {
    skyRGB = U.getColor(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
-   //skyInverse = Color.color(U.clamp(-skyRGB[0] + 1), U.clamp(-skyRGB[1] + 1), U.clamp(-skyRGB[2] + 1));
    double r = skyRGB.getRed(), g = skyRGB.getGreen(), b = skyRGB.getBlue();
    if (r > 0 || g > 0 || b > 0) {
     while (r < 1 && g < 1 && b < 1) {
@@ -402,7 +412,7 @@ public enum E {//<-Static content for V.E.'s Environment
   List<Node> theChildren = VE.group.getChildren();
   boolean mapViewer = VE.status == VE.Status.mapViewer, updateIfMatchBegan = mapViewer || (gamePlay && VE.Match.started);
   double sunlightAngle = Sun.X != 0 || Sun.Z != 0 ? (((Sun.X / (Sun.Y * 50)) * U.sin(Camera.XZ)) + ((Sun.Z / (Sun.Y * 50)) * U.cos(Camera.XZ))) * U.cos(Camera.YZ) : 0;
-  if (VE.Map.name.equals("the Sun")) {
+  if (VE.Map.name.equals(SL.MN.theSun)) {
    Sun.RGBVariance *= U.random() < .5 ? 81 / 80. : 80 / 81.;
    Sun.RGBVariance = U.clamp(.2, Sun.RGBVariance, 1);
    VE.scene3D.setFill(Color.color(Sun.RGBVariance, Sun.RGBVariance * .5, 0));
@@ -421,7 +431,7 @@ public enum E {//<-Static content for V.E.'s Environment
    }
   }
   if (theChildren.contains(Ground.C) && Ground.level <= 0) {
-   double groundY = VE.vehiclePerspective < VE.vehicles.size() && VE.vehicles.get(VE.vehiclePerspective).P.inPool && Camera.Y > 0 ? Pool.depth : Math.max(0, -Camera.Y * .01);
+   double groundY = Pool.exists && U.distance(Camera.X, Pool.X, Camera.Z, Pool.Z) < Pool.C[0].getRadius() && Camera.Y > 0 ? Pool.depth : Math.max(0, -Camera.Y * .01);
    while (Math.abs(Ground.X - Camera.X) > 100000) Ground.X += Ground.X > Camera.X ? -200000 : 200000;
    while (Math.abs(Ground.Z - Camera.Z) > 100000) Ground.Z += Ground.Z > Camera.Z ? -200000 : 200000;
    if (Camera.Y < groundY) {
@@ -444,9 +454,9 @@ public enum E {//<-Static content for V.E.'s Environment
    Terrain.universal.setDiffuseMap(U.Images.get(Terrain.terrain.trim()));
    Terrain.universal.setSpecularMap(U.Images.get(Terrain.terrain.trim()));
    Terrain.universal.setBumpMap(U.Images.getNormalMap(Terrain.terrain.trim()));
-   TE.Paved.universal.setDiffuseMap(U.Images.get(SL.Images.paved));
-   TE.Paved.universal.setSpecularMap(U.Images.get(SL.Images.paved));
-   TE.Paved.universal.setBumpMap(U.Images.getNormalMap(SL.Images.paved));
+   TE.Paved.universal.setDiffuseMap(U.Images.get(SL.paved));
+   TE.Paved.universal.setSpecularMap(U.Images.get(SL.paved));
+   TE.Paved.universal.setBumpMap(U.Images.getNormalMap(SL.paved));
   }
   Star.run();
   Cloud.run();
@@ -523,7 +533,7 @@ public enum E {//<-Static content for V.E.'s Environment
       double trackX = trackPlane.X + trackPart.X, trackZ = trackPlane.Z + trackPart.Z;
       if (Math.abs(I.X - trackX) <= trackPlane.radiusX && Math.abs(I.Z - trackZ) <= trackPlane.radiusZ) {
        double trackY = trackPlane.Y + trackPart.Y;
-       if (trackPlane.type.contains(" tree ")) {
+       if (trackPlane.type.contains(SL.Thicks.tree)) {
         I.Y = trackY - trackPlane.radiusY;
        } else if (trackPlane.wall == TrackPlane.Wall.none) {
         if (trackPlane.YZ == 0 && trackPlane.XY == 0) {
@@ -565,7 +575,7 @@ public enum E {//<-Static content for V.E.'s Environment
   GroundPlate.instances.clear();
   Cloud.instances.clear();
   Star.instances.clear();
-  Raindrop.instances.clear();
+  Rain.raindrops.clear();
   E.Storm.Lightning.groundBursts.clear();
   Snowball.instances.clear();
   Tornado.parts.clear();
@@ -574,13 +584,13 @@ public enum E {//<-Static content for V.E.'s Environment
   Boulder.instances.clear();
   Volcano.rocks.clear();
   Meteor.instances.clear();
-  Terrain.terrain = " ground ";
+  Terrain.terrain = SL.Thicks.ground;
   skyRGB = Ground.RGB = U.getColor(0);
   E.Sun.X = E.Sun.Y = E.Sun.Z
   = E.Wind.maxPotency = E.Wind.speedX = E.Wind.speedZ
   = E.Ground.level = E.Pool.depth = 0;
   Terrain.RGB = U.getColor(0);
-  E.Storm.Lightning.exists = Volcano.exists = E.Wind.stormExists = E.mapBounds.slowVehicles = E.Pool.exists = Tornado.movesRepairPoints = false;
+  E.Storm.Lightning.exists = Volcano.exists = Tsunami.exists = E.Wind.stormExists = E.mapBounds.slowVehicles = E.Pool.exists = Tornado.movesRepairPoints = false;
   E.mapBounds.left = E.mapBounds.backward = E.mapBounds.Y = Double.NEGATIVE_INFINITY;
   E.mapBounds.right = E.mapBounds.forward = viewableMapDistance = Double.POSITIVE_INFINITY;
   gravity = 7;

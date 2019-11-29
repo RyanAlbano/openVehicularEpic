@@ -32,7 +32,7 @@ class ExplosionPart extends Core {
   PhongMaterial PM = new PhongMaterial();
   U.Phong.setDiffuseRGB(PM, 0);
   U.Phong.setSpecularRGB(PM, 0);
-  PM.setSelfIlluminationMap(U.Images.get(SL.Images.white));
+  PM.setSelfIlluminationMap(U.Images.get(SL.white));
   U.setMaterialSecurely(MV, PM);
   U.Nodes.add(MV);
   MV.setVisible(false);

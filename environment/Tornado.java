@@ -10,7 +10,6 @@ import ve.VE;
 import ve.utilities.U;
 import ve.vehicles.Physics;
 import ve.vehicles.Vehicle;
-import ve.vehicles.Wheel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,7 +60,7 @@ public enum Tornado {
     tornadoPart.run();
    }
    if (!VE.Match.muteSound && update) {
-    sound.loop(Math.sqrt(U.distance(Camera.X, parts.get(0).X, Camera.Y, 0, Camera.Z, parts.get(0).Z)) * .08);
+    sound.loop(Math.sqrt(U.distance(Camera.X, parts.get(0).X, Camera.Y, 0, Camera.Z, parts.get(0).Z)) * Sound.standardDistance(1));
    } else {
     sound.stop();
    }
@@ -69,18 +68,21 @@ public enum Tornado {
  }
 
  public static void vehicleInteract(Vehicle V) {
-  if (!parts.isEmpty() && V.Y > parts.get(parts.size() - 1).Y && U.distance(V.X, parts.get(0).X, V.Z, parts.get(0).Z) < parts.get(0).C.getRadius() * 7.5) {
-   double tornadoThrowEngage = (400000 / U.distance(V.X, parts.get(0).X, V.Z, parts.get(0).Z)) * VE.tick * (V.P.mode == Physics.Mode.fly ? 20 : 1);
+  V.P.inTornado = false;
+  if (!parts.isEmpty() && !V.phantomEngaged && V.Y > parts.get(parts.size() - 1).Y && U.distance(V.X, parts.get(0).X, V.Z, parts.get(0).Z) < parts.get(0).C.getRadius() * 7.5) {
+   double throwEngage = (400000 / U.distance(V.X, parts.get(0).X, V.Z, parts.get(0).Z)) * VE.tick * (V.P.mode == Physics.Mode.fly ? 20 : 1);
    long maxThrow = 750;
-   for (Wheel wheel : V.wheels) {
-    if (V.getsPushed >= 0) {
-     wheel.speedX += Math.abs(wheel.speedX) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(tornadoThrowEngage), maxThrow) : 0;
-     wheel.speedX += 2 * (V.X < parts.get(0).X && wheel.speedX < maxThrow ? Math.min(U.random(StrictMath.pow(tornadoThrowEngage, .75)), maxThrow) : V.X > parts.get(0).X && wheel.speedX > -maxThrow ? -Math.min(U.random(StrictMath.pow(tornadoThrowEngage, .75)), maxThrow) : 0);
-     wheel.speedZ += Math.abs(wheel.speedZ) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(tornadoThrowEngage), maxThrow) : 0;
-     wheel.speedZ += 2 * (V.Z < parts.get(0).Z && wheel.speedZ < maxThrow ? Math.min(U.random(StrictMath.pow(tornadoThrowEngage, .75)), maxThrow) : V.Z > parts.get(0).Z && wheel.speedZ > -maxThrow ? -Math.min(U.random(StrictMath.pow(tornadoThrowEngage, .75)), maxThrow) : 0);
-    }
-    wheel.speedY += V.getsLifted >= 0 && Math.abs(wheel.speedY) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(tornadoThrowEngage), maxThrow) : 0;
+   if (V.getsPushed >= 0) {
+    V.P.speedX += Math.abs(V.P.speedX) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
+    V.P.speedX += 2 *
+    (V.X < parts.get(0).X && V.P.speedX < maxThrow ? Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) :
+    V.X > parts.get(0).X && V.P.speedX > -maxThrow ? -Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) : 0);
+    V.P.speedZ += Math.abs(V.P.speedZ) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
+    V.P.speedZ += 2 *
+    (V.Z < parts.get(0).Z && V.P.speedZ < maxThrow ? Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) :
+    V.Z > parts.get(0).Z && V.P.speedZ > -maxThrow ? -Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) : 0);
    }
+   V.P.speedY += V.getsLifted >= 0 && Math.abs(V.P.speedY) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
    V.P.inTornado = V.getsLifted >= 0;
   }
  }

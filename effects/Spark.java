@@ -19,7 +19,7 @@ public class Spark extends Core {
   PhongMaterial PM = new PhongMaterial();
   U.Phong.setDiffuseRGB(PM, 0);
   U.Phong.setSpecularRGB(PM, 0);
-  PM.setSelfIlluminationMap(U.Images.get(SL.Images.fireLight + U.random(3)));//<-Integer random for lists
+  PM.setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));//<-Integer random for lists
   U.setMaterialSecurely(C, PM);
   U.Nodes.add(C);
   C.setVisible(false);

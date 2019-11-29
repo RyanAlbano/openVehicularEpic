@@ -6,13 +6,13 @@ import ve.VE;
 import ve.environment.E;
 import ve.utilities.U;
 
-public class repairSphere extends Core {
+public class RepairSphere extends Core {
 
  private final Sphere S;
  public double stage;
  private double speedX, speedY, speedZ;
 
- repairSphere(Vehicle V) {
+ RepairSphere(Vehicle V) {
   S = new Sphere(U.random(V.absoluteRadius * .1));
   U.setMaterialSecurely(S, E.repairSpherePM);
   U.Nodes.add(S);

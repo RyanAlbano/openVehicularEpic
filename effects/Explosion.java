@@ -48,7 +48,7 @@ public class Explosion extends Core {
   }
  }
 
- public void deploy(double x, double y, double z, Vehicle vehicle) {//<-'vehicle' not always the explosion's parent--can be null!
+ public void deploy(double x, double y, double z, Vehicle vehicle) {//<-'vehicle' not always the explosion's parent--can be null
   inX = x;
   inY = y;
   inZ = z;
@@ -80,7 +80,7 @@ public class Explosion extends Core {
     if (U.render(this, -absoluteRadius)) {
      U.setTranslate(MV, this);
      U.randomRotate(MV);
-     ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.Images.fireLight + U.random(3)));
+     ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
      MV.setVisible(true);
     } else {
      MV.setVisible(false);
