@@ -1,4 +1,4 @@
-# theVehicularEpic
-Official source repository of the V.E. project. Help wanted!
+# openVehicularEpic
+Official source repository of openV.E.--help wanted!
 
-https://www.indiedb.com/games/the-vehicular-epic
+https://www.indiedb.com/games/vehicular-epic
