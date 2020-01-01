@@ -1,20 +1,24 @@
-package ve;
+package ve.utilities;
 
-import ve.environment.E;
+import ve.environment.Storm;
+import ve.instances.I;
 import ve.trackElements.TE;
+import ve.ui.Keys;
+import ve.ui.UI;
 
 import java.util.ArrayList;
 import java.util.List;
 
-enum Recorder {
+public enum Recorder {
  ;
- static final int totalFrames = 500;
- static int recordFrame;
- static int gameFrame;
- static long recordingsCount, recorded;
+ public static final int totalFrames = 500;
+ public static int recordFrame;
+ public static int gameFrame;
+ public static long recordingsCount;
+ public static long recorded;
  private static final double[] bonusX, bonusY, bonusZ;
  private static final int[] bonusHolder;
- static final List<Vehicle> vehicles = new ArrayList<>();
+ public static final List<Vehicle> vehicles = new ArrayList<>();
 
  private static boolean[] recBoolean() {
   return new boolean[totalFrames];
@@ -33,7 +37,7 @@ enum Recorder {
   bonusX = recDouble();
   bonusY = recDouble();
   bonusZ = recDouble();
-  for (int n = VE.maxPlayers; --n >= 0; ) {
+  for (int n = UI.maxPlayers; --n >= 0; ) {
    vehicles.add(new Vehicle());
   }
  }
@@ -50,15 +54,15 @@ enum Recorder {
   static final long[] strikeStage = recLong();
  }
 
- static void updateFrame() {
-  if (VE.status == VE.Status.play) {
+ public static void updateFrame() {
+  if (UI.status == UI.Status.play) {
    recorded = Math.min(recorded + 1, totalFrames);
    gameFrame = ++gameFrame >= totalFrames ? 0 : gameFrame;
   }
  }
 
- static void recordGeneral() {
-  bonusHolder[gameFrame] = VE.bonusHolder;
+ public static void recordGeneral() {
+  bonusHolder[gameFrame] = UI.bonusHolder;
   bonusX[gameFrame] = TE.bonus.X;
   bonusY[gameFrame] = TE.bonus.Y;
   bonusZ[gameFrame] = TE.bonus.Z;
@@ -67,25 +71,25 @@ enum Recorder {
    Tsunami.tsunamiZ[gameFrame] = ve.environment.Tsunami.Z;
    Tsunami.direction[gameFrame] = ve.environment.Tsunami.direction;
   }
-  if (E.Storm.Lightning.exists) {
-   Lightning.X[gameFrame] = E.Storm.Lightning.X;
-   Lightning.Z[gameFrame] = E.Storm.Lightning.Z;
-   Lightning.strikeStage[gameFrame] = E.Storm.Lightning.strikeStage;
+  if (Storm.Lightning.exists) {
+   Lightning.X[gameFrame] = Storm.Lightning.X;
+   Lightning.Z[gameFrame] = Storm.Lightning.Z;
+   Lightning.strikeStage[gameFrame] = Storm.Lightning.strikeStage;
   }
  }
 
- static void playBack() {
-  if (VE.status == VE.Status.replay) {
-   if (++recordingsCount >= recorded || VE.Keys.Enter || VE.Keys.Space || VE.Keys.Escape) {
-    VE.status = VE.Status.paused;
+ public static void playBack() {
+  if (UI.status == UI.Status.replay) {
+   if (++recordingsCount >= recorded || Keys.Enter || Keys.Space || Keys.Escape) {
+    UI.status = UI.Status.paused;
     recordFrame = gameFrame - 1;
     while (recordFrame < 0) recordFrame += totalFrames;
-    if (VE.Keys.Enter || VE.Keys.Space || VE.Keys.Escape) {
-     VE.Sounds.UI.play(1, 0);
+    if (Keys.Enter || Keys.Space || Keys.Escape) {
+     Sounds.UI.play(1, 0);
     }
-    VE.Keys.Up = VE.Keys.Down = VE.Keys.Enter = VE.Keys.Space = VE.Keys.Escape = false;
+    Keys.Up = Keys.Down = Keys.Enter = Keys.Space = Keys.Escape = false;
    }
-   VE.bonusHolder = bonusHolder[recordFrame];
+   UI.bonusHolder = bonusHolder[recordFrame];
    TE.bonus.X = bonusX[recordFrame];
    TE.bonus.Y = bonusY[recordFrame];
    TE.bonus.Z = bonusZ[recordFrame];
@@ -94,19 +98,19 @@ enum Recorder {
     ve.environment.Tsunami.Z = Tsunami.tsunamiZ[recordFrame];
     ve.environment.Tsunami.direction = Tsunami.direction[recordFrame];
    }
-   if (E.Storm.Lightning.exists) {
-    E.Storm.Lightning.X = Lightning.X[recordFrame];
-    E.Storm.Lightning.Z = Lightning.Z[recordFrame];
-    E.Storm.Lightning.strikeStage = Lightning.strikeStage[recordFrame];
+   if (Storm.Lightning.exists) {
+    Storm.Lightning.X = Lightning.X[recordFrame];
+    Storm.Lightning.Z = Lightning.Z[recordFrame];
+    Storm.Lightning.strikeStage = Lightning.strikeStage[recordFrame];
    }
-   for (int n = VE.vehiclesInMatch; --n >= 0; ) {
+   for (int n = UI.vehiclesInMatch; --n >= 0; ) {
     vehicles.get(n).playBack();
    }
    recordFrame = ++recordFrame >= totalFrames ? 0 : recordFrame;
   }
  }
 
- static class Vehicle {
+ public static class Vehicle {
   private final double[] X = recDouble(), Y = recDouble(), Z = recDouble(),
   XZ = recDouble(), XY = recDouble(), YZ = recDouble(),
   vehicleTurretXZ = recDouble(), vehicleTurretYZ = recDouble(), speed = recDouble();
@@ -122,8 +126,8 @@ enum Recorder {
   private final boolean[] wrathEngaged = recBoolean();
   private final ve.vehicles.Physics.Mode[] mode = new ve.vehicles.Physics.Mode[totalFrames];
 
-  void recordVehicle(ve.vehicles.Vehicle vehicle) {
-   if (VE.status == VE.Status.play) {
+  public void recordVehicle(ve.vehicles.Vehicle vehicle) {
+   if (UI.status == UI.Status.play) {
     X[gameFrame] = vehicle.X;
     Y[gameFrame] = vehicle.Y;
     Z[gameFrame] = vehicle.Z;
@@ -165,7 +169,7 @@ enum Recorder {
   }
 
   void playBack() {
-   ve.vehicles.Vehicle vehicle = VE.vehicles.get(vehicles.indexOf(this));
+   ve.vehicles.Vehicle vehicle = I.vehicles.get(vehicles.indexOf(this));
    vehicle.X = X[recordFrame];
    vehicle.Y = Y[recordFrame];
    vehicle.Z = Z[recordFrame];

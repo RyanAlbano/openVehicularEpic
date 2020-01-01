@@ -3,8 +3,8 @@ package ve.environment;
 import javafx.scene.shape.Cylinder;
 
 import javafx.scene.transform.Rotate;
-import ve.Camera;
-import ve.VE;
+import ve.ui.Map;
+import ve.utilities.Camera;
 import ve.utilities.SL;
 import ve.utilities.U;
 
@@ -16,9 +16,9 @@ enum GroundPlate {
  public static final List<Instance> instances = new ArrayList<>();
 
  static void load(String terrain) {
-  if (E.Ground.level <= 0 && !terrain.contains(SL.Thick(SL.snow))) {
+  if (Ground.level <= 0 && !terrain.contains(SL.Thick(SL.snow))) {
    for (int n = 0; n < 419; n++) {//<-'419' is the minimum needed to have groundPlates cover the entire ground surface with NO gaps, before duplicates get removed
-    instances.add(new Instance(VE.Map.name.equals("Epic Trip") ? 1500 : 1732.0508075688772935274463415059));
+    instances.add(new Instance(Map.name.equals("Epic Trip") ? 1500 : 1732.0508075688772935274463415059));
    }
    double baseX = -30000, baseZ = -30000;
    boolean shift = false;
@@ -33,7 +33,7 @@ enum GroundPlate {
      baseX += 2598.0762113533159402911695122588;
     }
     //double varyRGB = 1 + U.randomPlusMinus(.05);<-In case we decide using it again
-    U.setMaterialSecurely(groundPlate, E.Terrain.universal);
+    U.setMaterialSecurely(groundPlate, Terrain.universal);
     groundPlate.clampXZ();
     groundPlate.setRotationAxis(Rotate.Y_AXIS);
     groundPlate.setRotate(-30 + (60 * U.random(6)));//<-INT random for hex-rotation!

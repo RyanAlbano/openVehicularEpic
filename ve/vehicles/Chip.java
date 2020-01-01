@@ -1,13 +1,13 @@
 package ve.vehicles;
 
 import javafx.scene.shape.*;
-import ve.Core;
-import ve.VE;
 import ve.environment.E;
+import ve.instances.CoreAdvanced;
+import ve.ui.UI;
 import ve.utilities.SL;
 import ve.utilities.U;
 
-class Chip extends Core {
+class Chip extends CoreAdvanced {
 
  private final MeshView MV;
  private final VehiclePart VP;
@@ -56,18 +56,18 @@ class Chip extends Core {
 
  public void run(Vehicle V, boolean gamePlay) {
   if (stage > 0) {
-   if (Y + VP.Y > V.P.localGround || (stage += gamePlay ? U.random(VE.tick) : 0) > 10) {
+   if (Y + VP.Y > V.P.localGround || (stage += gamePlay ? U.random(UI.tick) : 0) > 10) {
     stage = 0;
     MV.setVisible(false);
    } else {
-    XZ += speedXZ * VE.tick;
-    XY += speedXY * VE.tick;
-    YZ += speedYZ * VE.tick;
+    XZ += speedXZ * UI.tick;
+    XY += speedXY * UI.tick;
+    YZ += speedYZ * UI.tick;
     if (gamePlay) {
-     X += speedX * VE.tick;
-     Z += speedZ * VE.tick;
-     gravitySpeed += E.gravity * VE.tick;
-     Y += speedY * VE.tick + (V.P.mode.name().startsWith(SL.drive) ? gravitySpeed * VE.tick : 0);
+     X += speedX * UI.tick;
+     Z += speedZ * UI.tick;
+     gravitySpeed += E.gravity * UI.tick;
+     Y += speedY * UI.tick + (V.P.mode.name().startsWith(SL.drive) ? gravitySpeed * UI.tick : 0);
     }
     if (VP.MV.isVisible() && U.render(X + VP.X, Y + VP.Y, Z + VP.Z)) {
      U.setTranslate(MV, X + VP.X, Y + VP.Y, Z + VP.Z);

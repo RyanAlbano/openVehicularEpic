@@ -2,11 +2,12 @@ package ve.environment;
 
 import javafx.scene.shape.Cylinder;
 
-import ve.Camera;
-import ve.Core;
-import ve.Sound;
-import ve.VE;
+import ve.instances.Core;
+import ve.ui.Match;
+import ve.ui.UI;
+import ve.utilities.Camera;
 import ve.utilities.SL;
+import ve.utilities.Sound;
 import ve.utilities.U;
 
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ public class Rain extends Core {
    for (Drop raindrop : raindrops) {
     raindrop.run();
    }
-   if (!VE.Match.muteSound && update) {
+   if (!Match.muteSound && update) {
     sound.loop(Math.sqrt(U.distance(0, 0, Camera.Y, 0, 0, 0)) * Sound.standardDistance(1));
    } else {
     sound.stop();
@@ -49,15 +50,15 @@ public class Rain extends Core {
   }
 
   private void run() {
-   X += E.Wind.speedX * VE.tick;
-   Z += E.Wind.speedZ * VE.tick;
-   Y += 200 * VE.tick;
+   X += Wind.speedX * UI.tick;
+   Z += Wind.speedZ * UI.tick;
+   Y += 200 * UI.tick;
    if (Y > 0 || Math.abs(X - Camera.X) > wrapDistance || Math.abs(Y - Camera.Y) > wrapDistance || Math.abs(Z - Camera.Z) > wrapDistance) {
     X = Camera.X + U.randomPlusMinus(wrapDistance);
     Y = Camera.Y + U.randomPlusMinus(wrapDistance);
     Z = Camera.Z + U.randomPlusMinus(wrapDistance);
    }
-   if (Y > E.Storm.stormCloudY && U.render(this, 200)) {
+   if (Y > Storm.stormCloudY && U.render(this, 200)) {
     U.setTranslate(C, this);
     C.setVisible(true);
    } else {

@@ -2,7 +2,7 @@ package ve.environment;
 
 import javafx.scene.shape.*;
 import org.fxyz3d.shapes.primitives.FrustumMesh;
-import ve.*;
+import ve.instances.Core;
 import ve.trackElements.TE;
 import ve.utilities.*;
 
@@ -23,35 +23,18 @@ public class FrustumMound extends Core {//NOTE: Small mounds follow the vehicles
   this.wraps = wraps;
   this.renderAlways = renderAlways;
   absoluteRadius = Math.max(mound.getMajorRadius(), Math.max(mound.getMinorRadius(), mound.getHeight()));
-  U.setMaterialSecurely(mound, paved ? TE.Paved.universal : E.Terrain.universal);
+  U.setMaterialSecurely(mound, paved ? TE.Paved.universal : Terrain.universal);
   U.Nodes.add(mound);
   U.rotate(mound, 0, U.random(360.));//<-For visual variation
  }
 
  public void runGraphics() {
   if (wraps) {
-   boolean setSlope = false;
-   if (Math.abs(X) < E.centerShiftOffAt) {
-    X += U.random() < .5 ? E.centerShiftOffAt : -E.centerShiftOffAt;
-    setSlope = true;
-   }
-   if (Math.abs(X - Camera.X) > 40000) {
-    while (X > Camera.X + 40000) X -= 80000;
-    while (X < Camera.X - 40000) X += 80000;
-    setSlope = true;
-   }
-   if (Math.abs(Z - Camera.Z) > 40000) {
-    while (Z > Camera.Z + 40000) Z -= 80000;
-    while (Z < Camera.Z - 40000) Z += 80000;
-    setSlope = true;
-   }
-   if (setSlope) {
-    E.setTerrainSit(this, false);
-   }
+   E.wrap(this);
   }
   double moundY = Y - (mound.getHeight() * .5), depth = U.getDepth(X, moundY, Z);
   if (depth > -absoluteRadius && (renderAlways || absoluteRadius * E.renderLevel >= U.distance(this) * Camera.zoom)) {
-   mound.setCullFace(cameraInside() ? CullFace.NONE : CullFace.BACK);
+   mound.setCullFace(objectInside(Camera.X, Camera.Y, Camera.Z) ? CullFace.NONE : CullFace.BACK);
    U.setTranslate(mound, X, moundY, Z);
    mound.setVisible(true);
   } else {
@@ -59,17 +42,21 @@ public class FrustumMound extends Core {//NOTE: Small mounds follow the vehicles
   }
  }
 
- public boolean cameraInside() {
+ public boolean objectInside(Core C) {
+  return objectInside(C.X, C.Y, C.Z);
+ }
+
+ public boolean objectInside(double inX, double inY, double inZ) {
   double moundHeight = mound.getHeight(), halfHeight = moundHeight * .5;
-  if (Math.abs(Camera.Y - (Y - halfHeight)) <= halfHeight) {
-   double distance = U.distanceXZ(this),
+  if (Math.abs(inY - (Y - halfHeight)) <= halfHeight) {
+   double distance = U.distance(X, inX, Z, inZ),
    radiusTop = mound.getMinorRadius();
    if (distance < radiusTop) {
     return true;
    } else {
     double radiusBottom = mound.getMajorRadius();
     if (distance < radiusBottom) {
-     return Y >= Y - (radiusBottom - distance) * (moundHeight / Math.abs(radiusBottom - radiusTop));
+     return inY >= Y - (radiusBottom - distance) * (moundHeight / Math.abs(radiusBottom - radiusTop));
     }
    }
   }

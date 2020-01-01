@@ -4,9 +4,11 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
-import ve.Camera;
-import ve.VE;
-import ve.utilities.SL;
+import ve.instances.I;
+import ve.ui.Match;
+import ve.ui.UI;
+import ve.utilities.Camera;
+import ve.utilities.Images;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
 
@@ -22,7 +24,7 @@ public class EnergyBolt extends MeshView {
   PhongMaterial PM = new PhongMaterial();
   U.Phong.setDiffuseRGB(PM, 0);
   U.Phong.setSpecularRGB(PM, 0);
-  PM.setSelfIlluminationMap(U.Images.get(SL.white));
+  PM.setSelfIlluminationMap(Images.white);
   U.setMaterialSecurely(this, PM);
   TriangleMesh TM = new TriangleMesh();
   TM.getPoints().setAll(
@@ -47,7 +49,7 @@ public class EnergyBolt extends MeshView {
   } else {
    target = V.index;
    double compareDistance1 = Double.POSITIVE_INFINITY;
-   for (Vehicle vehicle : VE.vehicles) {//<-Direct energy towards fellow support infrastructure
+   for (Vehicle vehicle : I.vehicles) {//<-Direct energy towards fellow support infrastructure
     if (vehicle.index != V.index && U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) < compareDistance1 &&
     vehicle.type == Vehicle.Type.supportInfrastructure) {//*
      target = vehicle.index;
@@ -56,22 +58,22 @@ public class EnergyBolt extends MeshView {
    }
    //*May need to be changed if more infrastructure types get added later!
    double compareDistance = Double.POSITIVE_INFINITY;
-   for (Vehicle vehicle : VE.vehicles) {//<-Redirect energy towards fellow non-support-infrastructure teammates if they're alive or exist
+   for (Vehicle vehicle : I.vehicles) {//<-Redirect energy towards fellow non-support-infrastructure teammates if they're alive or exist
     if (vehicle.index != V.index && U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) < compareDistance &&
     vehicle.type != Vehicle.Type.supportInfrastructure) {//*
      target = vehicle.index;
      compareDistance = U.distance(V, vehicle);
     }
    }
-   if (VE.Match.started && gamePlay) {
-    VE.vehicles.get(target).energyMultiple *= 2;
+   if (Match.started && gamePlay) {
+    I.vehicles.get(target).energyMultiple *= 2;
    }
    if (S.sound.running()) {
     render++;
    } else {//This technique of the shock graphics depending on the audio timing (as opposed to vice-versa) is a bit unusual
     render = 0;
     if (gamePlay) {
-     S.sound.play(Double.NaN, Math.min(V.VA.distanceVehicleToCamera, VE.vehicles.get(target).VA.distanceVehicleToCamera));
+     S.sound.play(Double.NaN, Math.min(V.VA.distanceVehicleToCamera, I.vehicles.get(target).VA.distanceVehicleToCamera));
     }
    }
   }
@@ -79,7 +81,7 @@ public class EnergyBolt extends MeshView {
 
  public void renderMesh() {
   if (!V.destroyed && render > 3) {//<-Not sure why 'render' check must be this high
-   Vehicle targetV = VE.vehicles.get(target);
+   Vehicle targetV = I.vehicles.get(target);
    double sizeAtSource = V.absoluteRadius * .05,
    sizeAtTarget = targetV.absoluteRadius * .05,
    sizeAtMidpoint = (sizeAtSource + sizeAtTarget) * .5,

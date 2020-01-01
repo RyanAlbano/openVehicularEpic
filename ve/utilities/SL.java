@@ -10,7 +10,7 @@ public enum SL {//StringLiterals--don't EVER change the texts!
  destroyed = "destroyed", drive = "drive",
  END = "END",
  fire = "fire", firelight = "firelight", flick1 = "flick1", flick2 = "flick2", fromXZ = "fromXZ", fromYZ = "fromYZ", foliage = "foliage", fastCull = "fastCull", fastCullB = "fastCullB", fastCullF = "fastCullF", fastCullR = "fastCullR", fastCullL = "fastCullL",
- ground = "ground", grid = "grid", gate = "gate", GameSettings = "GameSettings", GameVehicles = "GameVehicles", getXY = "getXY", getYZ = "getYZ",
+ ground = "ground", grid = "grid", gate = "gate", grass = "grass", GameSettings = "GameSettings", GameVehicles = "GameVehicles", getXY = "getXY", getYZ = "getYZ",
  hard = "hard", HostReady = "HostReady", hide = "hide",
  Instant = "Instant", ice = "ice",
  jetfighter = "jetfighter", joinerReady = "joinerReady",
@@ -20,11 +20,11 @@ public enum SL {//StringLiterals--don't EVER change the texts!
  OPEN_VEHICULAR_EPIC = "OPEN VEHICULAR EPIC", OPTIONS = "OPTIONS",
  paved = "paved", pavedColor = "pavedColor", particle = "particle", Port = "Port",
  RA = "RA", rain = "rain", reflect = "reflect", rimFaces = "rimFaces", rock = "rock", RGB = "RGB", Ready = "Ready",
- size = "size", scale = "scale", strip = "strip", shiny = "shiny", sport = "sport", snow = "snow", steers = "steers", steerXZ = "steerXZ", steerXY = "steerXY", steerYZ = "steerYZ", steerFromXZ = "steerFromXZ", steerFromYZ = "steerFromYZ", spinner = "spinner", selfIlluminate = "selfIlluminate", sportRimFaces = "sportRimFaces",
+ size = "size", scale = "scale", sand = "sand", strip = "strip", shiny = "shiny", sport = "sport", snow = "snow", steers = "steers", steerXZ = "steerXZ", steerXY = "steerXY", steerYZ = "steerYZ", steerFromXZ = "steerFromXZ", steerFromYZ = "steerFromYZ", spinner = "spinner", selfIlluminate = "selfIlluminate", sportRimFaces = "sportRimFaces",
  type = "type", texture = "texture", tree = "tree", turret = "turret", turretBarrel = "turretBarrel", thrust = "thrust", thrustBlue = "thrustBlue", thrustWhite = "thrustWhite", theRandomColor = "theRandomColor", tornado = "tornado", tsunami = "tsunami", TargetHost = "TargetHost",
  UserName = "UserName",
  vehicles = "vehicles", Vehicle = "Vehicle", Vertices_/*:*/ = "Vertices: ",
- white = "white", wheel = "wheel", water = "water", wheelPoint = "wheelPoint", wheelFaces = "wheelFaces", wheelRingFaces = "wheelRingFaces",
+ white = "white", wood = "wood", wheel = "wheel", water = "water", wheelPoint = "wheelPoint", wheelFaces = "wheelFaces", wheelRingFaces = "wheelRingFaces",
  XY = "XY", XZ = "XZ", YZ = "YZ";
 
  public static String Thick(String s) {
@@ -38,7 +38,7 @@ public enum SL {//StringLiterals--don't EVER change the texts!
   speedway2000000 = "V.E. Speedway 2000000",
   theBottleneck = "the Bottleneck",
   testOfDamage = "the Test of Damage",
-  phantomCavern = "Phantom Cavern",
+  crystalCavern = "Crystal Cavern",
   matrix2x3 = "Matrix 2x3",
   vehicularFalls = "Vehicular Falls",
   summitOfEpic = "SUMMIT of EPIC",

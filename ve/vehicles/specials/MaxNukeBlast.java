@@ -2,10 +2,14 @@ package ve.vehicles.specials;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
-import ve.Core;
-import ve.Sound;
-import ve.VE;
-import ve.utilities.SL;
+import ve.effects.Effects;
+import ve.instances.Core;
+import ve.instances.CoreAdvanced;
+import ve.instances.I;
+import ve.ui.Match;
+import ve.ui.UI;
+import ve.utilities.Images;
+import ve.utilities.Sound;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
 
@@ -16,7 +20,7 @@ public class MaxNukeBlast extends Core {
  private final Vehicle V;
  private final Sphere main;
  private double sphereSize;
- private final boolean[] othersBlasted = new boolean[VE.vehiclesInMatch];
+ private final boolean[] othersBlasted = new boolean[UI.vehiclesInMatch];
  private final Collection<NukeBlastPart> parts = new ArrayList<>();
  static final double blastSpeed = 6000;
 
@@ -29,7 +33,7 @@ public class MaxNukeBlast extends Core {
   main.setVisible(false);
   PhongMaterial partPM = new PhongMaterial();
   U.Phong.setSpecularRGB(partPM, 0);
-  partPM.setSelfIlluminationMap(U.Images.get(SL.white));
+  partPM.setSelfIlluminationMap(Images.white);
   for (int n = 1000; --n >= 0; ) {
    parts.add(new NukeBlastPart(partPM));
   }
@@ -54,7 +58,7 @@ public class MaxNukeBlast extends Core {
  }
 
  public void runLogic(boolean gamePlay) {
-  double speed = blastSpeed * VE.tick;
+  double speed = blastSpeed * UI.tick;
   if (!V.isIntegral() && gamePlay) {
    sphereSize += speed;
    U.setScale(main, sphereSize);
@@ -62,7 +66,7 @@ public class MaxNukeBlast extends Core {
   } else {
    V.VA.nuke.stop(1);
   }
-  ((PhongMaterial) main.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
+  ((PhongMaterial) main.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
   for (NukeBlastPart nukeBlast : parts) {
    nukeBlast.runLogic(gamePlay, speed);
   }
@@ -76,19 +80,19 @@ public class MaxNukeBlast extends Core {
   } else {
    main.setVisible(false);
   }
-  ((PhongMaterial) main.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
+  ((PhongMaterial) main.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
   for (NukeBlastPart nukeBlast : parts) {
    nukeBlast.runRender(vehicleExploded);
   }
  }
 
  public void runHitOthers(boolean greenTeam) {
-  boolean replay = VE.status == VE.Status.replay;
-  for (Vehicle vehicle : VE.vehicles) {
+  boolean replay = UI.status == UI.Status.replay;
+  for (Vehicle vehicle : I.vehicles) {
    if (!U.sameTeam(V, vehicle) && !othersBlasted[vehicle.index] && !vehicle.reviveImmortality && U.distance(V.MNB, vehicle) < V.MNB.sphereSize + vehicle.collisionRadius && !vehicle.phantomEngaged) {
     V.P.hitCheck(vehicle);
     vehicle.setDamage(vehicle.damageCeiling());
-    VE.Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : vehicle.durability;
+    Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : vehicle.durability;
     if (vehicle.getsPushed >= 0) {
      vehicle.P.speedX += blastSpeed * Double.compare(vehicle.X, X) * (1 + U.random(.5));
      vehicle.P.speedZ += blastSpeed * Double.compare(vehicle.Z, Z) * (1 + U.random(.5));
@@ -105,7 +109,7 @@ public class MaxNukeBlast extends Core {
   }
  }
 
- static class NukeBlastPart extends Core {
+ static class NukeBlastPart extends CoreAdvanced {
 
   private final Sphere S;
   double sinXZ, sinYZ, cosXZ, cosYZ;//<-Performance optimization

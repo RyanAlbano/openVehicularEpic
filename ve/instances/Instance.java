@@ -1,4 +1,4 @@
-package ve;
+package ve.instances;
 
 import java.io.*;
 
@@ -10,7 +10,7 @@ import ve.utilities.*;
 import ve.vehicles.Vehicle;
 import ve.vehicles.VehiclePart;
 
-public class Instance extends Core {
+public class Instance extends CoreAdvanced {
 
  public int vertexQuantity;
  public double renderRadius;

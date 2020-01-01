@@ -3,9 +3,10 @@ package ve.environment;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
 
-import ve.Core;
-import ve.Sound;
-import ve.VE;
+import ve.instances.Core;
+import ve.ui.Match;
+import ve.ui.UI;
+import ve.utilities.Sound;
 import ve.utilities.U;
 import ve.vehicles.Splash;
 import ve.vehicles.Vehicle;
@@ -54,13 +55,13 @@ public enum Tsunami {
 
  static void run(boolean update, boolean updateIfMatchBegan) {
   if (exists) {
-   if (VE.status != VE.Status.replay) {//<-Still executes if in map viewer--using 'VE.Status.play' does not
+   if (UI.status != UI.Status.replay) {//<-Still executes if in map viewer--using 'VE.Status.play' does not
     if (updateIfMatchBegan && Math.abs(direction == Tsunami.Direction.left || direction == Tsunami.Direction.right ? X : Z) > globalSize) {
      wrap();
     }
     if (updateIfMatchBegan) {
-     X += speedX * VE.tick;
-     Z += speedZ * VE.tick;
+     X += speedX * UI.tick;
+     Z += speedZ * UI.tick;
     }
    }
    double tsunamiPartShift = globalSize * .01;
@@ -82,7 +83,7 @@ public enum Tsunami {
    for (Tsunami.Part tsunamiPart : parts) {
     tsunamiPart.run();
    }
-   if (!VE.Match.muteSound && update) {
+   if (!Match.muteSound && update) {
     double soundDistance = Double.POSITIVE_INFINITY;
     for (Tsunami.Part tsunamiPart : parts) {
      soundDistance = Math.min(soundDistance, U.distance(tsunamiPart));
@@ -109,14 +110,14 @@ public enum Tsunami {
   for (Tsunami.Part tsunamiPart : parts) {
    if (U.distance(V, tsunamiPart) < V.collisionRadius + tsunamiPart.C.getRadius()) {
     if (V.getsPushed >= 0) {
-     V.P.speedX += speedX * .5 * VE.tick;
-     V.P.speedZ += speedZ * .5 * VE.tick;
+     V.P.speedX += speedX * .5 * UI.tick;
+     V.P.speedZ += speedZ * .5 * UI.tick;
     }
     if (V.getsLifted >= 0) {
-     V.P.speedY += E.gravity * VE.tick * 4 * Double.compare(tsunamiPart.Y, V.Y);
+     V.P.speedY += E.gravity * UI.tick * 4 * Double.compare(tsunamiPart.Y, V.Y);
     }
     for (int n1 = 20; --n1 >= 0; ) {
-     V.splashes.get(V.currentSplash).deploy(V.wheels.get(U.random(4)), U.random(V.absoluteRadius * .05),
+     V.splashes.get(V.currentSplash).deploy(V.wheels.isEmpty() ? null : V.wheels.get(U.random(4)), U.random(V.absoluteRadius * .05),
      speedX + U.randomPlusMinus(Math.max(speed, V.P.netSpeed)),
      U.randomPlusMinus(Math.max(speed, V.P.netSpeed)),
      speedZ + U.randomPlusMinus(Math.max(speed, V.P.netSpeed)));

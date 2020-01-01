@@ -1,10 +1,10 @@
 package ve.trackElements.trackParts;
 
 import javafx.scene.paint.Color;
-import ve.Core;
+import ve.instances.CoreAdvanced;
 import ve.utilities.U;
 
-public class TrackPlane extends Core {
+public class TrackPlane extends CoreAdvanced {
 
  public double radiusX, radiusY, radiusZ, damage;
  public Color RGB = U.getColor(0);

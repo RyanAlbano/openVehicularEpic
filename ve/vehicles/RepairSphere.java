@@ -1,12 +1,12 @@
 package ve.vehicles;
 
 import javafx.scene.shape.Sphere;
-import ve.Core;
-import ve.VE;
 import ve.environment.E;
+import ve.instances.CoreAdvanced;
+import ve.ui.UI;
 import ve.utilities.U;
 
-public class RepairSphere extends Core {
+public class RepairSphere extends CoreAdvanced {
 
  private final Sphere S;
  public double stage;
@@ -27,7 +27,7 @@ public class RepairSphere extends Core {
 
  void run(Vehicle V) {
   if (stage > 0) {
-   if ((stage += U.random(VE.tick)) > 20) {
+   if ((stage += U.random(UI.tick)) > 20) {
     stage = 0;
     S.setVisible(false);
    } else {

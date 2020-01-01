@@ -3,12 +3,11 @@ package ve.effects;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
 
-import ve.Core;
-import ve.VE;
-import ve.utilities.SL;
+import ve.instances.CoreAdvanced;
+import ve.ui.UI;
 import ve.utilities.U;
 
-public class Spark extends Core {
+public class Spark extends CoreAdvanced {
 
  private final Cylinder C;
  private double stage;
@@ -18,7 +17,7 @@ public class Spark extends Core {
   PhongMaterial PM = new PhongMaterial();
   U.Phong.setDiffuseRGB(PM, 0);
   U.Phong.setSpecularRGB(PM, 0);
-  PM.setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));//<-Integer random for lists
+  PM.setSelfIlluminationMap(Effects.fireLight());
   U.setMaterialSecurely(C, PM);
   U.Nodes.add(C);
   C.setVisible(false);
@@ -37,7 +36,7 @@ public class Spark extends Core {
 
  public void run(boolean gamePlay) {
   if (stage > 0) {
-   if ((stage += U.random(VE.tick)) > 2) {
+   if ((stage += U.random(UI.tick)) > 2) {
     stage = 0;
     C.setVisible(false);
    } else {

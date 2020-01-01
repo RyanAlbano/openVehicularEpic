@@ -1,7 +1,8 @@
-package ve;
+package ve.utilities;
 
 import ve.environment.E;
-import ve.utilities.U;
+import ve.ui.Match;
+import ve.ui.Options;
 
 import java.io.*;
 import java.util.*;
@@ -25,8 +26,8 @@ public class Sound {
     AudioFormat AF = AIS.getFormat();
     AudioInputStream AIS2 = AudioSystem.getAudioInputStream(new AudioFormat
     (AF.getFrameRate(),
-    Math.min(AF.getSampleSizeInBits(), VE.Options.degradedSoundEffects ? 8 : 16),
-    Math.min(AF.getChannels(), VE.Options.degradedSoundEffects ? 1 : 2),
+    Math.min(AF.getSampleSizeInBits(), Options.degradedSoundEffects ? 8 : 16),
+    Math.min(AF.getChannels(), Options.degradedSoundEffects ? 1 : 2),
     true,
     AF.isBigEndian()),
     AIS);
@@ -100,7 +101,7 @@ public class Sound {
  }
 
  public void play(double index, double gain) {
-  if (!VE.Match.muteSound) {
+  if (!Match.muteSound) {
    setCurrentIndex(index);
    if (currentIndex < clips.size()) {
     clips.get(currentIndex).clip.stop();
@@ -118,7 +119,7 @@ public class Sound {
  }
 
  public void playIfNotPlaying(double index, double gain) {
-  if (!VE.Match.muteSound) {
+  if (!Match.muteSound) {
    setCurrentIndex(index);
    gain *= E.soundMultiple;
    if (currentIndex < clips.size() && !clips.get(currentIndex).clip.isRunning() && gain < 80) {
@@ -134,7 +135,7 @@ public class Sound {
  }
 
  public void loop(double index, double gain) {
-  if (!VE.Match.muteSound) {
+  if (!Match.muteSound) {
    setCurrentIndex(index);
    if (currentIndex < clips.size()) {
     if (Math.abs(clips.get(currentIndex).lastGain - clips.get(currentIndex).gain.getValue()) > 1) {
@@ -155,7 +156,7 @@ public class Sound {
  }
 
  public void resume(double index, double gain) {
-  if (!VE.Match.muteSound) {
+  if (!Match.muteSound) {
    setCurrentIndex(index);
    if (currentIndex < clips.size()) {
     if (Math.abs(clips.get(currentIndex).lastGain - clips.get(currentIndex).gain.getValue()) > 1) {

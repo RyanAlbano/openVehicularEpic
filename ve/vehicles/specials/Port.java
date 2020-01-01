@@ -1,8 +1,8 @@
 package ve.vehicles.specials;
 
-import ve.Core;
+import ve.instances.CoreAdvanced;
 
-public class Port extends Core {
+public class Port extends CoreAdvanced {
 
  public Spit spit;
 }

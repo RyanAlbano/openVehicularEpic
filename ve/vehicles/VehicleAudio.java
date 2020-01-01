@@ -1,11 +1,13 @@
 package ve.vehicles;
 
-import ve.Camera;
-import ve.Sound;
-import ve.VE;
 import ve.environment.Pool;
 import ve.environment.Tsunami;
+import ve.ui.Match;
+import ve.ui.Mouse;
+import ve.ui.UI;
+import ve.utilities.Camera;
 import ve.utilities.SL;
+import ve.utilities.Sound;
 import ve.utilities.U;
 import ve.vehicles.specials.Special;
 
@@ -230,8 +232,8 @@ public class VehicleAudio {
  }
 
  void run(boolean gamePlay) {
-  if (V.engine == Vehicle.Engine.train && gamePlay && VE.Match.started) {
-   if (Math.abs(V.P.speed) * VE.tick > U.random(5000.)) {
+  if (V.engine == Vehicle.Engine.train && gamePlay && Match.started) {
+   if (Math.abs(V.P.speed) * UI.tick > U.random(5000.)) {
     train.playIfNotPlaying(U.random(9), distanceVehicleToCamera);
    }
    if (U.startsWith(V.P.mode.name(), SL.drive, Physics.Mode.neutral.name()) && !V.destroyed && (V.drive || V.reverse)) {
@@ -251,12 +253,12 @@ public class VehicleAudio {
   }
   engineDiscord = false;
   if (V.isIntegral() && gamePlay) {
-   if (chuff != null && chuffTimer <= 0 && Math.abs(V.P.speed) <= V.accelerationStages[0] * VE.tick && (V.drive || V.reverse)) {
+   if (chuff != null && chuffTimer <= 0 && Math.abs(V.P.speed) <= V.accelerationStages[0] * UI.tick && (V.drive || V.reverse)) {
     chuff.play(Double.NaN, distanceVehicleToCamera);
     chuff.play(Double.NaN, distanceVehicleToCamera);
     chuffTimer = 22;
    }
-   if (fly != null && V.P.mode == Physics.Mode.fly && (V.drive || V.reverse || V.turnL || V.turnR || (V.steerByMouse && (Math.abs(VE.Mouse.steerX) > U.random(2000.) || Math.abs(VE.Mouse.steerY) > U.random(2000.))))) {
+   if (fly != null && V.P.mode == Physics.Mode.fly && (V.drive || V.reverse || V.turnL || V.turnR || (V.steerByMouse && (Math.abs(Mouse.steerX) > U.random(2000.) || Math.abs(Mouse.steerY) > U.random(2000.))))) {
     fly.playIfNotPlaying(U.random(fly.clips.size()), distanceVehicleToCamera);
    }
    if (!V.isFixed()) {
@@ -305,7 +307,7 @@ public class VehicleAudio {
    }
   }
   if (force != null && gamePlay) {
-   forceTimer += U.random(V.P.netSpeed) * VE.tick;
+   forceTimer += U.random(V.P.netSpeed) * UI.tick;
    int speedCheck = V.P.netSpeed > 1000 ? 5 : V.P.netSpeed > 500 ? 4 : V.P.netSpeed > 250 ? 3 : 2;
    if (V.steerInPlace && V.P.mode == Physics.Mode.driveSolid && (V.turnL || V.turnR) && !V.P.flipped() && speedCheck < 3) {
     force.play(U.random(2), distanceVehicleToCamera);
@@ -316,9 +318,9 @@ public class VehicleAudio {
     forceTimer = 0;
    }
   }
-  chuffTimer -= chuffTimer > 0 ? VE.tick : 0;
-  crashTimer -= crashTimer > 0 ? VE.tick : 0;
-  landTimer -= landTimer > 0 ? VE.tick : 0;
+  chuffTimer -= chuffTimer > 0 ? UI.tick : 0;
+  crashTimer -= crashTimer > 0 ? UI.tick : 0;
+  landTimer -= landTimer > 0 ? UI.tick : 0;
   if (!Double.isNaN(splashing)) {
    if (splashing > 150 && Camera.Y <= 0) {
     splashOverSurface.loop(distanceVehicleToCamera);
@@ -361,7 +363,7 @@ public class VehicleAudio {
    scraping = false;
   }
   if (!Double.isNaN(V.exhausting)) {
-   V.exhausting -= V.exhausting > 0 ? VE.tick : 0;
+   V.exhausting -= V.exhausting > 0 ? UI.tick : 0;
    if (exhaustIndex != engineIndex) {
     if (U.random() < 1 / (double) engineClipQuantity) {
      V.exhausting = 5;
@@ -370,14 +372,14 @@ public class VehicleAudio {
     exhaustIndex = engineIndex;
    }
   }
-  if (VE.Match.muteSound || !V.destroyed || !gamePlay) {
+  if (Match.muteSound || !V.destroyed || !gamePlay) {
    if (V.explosionType == Vehicle.ExplosionType.maxnuclear) {//<-DO check this, as stopping may cut out blast sound on Tactical Nuke
     nuke.stop(1);
    } else {
     burn.stop();//<-No burn sound on max nukes
    }
   }
-  if (VE.Match.muteSound || !V.isIntegral() || !gamePlay) {
+  if (Match.muteSound || !V.isIntegral() || !gamePlay) {
    for (Special special : V.specials) {
     if (special.type == Special.Type.phantom) {
      special.sound.stop();

@@ -3,12 +3,12 @@ package ve.effects;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 
-import ve.Core;
-import ve.VE;
-import ve.utilities.SL;
+import ve.instances.CoreAdvanced;
+import ve.ui.UI;
+import ve.utilities.Images;
 import ve.utilities.U;
 
-class ExplosionPart extends Core {
+class ExplosionPart extends CoreAdvanced {
 
  private final MeshView MV;
  private double stage, speed;
@@ -32,7 +32,7 @@ class ExplosionPart extends Core {
   PhongMaterial PM = new PhongMaterial();
   U.Phong.setDiffuseRGB(PM, 0);
   U.Phong.setSpecularRGB(PM, 0);
-  PM.setSelfIlluminationMap(U.Images.get(SL.white));
+  PM.setSelfIlluminationMap(Images.white);
   U.setMaterialSecurely(MV, PM);
   U.Nodes.add(MV);
   MV.setVisible(false);
@@ -48,14 +48,14 @@ class ExplosionPart extends Core {
 
  public void run(Explosion explosion, boolean gamePlay) {
   if (stage > 0) {
-   if ((stage += gamePlay ? U.random(VE.tick) : 0) > 5) {
+   if ((stage += gamePlay ? U.random(UI.tick) : 0) > 5) {
     stage = 0;
     MV.setVisible(false);
    } else {
     if (gamePlay) {
-     X -= speed * (U.sin(XZ) * U.cos(YZ)) * VE.tick;
-     Z += speed * (U.cos(XZ) * U.cos(YZ)) * VE.tick;
-     Y -= speed * U.sin(YZ) * VE.tick;
+     X -= speed * (U.sin(XZ) * U.cos(YZ)) * UI.tick;
+     Z += speed * (U.cos(XZ) * U.cos(YZ)) * UI.tick;
+     Y -= speed * U.sin(YZ) * UI.tick;
     }
     double setX, setY, setZ;
     if (explosion.focusVehicle != null) {

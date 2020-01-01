@@ -4,9 +4,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 import javafx.scene.transform.*;
-import ve.*;
+import ve.effects.Effects;
 import ve.environment.E;
+import ve.environment.Terrain;
+import ve.instances.InstancePart;
 import ve.trackElements.TE;
+import ve.ui.Options;
+import ve.ui.UI;
 import ve.utilities.*;
 
 public class TrackPartPart extends InstancePart {
@@ -75,7 +79,7 @@ public class TrackPartPart extends InstancePart {
   MV.setDrawMode(type.contains(SL.Thick(SL.line)) ? DrawMode.LINE : DrawMode.FILL);
   MV.setCullFace(CullFace.BACK);
   setPhong(type, type.contains(SL.Thick(SL.noTexture)) ? "" : textureType, i_RGB);
-  if (VE.status != VE.Status.vehicleViewer) {
+  if (UI.status != UI.Status.vehicleViewer) {
    fastCull = type.contains(SL.Thick(SL.fastCullB)) ? 0 : fastCull;
    fastCull = type.contains(SL.Thick(SL.fastCullF)) ? 2 : fastCull;
    fastCull = type.contains(SL.Thick(SL.fastCullR)) ? -1 : fastCull;
@@ -91,7 +95,7 @@ public class TrackPartPart extends InstancePart {
 
  private void setPhong(String type, String textureType, Color i_RGB) {//Don't bother moving this void to super
   if (TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.terrain && !type.contains(SL.Thick(SL.noTexture))) {
-   U.setMaterialSecurely(MV, E.Terrain.universal);
+   U.setMaterialSecurely(MV, Terrain.universal);
   } else if (TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.paved && !type.contains(SL.Thick(SL.noTexture))) {
    U.setMaterialSecurely(MV, TE.Paved.universal);
   } else {
@@ -109,7 +113,7 @@ public class TrackPartPart extends InstancePart {
     RGB = U.getColor(1);
    }
    RGB =
-   TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.terrain ? U.getColor(E.Terrain.RGB) :
+   TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.terrain ? U.getColor(Terrain.RGB) :
    TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.paved ? U.getColor(TE.Paved.globalShade) :
    RGB;//<-Still needed!
    if (blink) {
@@ -118,7 +122,7 @@ public class TrackPartPart extends InstancePart {
    PM = new PhongMaterial();
    U.Phong.setDiffuseRGB(PM, RGB);
    if (TP.tree) {
-    U.Phong.setSelfIllumination(PM, RGB.getRed() * .25, RGB.getGreen() * .25, RGB.getBlue() * .25);
+    PM.setSelfIlluminationMap(U.Phong.getSelfIllumination(RGB.getRed() * .25, RGB.getGreen() * .25, RGB.getBlue() * .25));
    }
    if (type.contains(SL.Thick(SL.noSpecular)) || blink) {
     U.Phong.setSpecularRGB(PM, 0);
@@ -128,11 +132,11 @@ public class TrackPartPart extends InstancePart {
     PM.setSpecularPower(shiny ? E.Specular.Powers.shiny : E.Specular.Powers.standard);
    }
    if (selfIlluminate) {
-    U.Phong.setSelfIllumination(PM, RGB);
+    PM.setSelfIlluminationMap(U.Phong.getSelfIllumination(RGB));
    }
-   PM.setDiffuseMap(U.Images.get(textureType));
-   PM.setSpecularMap(U.Images.get(textureType));
-   PM.setBumpMap(U.Images.getNormalMap(textureType));
+   PM.setDiffuseMap(Images.get(textureType));
+   PM.setSpecularMap(Images.get(textureType));
+   PM.setBumpMap(Images.getNormalMap(textureType));
    U.setMaterialSecurely(MV, PM);
   }
  }
@@ -158,7 +162,7 @@ public class TrackPartPart extends InstancePart {
     render = shiftedAxis == 2 ? Camera.Z >= TP.Z : shiftedAxis < 0 ? Camera.X >= TP.X : shiftedAxis > 0 ? Camera.X <= TP.X : Camera.Z <= TP.Z;
    }
    if (render) {
-    double[] placementX = {displaceX + (controller ? TP.driverViewX * VE.Options.driverSeat : 0)};
+    double[] placementX = {displaceX + (controller ? TP.driverViewX * Options.driverSeat : 0)};
     double[] placementY = {displaceY};
     double[] placementZ = {displaceZ};
     if (TP.vehicleModel && !base) {
@@ -175,7 +179,7 @@ public class TrackPartPart extends InstancePart {
      U.setTranslate(MV, TP.X + placementX[0], TP.Y + placementY[0], TP.Z + placementZ[0]);
      visible = true;
      if (blink) {
-      PM.setSelfIlluminationMap(U.Images.get(SL.blink + U.random(3)));
+      PM.setSelfIlluminationMap(Effects.blink());
      }
     }
    }
@@ -185,7 +189,7 @@ public class TrackPartPart extends InstancePart {
  void runAsTrackPart(double distanceTrackPartCamera, boolean renderALL) {
   if (renderALL || ((E.renderType == E.RenderType.fullDistance || size * E.renderLevel >= distanceTrackPartCamera * Camera.zoom) &&
   ((!checkpoint || TP.checkpointNumber == TE.currentCheckpoint) && !(checkpointWord && TE.lapCheckpoint) && !(lapWord && !TE.lapCheckpoint) &&
-  !(flickPolarity == 1 && VE.yinYang) && !(flickPolarity == 2 && !VE.yinYang)))) {
+  !(flickPolarity == 1 && UI.yinYang) && !(flickPolarity == 2 && !UI.yinYang)))) {
    boolean render = true;
    if (!Double.isNaN(fastCull) && !renderALL) {
     if (fastCull == 0) {
@@ -200,7 +204,7 @@ public class TrackPartPart extends InstancePart {
    }
    if (renderALL || (render && U.getDepth(TP) > -renderRadius)) {
     if (blink) {
-     PM.setSelfIlluminationMap(U.Images.get(SL.blink + U.random(3)));
+     PM.setSelfIlluminationMap(Effects.blink());
     }
     if (TP.isRepairPoint) {
      U.rotate(MV, TP.XY, TP.YZ, 0);
@@ -208,7 +212,7 @@ public class TrackPartPart extends InstancePart {
     if (checkpoint) {
      rotateXZ.setAngle(-TP.XZ + (TP.checkpointSignRotation ? 180 : 0));
      if (lapWord) {
-      PM.setSelfIlluminationMap(VE.yinYang ? U.Images.get(SL.white) : null);
+      PM.setSelfIlluminationMap(UI.yinYang ? Images.white : null);
      }
     }
     U.setTranslate(MV, TP);

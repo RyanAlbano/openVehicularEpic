@@ -5,12 +5,10 @@ import javafx.scene.shape.CullFace;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
-import ve.Camera;
-import ve.Core;
-import ve.Sound;
-import ve.VE;
-import ve.utilities.SL;
-import ve.utilities.U;
+import ve.effects.Effects;
+import ve.instances.CoreAdvanced;
+import ve.ui.UI;
+import ve.utilities.*;
 import ve.vehicles.Vehicle;
 import ve.vehicles.VehiclePart;
 
@@ -23,6 +21,7 @@ public enum Volcano {
  public static final double radiusBottom = 53000, radiusTop = 3000, height = 50000;
  public static double X, Z;
  private static double eruptionStage;
+ public static double cameraShake;
  private static final MeshView MV;
  public static final List<Rock> rocks = new ArrayList<>();
  public static Sound sound;
@@ -116,7 +115,7 @@ public enum Volcano {
  public static void load(String s) {
   if (s.startsWith("volcano(")) {
    PhongMaterial volcanoPM = new PhongMaterial();
-   U.Phong.setDiffuseRGB(volcanoPM, E.Ground.RGB);
+   U.Phong.setDiffuseRGB(volcanoPM, Ground.RGB);
    U.setMaterialSecurely(MV, volcanoPM);
    X = U.getValue(s, 0);
    Z = U.getValue(s, 1);
@@ -132,9 +131,9 @@ public enum Volcano {
       U.Phong.setDiffuseRGB(PM, 0);
       U.Phong.setSpecularRGB(PM, 0);
      } else {
-      PM.setDiffuseMap(U.Images.get(SL.rock));
-      PM.setSpecularMap(U.Images.get(SL.rock));
-      PM.setBumpMap(U.Images.getNormalMap(SL.rock));
+      PM.setDiffuseMap(Images.get(SL.rock));
+      PM.setSpecularMap(Images.get(SL.rock));
+      PM.setBumpMap(Images.getNormalMap(SL.rock));
      }
      U.setMaterialSecurely(rocks.get(n).S, PM);
      isLava = !isLava;
@@ -147,7 +146,7 @@ public enum Volcano {
  static void run(boolean updateIfMatchBegan) {
   if (exists) {
    U.setTranslate(MV, X, 0, Z);
-   if (!rocks.isEmpty()) {
+   if (!rocks.isEmpty()) {//<-If active volcano
     if (eruptionStage > 0) {
      long rocksLanded = 0;
      for (Volcano.Rock volcanoRock : rocks) {
@@ -159,7 +158,7 @@ public enum Volcano {
         volcanoRock.X += volcanoRock.speedX;
         volcanoRock.Y += volcanoRock.speedY;
         volcanoRock.Z += volcanoRock.speedZ;
-        volcanoRock.speedY += E.gravity * VE.tick;
+        volcanoRock.speedY += E.gravity * UI.tick;
        }
        if (volcanoRock.Y > volcanoRock.S.getRadius()) {
         volcanoRock.groundHit = true;
@@ -168,17 +167,19 @@ public enum Volcano {
        }
       }
      }
-     eruptionStage = rocksLanded >= rocks.size() ? 0 : eruptionStage + VE.tick;
+     eruptionStage = rocksLanded >= rocks.size() ? 0 : eruptionStage + UI.tick;
     } else if (updateIfMatchBegan) {
      for (Volcano.Rock volcanoRock : rocks) {
       volcanoRock.deploy();
      }
      eruptionStage = 1;
-     sound.play(Math.sqrt(U.distance(Camera.X, X, Camera.Y, -50000, Camera.Z, Z)) * Sound.standardDistance(.25));
+     setCameraShake(Camera.shakePresets.volcano);
+     sound.play(Math.sqrt(U.distance(Camera.X, X, Camera.Y, -height, Camera.Z, Z)) * Sound.standardDistance(.25));
     }
     for (Volcano.Rock volcanoRock : rocks) {
      volcanoRock.run();
     }
+    cameraShake -= cameraShake > 0 ? UI.tick : 0;
    }
   }
  }
@@ -188,8 +189,8 @@ public enum Volcano {
    double vehicleVolcanoRockDistance = U.distance(V, volcanoRock);
    if (vehicleVolcanoRockDistance < (V.collisionRadius + volcanoRock.S.getRadius()) * 1.5) {
     V.addDamage(V.durability * .5 + (vehicleVolcanoRockDistance < V.collisionRadius + volcanoRock.S.getRadius() ? V.durability : 0));
+    V.deformParts();
     for (VehiclePart part : V.parts) {
-     part.deform();
      part.throwChip(U.randomPlusMinus(U.netValue(volcanoRock.speedX, volcanoRock.speedY, volcanoRock.speedZ)));
     }
     V.VA.crashDestroy.play(Double.NaN, V.VA.distanceVehicleToCamera);
@@ -197,7 +198,11 @@ public enum Volcano {
   }
  }
 
- static class Rock extends Core {
+ public static void setCameraShake(double in) {
+  cameraShake = Math.max(cameraShake, in);
+ }
+
+ static class Rock extends CoreAdvanced {
 
   final Sphere S;
   private final double[] rotation = new double[3];
@@ -223,7 +228,7 @@ public enum Volcano {
    if (U.render(this, -S.getRadius())) {
     U.rotate(S, rotation[0] * eruptionStage, rotation[1] * eruptionStage);
     if (isLava) {
-     ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
+     ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
     }
     U.setTranslate(S, this);
     S.setVisible(true);

@@ -1,51 +1,55 @@
-package ve;
+package ve.utilities;
 
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.transform.Rotate;
 import ve.environment.E;
+import ve.environment.Ground;
 import ve.environment.Pool;
+import ve.environment.Volcano;
+import ve.instances.I;
 import ve.trackElements.TE;
-import ve.utilities.U;
+import ve.ui.Options;
+import ve.ui.UI;
 import ve.vehicles.Vehicle;
 
 public enum Camera {//<-Don't extend Core!
  ;
 
- static final PerspectiveCamera camera = new PerspectiveCamera(true);
- static final Rotate rotateXY = new Rotate();
+ public static final PerspectiveCamera camera = new PerspectiveCamera(true);
+ public static final Rotate rotateXY = new Rotate();
  public static double X, Y, Z;
- static double XY;
+ public static double XY;
  public static double XZ, YZ;
  public static double sinXZ, cosXZ, sinYZ, cosYZ;
- static final double defaultZoom = 75;
+ public static final double defaultZoom = 75;
  public static double zoom = defaultZoom;
- static double zoomChange = 1;
- static boolean shake;
- static final boolean[] toUserPerspective = new boolean[2];
- static final boolean[] restoreZoom = new boolean[2];
- static final boolean[] lookForward = new boolean[2];
- static double aroundVehicleXZ;
+ public static double zoomChange = 1;
+ public static boolean shake;
+ public static final boolean[] toUserPerspective = new boolean[2];
+ public static final boolean[] restoreZoom = new boolean[2];
+ public static final boolean[] lookForward = new boolean[2];
+ public static double aroundVehicleXZ;
  private static double aroundMapXZ = U.randomPlusMinus(180.);
- static long lookAround;
- static boolean flowFlip;
- static boolean lastViewNear;
+ public static long lookAround;
+ public static boolean flowFlip;
+ public static boolean lastViewNear;
  public static View view = View.docked;
- static View lastView = View.docked;
- static View lastViewWithLookAround = View.docked;
- static long mapSelectRandomRotationDirection;
+ public static View lastView = View.docked;
+ public static View lastViewWithLookAround = View.docked;
+ public static long mapSelectRandomRotationDirection;
 
- enum clipRange {
+ public enum clipRange {
   ;
   private static final double minimumNear = 2;
-  static final double normalNear = 4;
-  static final double maximumFar = Double.MAX_VALUE * .125;
+  public static final double normalNear = 4;
+  public static final double maximumFar = Double.MAX_VALUE * .125;
  }
 
- public enum shakePresets {//Only useful at vehicle's positions--not for explosive shots, mines etc.
+ public enum shakePresets {//<-Only useful at vehicle's positions--not for explosive shots, mines etc.
   ;
   public static final long vehicleDeath = 20, vehicleExplode = 30,
   massiveHit = 30, maxSpinnerHit = 30,
-  normalNuclear = 50, maxNuclear = 100;
+  normalNuclear = 50, maxNuclear = 100, volcano = 100;
  }
 
  public enum View {docked, near, distant, driver, flow, watchMove, watch}
@@ -62,11 +66,11 @@ public enum Camera {//<-Don't extend Core!
   camera2.setTranslateX(0);
   camera2.setTranslateY(0);
   camera2.setTranslateZ(0);
-  VE.scene3D.setCamera(camera);
+  UI.scene3D.setCamera(camera);
   TE.Arrow.scene.setCamera(camera2);
  }
 
- static void run(Vehicle playerV, boolean gamePlay) {
+ public static void run(Vehicle playerV, boolean gamePlay) {
   aroundVehicleXZ = lookForward[0] && lookForward[1] ? 0 : aroundVehicleXZ;
   camera.setNearClip(view == View.driver ? clipRange.minimumNear : clipRange.normalNear);
   double cameraVehicleXZ, cameraVehicleY;
@@ -88,7 +92,7 @@ public enum Camera {//<-Don't extend Core!
     xy1 *= -1;
     yz1 *= -1;
    }
-   double[] driverViewY = {playerV.driverViewY}, driverViewZ = {playerV.driverViewZ}, driverViewX = {playerV.driverViewX * VE.Options.driverSeat};
+   double[] driverViewY = {playerV.driverViewY}, driverViewZ = {playerV.driverViewZ}, driverViewX = {playerV.driverViewX * Options.driverSeat};
    if (syncToTurret && playerV.VT.pivotZ != 0) {
     U.rotateWithPivot(driverViewZ, driverViewY, -playerV.VT.pivotZ * .5, 0, -playerV.VT.YZ);
     U.rotateWithPivot(driverViewX, driverViewZ, 0, playerV.VT.pivotZ, playerV.VT.XZ);
@@ -104,7 +108,7 @@ public enum Camera {//<-Don't extend Core!
    Z = playerV.Z + driverViewZ[0];
   } else if (view == View.flow) {
    XY = 0;
-   double moveRate = .125 * VE.tick,
+   double moveRate = .125 * UI.tick,
    xd = -cameraVehicleY - (lastViewNear ? 0 : playerV.extraViewHeight) - (gamePlay ? Math.abs(playerV.P.speed) : 0);
    flowFlip = playerV.P.speed != 0 ? playerV.P.speed < 0 : flowFlip;
    if (flowFlip) {
@@ -137,7 +141,7 @@ public enum Camera {//<-Don't extend Core!
     while (Math.abs(playerV.X - X) > 10000) X += playerV.X > X ? 20000 : -20000;
     while (Math.abs(playerV.Z - Z) > 10000) Z += playerV.Z > Z ? 20000 : -20000;
     while (Math.abs(playerV.Y - Y) > 10000) Y += playerV.Y > Y ? 20000 : -20000;
-    Y = Math.min(Y, E.Ground.level - playerV.collisionRadius + (Pool.exists && U.distanceXZ(E.pool) < Pool.C[0].getRadius() ? Pool.depth : 0));
+    Y = Math.min(Y, Ground.level - playerV.collisionRadius + (Pool.exists && U.distanceXZ(E.pool) < Pool.C[0].getRadius() ? Pool.depth : 0));
    }
    double vehicleCameraDistanceX = playerV.X - X, vehicleCameraDistanceZ = playerV.Z - Z, vehicleCameraDistanceY = playerV.Y - Y;
    XZ = -((90 + (vehicleCameraDistanceX >= 0 ? 180 : 0)) + U.arcTan(vehicleCameraDistanceZ / vehicleCameraDistanceX));
@@ -185,48 +189,57 @@ public enum Camera {//<-Don't extend Core!
   if (Math.abs(aroundVehicleXZ) > 180) {
    aroundVehicleXZ += aroundVehicleXZ < -180 ? 360 : -360;
   }
-  if (shake) {
-   double shakeXZ = 0, shakeYZ = 0;
-   for (Vehicle vehicle : VE.vehicles) {
-    if (vehicle.cameraShake > 0) {
-     double distance = U.distance(vehicle);
-     shakeXZ += U.randomPlusMinus(vehicle.cameraShake * vehicle.cameraShake) / Math.max(1, distance * .1);
-     shakeYZ += U.randomPlusMinus(vehicle.cameraShake * vehicle.cameraShake) / Math.max(1, distance * .1);
-    }
-   }
-   XZ += U.clamp(-45, shakeXZ, 45);
-   YZ += U.clamp(-45, shakeYZ, 45);
-  }
+  runShake();
   setAngleTable();
  }
 
- static void runAroundTrack() {
+ public static void runAroundTrack() {
   YZ = 10;
   Y = TE.MS.Y - 5000;
   XY = 0;
   X = TE.MS.X - (17000 * U.sin(aroundMapXZ));
   Z = TE.MS.Z - (17000 * U.cos(aroundMapXZ));
   mapSelectRandomRotationDirection *= U.random() > .999 ? -1 : 1;
-  aroundMapXZ += mapSelectRandomRotationDirection * VE.tick;
+  aroundMapXZ += mapSelectRandomRotationDirection * UI.tick;
   while (aroundMapXZ > 180) aroundMapXZ -= 360;
   while (aroundMapXZ < -180) aroundMapXZ += 360;
-  if ((TE.MS.timer += VE.tick) > 6) {
+  if ((TE.MS.timer += UI.tick) > 6) {
    TE.MS.point = ++TE.MS.point >= TE.points.size() ? 0 : TE.MS.point;
    TE.MS.timer = 0;
   }
   if (TE.points.isEmpty()) {
    TE.MS.X = TE.MS.Z = TE.MS.Y = 0;
   } else {
-   TE.MS.X -= (TE.MS.X - TE.points.get(TE.MS.point).X) * .1 * VE.tick;
-   TE.MS.Y -= (TE.MS.Y - TE.points.get(TE.MS.point).Y) * .1 * VE.tick;
-   TE.MS.Z -= (TE.MS.Z - TE.points.get(TE.MS.point).Z) * .1 * VE.tick;
+   TE.MS.X -= (TE.MS.X - TE.points.get(TE.MS.point).X) * .1 * UI.tick;
+   TE.MS.Y -= (TE.MS.Y - TE.points.get(TE.MS.point).Y) * .1 * UI.tick;
+   TE.MS.Z -= (TE.MS.Z - TE.points.get(TE.MS.point).Z) * .1 * UI.tick;
    TE.MS.Y = Math.min(TE.MS.Y, 0);
   }
   XZ = aroundMapXZ;
   setAngleTable();
  }
 
- static void setAngleTable() {
+ static void runShake() {
+  if (shake) {
+   double shakeXZ = 0, shakeYZ = 0;
+   for (Vehicle vehicle : I.vehicles) {
+    if (vehicle.cameraShake > 0) {
+     double distance = U.distance(vehicle);
+     shakeXZ += U.randomPlusMinus(vehicle.cameraShake * vehicle.cameraShake) / Math.max(1, distance * .1);
+     shakeYZ += U.randomPlusMinus(vehicle.cameraShake * vehicle.cameraShake) / Math.max(1, distance * .1);
+    }
+   }
+   if (!Volcano.rocks.isEmpty() && Volcano.cameraShake > 0) {
+    double distance = U.distance(X, Volcano.X, Y, -Volcano.height, Z, Volcano.Z);
+    shakeXZ += U.randomPlusMinus(Volcano.cameraShake * Volcano.cameraShake) / Math.max(1, distance * .1);
+    shakeYZ += U.randomPlusMinus(Volcano.cameraShake * Volcano.cameraShake) / Math.max(1, distance * .1);
+   }
+   XZ += U.clamp(-45, shakeXZ, 45);
+   YZ += U.clamp(-45, shakeYZ, 45);
+  }
+ }
+
+ public static void setAngleTable() {
   sinXZ = U.sin(XZ);
   cosXZ = U.cos(XZ);
   sinYZ = U.sin(YZ);

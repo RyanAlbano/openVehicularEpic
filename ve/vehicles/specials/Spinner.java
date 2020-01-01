@@ -1,7 +1,8 @@
 package ve.vehicles.specials;
 
-import ve.Camera;
-import ve.VE;
+import ve.ui.Match;
+import ve.ui.UI;
+import ve.utilities.Camera;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
 import ve.vehicles.VehiclePart;
@@ -19,10 +20,10 @@ public class Spinner {
  public void run(boolean gamePlay) {
   if (gamePlay) {
    if (V.destroyed) {
-    if (Math.abs(speed) < .01 * VE.tick) {
+    if (Math.abs(speed) < .01 * UI.tick) {
      speed = 0;
     } else {
-     speed += .01 * (speed > 0 ? -1 : 1) * VE.tick;
+     speed += .01 * (speed > 0 ? -1 : 1) * UI.tick;
     }
    } else {
     boolean runSpinner = false;
@@ -33,12 +34,12 @@ public class Spinner {
      }
     }
     if (runSpinner) {
-     double speedChange = VE.tick * .005 * V.energyMultiple;
+     double speedChange = UI.tick * .005 * V.energyMultiple;
      speed += speed > 0 ? speedChange : speed < 0 ? -speedChange : (U.random() < .5 ? -1 : 1) * Double.MIN_VALUE;
     }
    }
   }
-  XZ += speed * 120 * VE.tick;
+  XZ += speed * 120 * UI.tick;
   while (XZ > 180) XZ -= 360;
   while (XZ < -180) XZ += 360;
   speed = U.clamp(-1, speed, 1);
@@ -65,15 +66,15 @@ public class Spinner {
     if (absSpeed > .125) {
      double damageAmount = vehicle.durability * absSpeed * speedReduction + (speedReduction >= 1 ? vehicle.damageCeiling() - vehicle.durability : 0);
      vehicle.addDamage(damageAmount);
-     VE.Match.scoreDamage[V.index < VE.vehiclesInMatch >> 1 ? 0 : 1] += VE.status == VE.Status.replay ? 0 : damageAmount;
+     Match.scoreDamage[V.index < UI.vehiclesInMatch >> 1 ? 0 : 1] += UI.status == UI.Status.replay ? 0 : damageAmount;
      V.P.hitCheck(vehicle);
      if (absSpeed > .5) {
       for (Wheel wheel : vehicle.wheels) {
        wheel.sparks(false);
       }
      }
+     vehicle.deformParts();
      for (VehiclePart part : vehicle.parts) {
-      part.deform();
       part.throwChip(U.randomPlusMinus(V.renderRadius * absSpeed));
      }
     }

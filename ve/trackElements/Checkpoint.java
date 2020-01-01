@@ -1,6 +1,6 @@
 package ve.trackElements;
 
-import ve.Core;
+import ve.instances.Core;
 
 public class Checkpoint extends Core {
 

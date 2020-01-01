@@ -2,8 +2,14 @@ package ve.trackElements;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
-import ve.*;
+import ve.instances.Core;
+import ve.instances.I;
+import ve.ui.Match;
+import ve.ui.Options;
+import ve.ui.UI;
+import ve.utilities.Network;
 import ve.utilities.SL;
+import ve.utilities.Sound;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
 
@@ -36,19 +42,19 @@ public class Bonus extends Core {
    speedX *= .99;
    speedY *= .99;
    speedZ *= .99;
-   X += speedX * VE.tick;
-   Vehicle vehicle = VE.vehicles.get(VE.bonusHolder);
+   X += speedX * UI.tick;
+   Vehicle vehicle = I.vehicles.get(UI.bonusHolder);
    double driftTolerance = vehicle.absoluteRadius * .6;
    if (Math.abs(X) > driftTolerance) {
     speedX *= -1;
     X *= .999;
    }
-   Y += speedY * VE.tick;
+   Y += speedY * UI.tick;
    if (Math.abs(Y) > driftTolerance) {
     speedY *= -1;
     Y *= .999;
    }
-   Z += speedZ * VE.tick;
+   Z += speedZ * UI.tick;
    if (Math.abs(Z) > driftTolerance) {
     speedZ *= -1;
     Z *= .999;
@@ -64,7 +70,7 @@ public class Bonus extends Core {
  }
 
  public void run() {
-  if (VE.bonusHolder < 0) {
+  if (UI.bonusHolder < 0) {
    if (U.getDepth(this) > -big.getRadius()) {
     U.setTranslate(big, this);
     U.Phong.setDiffuseRGB((PhongMaterial) big.getMaterial(), U.random(), U.random(), U.random());
@@ -77,25 +83,25 @@ public class Bonus extends Core {
    }
   } else {
    big.setVisible(false);
-   X = VE.vehicles.get(VE.bonusHolder).X;
-   Y = VE.vehicles.get(VE.bonusHolder).Y;
-   Z = VE.vehicles.get(VE.bonusHolder).Z;
+   X = I.vehicles.get(UI.bonusHolder).X;
+   Y = I.vehicles.get(UI.bonusHolder).Y;
+   Z = I.vehicles.get(UI.bonusHolder).Z;
    for (Bonus.Ball bonusBall : balls) {
     bonusBall.run();
    }
   }
-  if (VE.Match.started) {
+  if (Match.started) {
    if (Network.mode == Network.Mode.OFF) {
-    for (Vehicle vehicle : VE.vehicles) {
-     if (VE.bonusHolder < 0 && vehicle.isIntegral() && !vehicle.phantomEngaged && U.distance(vehicle.X, X, vehicle.Y, Y, vehicle.Z, Z) < vehicle.collisionRadius + big.getRadius()) {
+    for (Vehicle vehicle : I.vehicles) {
+     if (UI.bonusHolder < 0 && vehicle.isIntegral() && !vehicle.phantomEngaged && U.distance(vehicle.X, X, vehicle.Y, Y, vehicle.Z, Z) < vehicle.collisionRadius + big.getRadius()) {
       setHolder(vehicle);
      }
     }
-    VE.bonusHolder = VE.bonusHolder > -1 && !VE.vehicles.get(VE.bonusHolder).isIntegral() ? -1 : VE.bonusHolder;
+    UI.bonusHolder = UI.bonusHolder > -1 && !I.vehicles.get(UI.bonusHolder).isIntegral() ? -1 : UI.bonusHolder;
    } else {
-    Vehicle V = VE.vehicles.get(VE.userPlayerIndex);
+    Vehicle V = I.vehicles.get(UI.userPlayerIndex);
     if (Network.bonusHolder < 0 && V.isIntegral() && !V.phantomEngaged && U.distance(V.X, X, V.Y, Y, V.Z, Z) < V.collisionRadius + big.getRadius()) {
-     Network.bonusHolder = VE.userPlayerIndex;
+     Network.bonusHolder = UI.userPlayerIndex;
      if (Network.mode == Network.Mode.HOST) {
       for (PrintWriter PW : Network.out) {
        PW.println("BONUS0");
@@ -104,9 +110,9 @@ public class Bonus extends Core {
       Network.out.get(0).println(SL.BONUS);
      }
     }
-    int setHolder = Network.bonusHolder < 0 ? Network.bonusHolder : VE.bonusHolder;
-    if (setHolder > -1 && !VE.vehicles.get(setHolder).isIntegral()) {
-     Network.bonusHolder = VE.bonusHolder = -1;
+    int setHolder = Network.bonusHolder < 0 ? Network.bonusHolder : UI.bonusHolder;
+    if (setHolder > -1 && !I.vehicles.get(setHolder).isIntegral()) {
+     Network.bonusHolder = UI.bonusHolder = -1;
      if (Network.mode == Network.Mode.HOST) {
       for (PrintWriter PW : Network.out) {
        PW.println(SL.BonusOpen);
@@ -115,10 +121,10 @@ public class Bonus extends Core {
       Network.out.get(0).println(SL.BonusOpen);
      }
     }
-    if (VE.bonusHolder != Network.bonusHolder) {
-     VE.bonusHolder = Network.bonusHolder;
-     if (VE.bonusHolder > -1) {
-      setHolder(VE.vehicles.get(VE.bonusHolder));
+    if (UI.bonusHolder != Network.bonusHolder) {
+     UI.bonusHolder = Network.bonusHolder;
+     if (UI.bonusHolder > -1) {
+      setHolder(I.vehicles.get(UI.bonusHolder));
      }
     }
    }
@@ -126,12 +132,12 @@ public class Bonus extends Core {
  }
 
  public static void setHolder(Vehicle vehicle) {
-  VE.bonusHolder = vehicle.index;
+  UI.bonusHolder = vehicle.index;
   for (Bonus.Ball bonusBall : balls) {
-   bonusBall.setRadius(VE.vehicles.get(VE.bonusHolder).absoluteRadius * .02);
+   bonusBall.setRadius(I.vehicles.get(UI.bonusHolder).absoluteRadius * .02);
    bonusBall.X = bonusBall.Y = bonusBall.Z = bonusBall.speedX = bonusBall.speedY = bonusBall.speedZ = 0;
   }
-  if (VE.Options.headsUpDisplay) {
+  if (Options.headsUpDisplay) {
    sound.playIfNotPlaying(0);
   }
  }

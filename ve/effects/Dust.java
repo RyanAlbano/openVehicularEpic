@@ -2,14 +2,14 @@ package ve.effects;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
-import ve.Core;
-import ve.VE;
 import ve.environment.*;
+import ve.instances.CoreAdvanced;
+import ve.ui.UI;
 import ve.utilities.SL;
 import ve.utilities.U;
 import ve.vehicles.*;
 
-public class Dust extends Core {
+public class Dust extends CoreAdvanced {
 
  private final Cylinder C;
  private double stage;
@@ -21,7 +21,7 @@ public class Dust extends Core {
   PhongMaterial PM = new PhongMaterial();
   U.Phong.setSpecularRGB(PM, 0);
   U.setMaterialSecurely(C, PM);
-  U.Phong.setDiffuseRGB(PM, E.Ground.RGB, .5);
+  U.Phong.setDiffuseRGB(PM, Ground.RGB, .5);
   U.Nodes.add(C);//<-Leave here--creation times are determined in respective classes
  }
 
@@ -50,11 +50,11 @@ public class Dust extends Core {
  public void run() {
   if (stage > 0) {
    boolean show = false;
-   if ((stage += U.random(VE.tick)) > duration) {
+   if ((stage += U.random(UI.tick)) > duration) {
     stage = 0;
    } else {
-    X += U.randomPlusMinus(speedX) + (E.Wind.speedX * VE.tick);
-    Z += U.randomPlusMinus(speedZ) + (E.Wind.speedZ * VE.tick);
+    X += U.randomPlusMinus(speedX) + (Wind.speedX * UI.tick);
+    Z += U.randomPlusMinus(speedZ) + (Wind.speedZ * UI.tick);
     if (U.renderWithLOD(this)) {
      U.randomRotate(C);
      U.setTranslate(C, this);

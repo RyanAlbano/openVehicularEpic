@@ -4,12 +4,11 @@ import java.util.*;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
-import ve.Camera;
-import ve.Core;
-import ve.Sound;
-import ve.VE;
-import ve.utilities.SL;
-import ve.utilities.U;
+import ve.effects.Effects;
+import ve.instances.CoreAdvanced;
+import ve.ui.Match;
+import ve.ui.UI;
+import ve.utilities.*;
 import ve.vehicles.Vehicle;
 import ve.vehicles.VehiclePart;
 
@@ -46,8 +45,8 @@ public enum Meteor {
      V.P.speedX += U.randomPlusMinus(globalSpeed * .5);
      V.P.speedZ += U.randomPlusMinus(globalSpeed * .5);
     }
+    V.deformParts();
     for (VehiclePart part : V.parts) {
-     part.deform();
      part.throwChip(U.randomPlusMinus(U.netValue(meteor.speedX, globalSpeed, meteor.speedZ)));
     }
     V.VA.crashDestroy.play(Double.NaN, V.VA.distanceVehicleToCamera);
@@ -71,7 +70,7 @@ public enum Meteor {
   }
 
   void deploy() {
-   if (E.Ground.level == Double.POSITIVE_INFINITY && U.random() < .5) {
+   if (Ground.level == Double.POSITIVE_INFINITY && U.random() < .5) {
     speedY *= -1;
    }
    parts.get(0).X = Camera.X + U.randomPlusMinus(500000.);
@@ -93,10 +92,10 @@ public enum Meteor {
   private void run(boolean update) {
    parts.get(0).onFire = U.random() < .1;
    if (update) {
-    parts.get(0).X += speedX * VE.tick;
-    parts.get(0).Y += speedY * VE.tick;
-    parts.get(0).Z += speedZ * VE.tick;
-    if (parts.get(parts.size() - 1).Y >= E.Ground.level ||
+    parts.get(0).X += speedX * UI.tick;
+    parts.get(0).Y += speedY * UI.tick;
+    parts.get(0).Z += speedZ * UI.tick;
+    if (parts.get(parts.size() - 1).Y >= Ground.level ||
     Math.abs(parts.get(0).Y - Camera.Y) > 375000 || Math.abs(parts.get(0).X - Camera.X) > 500000 || Math.abs(parts.get(0).Z - Camera.Z) > 500000) {
      deploy();
     }
@@ -112,14 +111,14 @@ public enum Meteor {
    for (Part meteorPart : parts) {
     meteorPart.run();
    }
-   if (!VE.Match.muteSound && update) {
+   if (!Match.muteSound && update) {
     sound.loop(Math.sqrt(U.distance(parts.get(0))) * Sound.standardDistance(1));
    } else {
     sound.stop();
    }
   }
 
-  static class Part extends Core {
+  static class Part extends CoreAdvanced {
 
    final Sphere S;
    final double[] rotation = new double[3];
@@ -132,18 +131,18 @@ public enum Meteor {
    }
 
    void run() {
-    XZ += rotation[0] * VE.tick;
-    YZ += rotation[1] * VE.tick;
+    XZ += rotation[0] * UI.tick;
+    YZ += rotation[1] * UI.tick;
     if (U.render(this, -S.getRadius())) {
      if (onFire) {
       U.Phong.setDiffuseRGB((PhongMaterial) S.getMaterial(), 0);
       U.Phong.setSpecularRGB((PhongMaterial) S.getMaterial(), 0);
       ((PhongMaterial) S.getMaterial()).setDiffuseMap(null);
-      ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
+      ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
      } else {
       U.Phong.setDiffuseRGB((PhongMaterial) S.getMaterial(), 1);
       U.Phong.setSpecularRGB((PhongMaterial) S.getMaterial(), 1);
-      ((PhongMaterial) S.getMaterial()).setDiffuseMap(U.Images.get(SL.rock));
+      ((PhongMaterial) S.getMaterial()).setDiffuseMap(Images.get(SL.rock));
       ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(null);
      }
      U.rotate(S, YZ, XZ);

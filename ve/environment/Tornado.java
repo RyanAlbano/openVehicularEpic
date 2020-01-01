@@ -3,10 +3,11 @@ package ve.environment;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.Cylinder;
-import ve.Camera;
-import ve.Core;
-import ve.Sound;
-import ve.VE;
+import ve.instances.Core;
+import ve.ui.Match;
+import ve.ui.UI;
+import ve.utilities.Camera;
+import ve.utilities.Sound;
 import ve.utilities.U;
 import ve.vehicles.Physics;
 import ve.vehicles.Vehicle;
@@ -42,15 +43,15 @@ public enum Tornado {
 
  static void run(boolean update) {
   if (!parts.isEmpty()) {
-   if (E.Wind.maxPotency > 0 && update) {
-    parts.get(0).X += E.Wind.speedX * VE.tick;
-    parts.get(0).Z += E.Wind.speedZ * VE.tick;
+   if (Wind.maxPotency > 0 && update) {
+    parts.get(0).X += Wind.speedX * UI.tick;
+    parts.get(0).Z += Wind.speedZ * UI.tick;
    }
    if (U.distance(0, parts.get(0).X, 0, parts.get(0).Z) > maxTravelDistance) {
     parts.get(0).X *= .999;
     parts.get(0).Z *= .999;
-    E.Wind.speedX *= -1;
-    E.Wind.speedZ *= -1;
+    Wind.speedX *= -1;
+    Wind.speedZ *= -1;
    }
    for (int n = 1; n < parts.size(); n++) {
     parts.get(n).X = (parts.get(n - 1).X + parts.get(n).X) * .5;
@@ -59,7 +60,7 @@ public enum Tornado {
    for (Tornado.Part tornadoPart : parts) {
     tornadoPart.run();
    }
-   if (!VE.Match.muteSound && update) {
+   if (!Match.muteSound && update) {
     sound.loop(Math.sqrt(U.distance(Camera.X, parts.get(0).X, Camera.Y, 0, Camera.Z, parts.get(0).Z)) * Sound.standardDistance(1));
    } else {
     sound.stop();
@@ -70,7 +71,7 @@ public enum Tornado {
  public static void vehicleInteract(Vehicle V) {
   V.P.inTornado = false;
   if (!parts.isEmpty() && !V.phantomEngaged && V.Y > parts.get(parts.size() - 1).Y && U.distance(V.X, parts.get(0).X, V.Z, parts.get(0).Z) < parts.get(0).C.getRadius() * 7.5) {
-   double throwEngage = (400000 / U.distance(V.X, parts.get(0).X, V.Z, parts.get(0).Z)) * VE.tick * (V.P.mode == Physics.Mode.fly ? 20 : 1);
+   double throwEngage = (400000 / U.distance(V.X, parts.get(0).X, V.Z, parts.get(0).Z)) * UI.tick * (V.P.mode == Physics.Mode.fly ? 20 : 1);
    long maxThrow = 750;
    if (V.getsPushed >= 0) {
     V.P.speedX += Math.abs(V.P.speedX) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
@@ -116,7 +117,7 @@ public enum Tornado {
     U.randomRotate(groundDust);
     PhongMaterial PM = new PhongMaterial();
     double shade = 1 - U.random(.5);
-    double[] mix = {(shade + E.Ground.RGB.getRed()) * .5, (shade + E.Ground.RGB.getGreen()) * .5, (shade + E.Ground.RGB.getBlue()) * .5};
+    double[] mix = {(shade + Ground.RGB.getRed()) * .5, (shade + Ground.RGB.getGreen()) * .5, (shade + Ground.RGB.getBlue()) * .5};
     U.Phong.setDiffuseRGB(PM, mix[0], mix[1], mix[2]);
     U.setMaterialSecurely(groundDust, PM);
     U.setTranslate(groundDust, groundDustX, groundDustY, groundDustZ);

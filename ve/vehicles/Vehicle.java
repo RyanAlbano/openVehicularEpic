@@ -2,17 +2,21 @@ package ve.vehicles;
 
 import javafx.scene.PointLight;
 import javafx.scene.paint.Color;
-import ve.*;
 import ve.effects.Dust;
 import ve.effects.Explosion;
 import ve.effects.Smoke;
 import ve.effects.Spark;
 import ve.environment.*;
+import ve.instances.I;
+import ve.instances.Instance;
+import ve.instances.InstancePart;
 import ve.trackElements.Bonus;
 import ve.trackElements.TE;
-import ve.utilities.Quaternion;
-import ve.utilities.SL;
-import ve.utilities.U;
+import ve.ui.Keys;
+import ve.ui.Map;
+import ve.ui.Match;
+import ve.ui.UI;
+import ve.utilities.*;
 import ve.vehicles.specials.*;
 
 import java.io.BufferedReader;
@@ -67,13 +71,14 @@ public class Vehicle extends Instance {
  double exhausting = Double.NaN;
  double othersAvoidAt;
  Engine engine = Engine.none;
- public boolean amphibious;
+ public Amphibious amphibious;
  public double driverViewY, driverViewZ /*driverViewX*/, extraViewHeight;
  ve.vehicles.AI.Behavior behavior = ve.vehicles.AI.Behavior.adapt;//<-The whole AI class would have to be needlessly instantiated every time if this were in AI
  public final List<Special> specials = new ArrayList<>();
  public ExplosionType explosionType = ExplosionType.none;
  long explosionsWhenDestroyed;
  //
+ public boolean bumpIgnore;
  private String wheelTextureType = "";
  private double damage;
  public boolean destroyed;
@@ -127,6 +132,8 @@ public class Vehicle extends Instance {
 
  enum Death {none, diedAlone, killedByAnother}
 
+ public enum Amphibious {ON, OFF}
+
  public VehicleTurret VT;
 
  public Vehicle(int model, int listIndex, boolean isReal) {
@@ -137,9 +144,9 @@ public class Vehicle extends Instance {
   modelNumber = model;
   index = listIndex;
   realVehicle = isReal;
-  modelName = VE.vehicleModels.get(modelNumber);
+  modelName = UI.vehicleModels.get(modelNumber);
   long n;
-  theRandomColor = index == VE.userPlayerIndex ? VE.userRandomRGB : U.getColor(U.random(), U.random(), U.random());
+  theRandomColor = index == UI.userPlayerIndex ? UI.userRandomRGB : U.getColor(U.random(), U.random(), U.random());
   int wheelCount = 0;
   long lightsAdded = 0;
   boolean onModelPart = false, addWheel = false;
@@ -245,7 +252,7 @@ public class Vehicle extends Instance {
      }
     }
     name = s.startsWith("name(") ? U.getString(s, 0) : name;
-    VE.vehicleMaker = s.startsWith("maker(") ? U.getString(s, 0) : VE.vehicleMaker;
+    UI.vehicleMaker = s.startsWith("maker(") ? U.getString(s, 0) : UI.vehicleMaker;
     if (s.startsWith("type(")) {
      type = Type.valueOf(U.getString(s, 0));
      floats = s.contains("floats") || floats;
@@ -311,7 +318,7 @@ public class Vehicle extends Instance {
      }
      VA.engineTuning = s.contains("harmonicSeries") ? VehicleAudio.EngineTuning.harmonicSeries : VA.engineTuning;
     }
-    amphibious = s.startsWith("amphibious(yes") || amphibious;
+    amphibious = s.startsWith("amphibious(yes") ? Amphibious.ON : amphibious;
     driverViewY = s.startsWith("driverViewY(") ? U.getValue(s, 0) * modelSize + translate[1] : driverViewY;
     driverViewZ = s.startsWith("driverViewZ(") ? U.getValue(s, 0) * modelSize + translate[2] : driverViewZ;
     driverViewX = s.startsWith("driverViewX(") ? Math.abs(U.getValue(s, 0) * modelSize) + translate[0] : driverViewX;
@@ -388,8 +395,8 @@ public class Vehicle extends Instance {
    }
   } catch (IOException e) {
    System.out.println(U.modelLoadingError + e);
-   System.out.println(VE.UI.At_File_ + model);
-   System.out.println(VE.UI.At_Line_ + s);
+   System.out.println(UI.At_File_ + model);
+   System.out.println(UI.At_Line_ + s);
   }
   if (lightsAdded < 1) {
    parts.add(new VehiclePart(this, new double[1], new double[1], new double[1], 1, U.getColor(1), SL.Thick(SL.light), ""));
@@ -422,7 +429,7 @@ public class Vehicle extends Instance {
    P = new Physics(this);
    if (Pool.exists || Tsunami.exists) {
     for (n = Splash.defaultQuantity; --n >= 0; ) {
-     splashes.add(new Splash());
+     splashes.add(new Splash(this));
     }
    }
    for (Wheel wheel : wheels) {
@@ -437,7 +444,7 @@ public class Vehicle extends Instance {
      }
     }
    }
-   if (VE.Map.defaultVehicleLightBrightness > 0) {
+   if (Map.defaultVehicleLightBrightness > 0) {
     burnLight = new PointLight();
    }
    if (explosionType == ExplosionType.maxnuclear) {
@@ -517,7 +524,7 @@ public class Vehicle extends Instance {
 
  public void addTransparentNodes() {
   if (realVehicle) {
-   if (contact == Physics.Contact.rubber || E.Terrain.terrain.contains(SL.Thick(SL.snow))) {
+   if (contact == Physics.Contact.rubber || Terrain.terrain.contains(SL.Thick(SL.snow))) {
     Color C = U.getColor(wheelRGB.getRed() * .5, wheelRGB.getGreen() * .5, wheelRGB.getBlue() * .5);
     if (!wheelTextureType.isEmpty()) {
      C = U.getColor(C.getRed() * .333, C.getGreen() * .333, C.getBlue() * .333);
@@ -585,7 +592,7 @@ public class Vehicle extends Instance {
   P.atPoolXZ = Pool.exists && U.distanceXZ(this, E.pool) < Pool.C[0].getRadius();
   P.inPool = P.atPoolXZ && Y + clearanceY > 0;
   P.resetLocalGround();
-  lightBrightness = VE.Map.defaultVehicleLightBrightness;
+  lightBrightness = Map.defaultVehicleLightBrightness;
  }
 
  public boolean isFixed() {
@@ -604,12 +611,23 @@ public class Vehicle extends Instance {
   return percent ? damage / durability : damage;
  }
 
+ public void deformParts() {
+  double deformAngle = getDamage(true) * 6.;
+  for (VehiclePart part : parts) {
+   part.deform(deformAngle);
+  }
+ }
+
  public double damageCeiling() {
   return durability * 1.004;//<-Always rounds to '100%' visually in UI
  }
 
  public boolean isIntegral() {
   return damage <= durability;
+ }
+
+ boolean highGrip() {
+  return grip > 100;
  }
 
  public boolean dealsMassiveDamage() {//'Massive damage' is defined as a non-aircraft vehicle, with or without any specials, that has a damageDealt >= 100
@@ -630,7 +648,7 @@ public class Vehicle extends Instance {
   }
   boolean renderALL = E.renderType == E.RenderType.ALL;
   if (renderALL || E.renderType == E.RenderType.fullDistance || distanceToCamera < E.viewableMapDistance + collisionRadius) {
-   onFire = VE.Map.name.equals(SL.Maps.theSun) || onFire;
+   onFire = Map.name.equals(SL.Maps.theSun) || onFire;
    rotation.set();
    rotation.multiply(0, 0, -U.sin(XY * .5), U.cos(XY * .5));//<-Mind the multiply order!
    rotation.multiply(-U.sin(YZ * .5), 0, 0, U.cos(YZ * .5));
@@ -693,7 +711,7 @@ public class Vehicle extends Instance {
   if (repairSpheresRemoved >= repairSpheres.size()) {
    reviveImmortality = false;
   }
-  if (!isIntegral() && VE.Map.defaultVehicleLightBrightness > 0 && !parts.isEmpty() && distanceToCamera < E.viewableMapDistance) {
+  if (!isIntegral() && Map.defaultVehicleLightBrightness > 0 && !parts.isEmpty() && distanceToCamera < E.viewableMapDistance) {
    U.Nodes.Light.setRGB(burnLight, .5, .25 + U.random(.2), U.random(.125));
    U.setTranslate(burnLight, this);
    U.Nodes.Light.add(burnLight);
@@ -712,28 +730,31 @@ public class Vehicle extends Instance {
  }
 
  public void getPlayerInput() {
-  if (index == VE.userPlayerIndex && Network.mode == Network.Mode.OFF && VE.status != VE.Status.replay) {
-   drive = VE.Keys.Up;
-   reverse = VE.Keys.Down;
-   turnL = VE.Keys.Left;
-   turnR = VE.Keys.Right;
-   handbrake = VE.Keys.Space;
-   boost = VE.Keys.keyBoost;
-   passBonus = VE.Keys.PassBonus;
+  if (index == UI.userPlayerIndex && Network.mode == Network.Mode.OFF && UI.status != UI.Status.replay) {
+   drive = Keys.Up;
+   reverse = Keys.Down;
+   turnL = Keys.Left;
+   turnR = Keys.Right;
+   handbrake = Keys.Space;
+   boost = Keys.keyBoost;
+   passBonus = Keys.PassBonus;
+   if (amphibious != null) {
+    amphibious = Keys.Amphibious ? Amphibious.ON : Amphibious.OFF;
+   }
    boolean turretExists = VT != null, get2ndDrive = false;
    if (turretExists && !VT.hasAutoAim) {
     get2ndDrive = true;
-    VT.turnL = VE.Keys.A;
-    VT.turnR = VE.Keys.D;
+    VT.turnL = Keys.A;
+    VT.turnR = Keys.D;
    }
    if (type == Type.aircraft || get2ndDrive) {
-    drive2 = VE.Keys.W;
-    reverse2 = VE.Keys.S;
+    drive2 = Keys.W;
+    reverse2 = Keys.S;
    }
    for (Special special : specials) {
     if (special.aimType != Special.AimType.auto) {
      boolean shootWithCanceledSteer = special.aimType != Special.AimType.normal && special.type != Special.Type.mine && turretExists && VT.turnL && VT.turnR;
-     special.fire = VE.Keys.Special[specials.indexOf(special)] || shootWithCanceledSteer;
+     special.fire = Keys.Special[specials.indexOf(special)] || shootWithCanceledSteer;
     }
    }
   }
@@ -742,7 +763,7 @@ public class Vehicle extends Instance {
  public void setTurretY() {
   if (isFixed()) {
    Y = 0;
-   if (!U.equals(VE.Map.name, SL.Maps.everybodyEverything, SL.Maps.devilsStairwell)) {
+   if (!U.equals(Map.name, SL.Maps.everybodyEverything, SL.Maps.devilsStairwell)) {
     E.setTerrainSit(this, true);
    }
    Y -= turretBaseY;
@@ -762,9 +783,9 @@ public class Vehicle extends Instance {
  }
 
  public void runMiscellaneous(boolean gamePlay) {
-  steerByMouse = index == VE.userPlayerIndex && VE.Match.cursorDriving;
+  steerByMouse = index == UI.userPlayerIndex && Match.cursorDriving;
   int n;
-  inDriverView = index == VE.vehiclePerspective && Camera.view == Camera.View.driver;
+  inDriverView = index == UI.vehiclePerspective && Camera.view == Camera.View.driver;
   if (!specials.isEmpty()) {
    phantomEngaged = false;
    for (Special special : specials) {
@@ -775,21 +796,21 @@ public class Vehicle extends Instance {
    }
   }
   VA.distanceVehicleToCamera =
-  index == VE.vehiclePerspective && Camera.view == Camera.View.driver ? 0 :
+  index == UI.vehiclePerspective && Camera.view == Camera.View.driver ? 0 :
   Math.sqrt(U.distance(this)) * Sound.standardDistance(1);
   if (P.massiveHitTimer > 0) {
-   P.massiveHitTimer -= VE.tick;
+   P.massiveHitTimer -= UI.tick;
   }
   if (screenFlash > 0) {
-   screenFlash -= VE.tick * (explosionType == ExplosionType.maxnuclear ? .01 : .1);
+   screenFlash -= UI.tick * (explosionType == ExplosionType.maxnuclear ? .01 : .1);
   }
-  cameraShake -= cameraShake > 0 ? VE.tick : 0;
+  cameraShake -= cameraShake > 0 ? UI.tick : 0;
   P.inWrath = false;
   if (isIntegral()) {
    destroyed = false;
    P.destructTimer = 0;
-   onFire = VE.Map.name.equals(SL.Maps.theSun) && onFire;
-   setDamage(getDamage(false) - (gamePlay ? selfRepair * VE.tick : 0));
+   onFire = Map.name.equals(SL.Maps.theSun) && onFire;
+   addDamage(gamePlay ? -selfRepair * UI.tick : 0);
    for (VehiclePart part : parts) {
     part.explodeStage = VehiclePart.ExplodeStage.intact;
    }
@@ -807,14 +828,14 @@ public class Vehicle extends Instance {
      nukeDetonate();
     }
    }
-   destroyed = (P.destructTimer += VE.tick) >= 8 || destroyed;
+   destroyed = (P.destructTimer += UI.tick) >= 8 || destroyed;
    if (VA.burn != null && destroyed && gamePlay) {
     VA.burn.loop(VA.distanceVehicleToCamera);
    }
    if (gamePlay) {
     double multiple = explosionType == ExplosionType.maxnuclear ? Double.POSITIVE_INFINITY : explosionType == ExplosionType.nuclear ? 2 : 1;
     P.subtractExplodeStage = P.explodeStage > 100 * multiple || P.subtractExplodeStage;
-    P.explodeStage += VE.tick * (P.subtractExplodeStage ? -1 : 1);
+    P.explodeStage += UI.tick * (P.subtractExplodeStage ? -1 : 1);
     if (P.explodeStage < 0) {
      repair(gamePlay);
      reviveImmortality = true;
@@ -826,10 +847,10 @@ public class Vehicle extends Instance {
   }
   double deformation = getDamage(true) * 6;
   for (VehiclePart part : parts) {//Ensures the visual deformation is never above the damage
-   part.damage.setAngle(U.clamp(-deformation, part.damage.getAngle(), deformation));
+   part.damage.setAngle(U.clamp(-deformation, part.damage.getAngle(), deformation));//fixMe--this doesn't seem to be working in replays?
   }
-  if (passBonus && VE.bonusHolder == index) {
-   for (Vehicle vehicle : VE.vehicles) {
+  if (passBonus && UI.bonusHolder == index) {
+   for (Vehicle vehicle : I.vehicles) {
     if (!U.sameVehicle(this, vehicle) && U.sameTeam(this, vehicle) && U.distance(this, vehicle) < collisionRadius + vehicle.collisionRadius) {
      Bonus.setHolder(vehicle);//^Checking same team, so sameVehicle check IS needed
     }
@@ -855,7 +876,7 @@ public class Vehicle extends Instance {
    }
   }
   TE.runVehicleRepairPointInteraction(this, gamePlay);
-  XY = !VE.Match.started && engine == Engine.hotrod ? U.randomPlusMinus(2.) : XY;
+  XY = !Match.started && engine == Engine.hotrod ? U.randomPlusMinus(2.) : XY;
   for (Special special : specials) {
    if (special.type == Special.Type.phantom) {
     if (special.fire) {
@@ -901,7 +922,7 @@ public class Vehicle extends Instance {
 
  void runStuntScoring(boolean replay) {
   if (P.mode.name().startsWith(SL.drive)) {
-   if ((P.stuntTimer += VE.tick) > stuntLandWaitTime() && !gotStunt) {
+   if ((P.stuntTimer += UI.tick) > stuntLandWaitTime() && !gotStunt) {
     if (!P.flipped() || landStuntsBothSides) {
      double rollReward = Math.abs(P.stuntXY) > 135 ? Math.abs(P.stuntXY) * .75 : rollCheck[0] || rollCheck[1] ? 270 : 0;
      rollReward *= rollCheck[0] && rollCheck[1] ? 2 : 1;
@@ -910,8 +931,8 @@ public class Vehicle extends Instance {
      double spinReward = Math.abs(P.stuntXZ) >= 180 ? Math.abs(P.stuntXZ) * .75 : spinCheck[0] || spinCheck[1] ? 270 : 0;
      spinReward *= spinCheck[0] && spinCheck[1] ? 2 : 1;
      P.stuntReward = (rollReward + flipReward + spinReward) * (offTheEdge ? 2 : 1);
-     VE.Match.scoreStunt[index < VE.vehiclesInMatch >> 1 ? 0 : 1] += replay ? 0 : P.stuntReward;
-     VE.Match.processStunt(this);
+     Match.scoreStunt[index < UI.vehiclesInMatch >> 1 ? 0 : 1] += replay ? 0 : P.stuntReward;
+     Match.processStunt(this);
     }
     P.stuntXY = P.stuntYZ = P.stuntXZ = 0;
     flipCheck[0] = flipCheck[1] = rollCheck[0] = rollCheck[1] = spinCheck[0] = spinCheck[1] = offTheEdge = false;
@@ -921,7 +942,7 @@ public class Vehicle extends Instance {
    }
    if (!P.flipped() || landStuntsBothSides) {
     P.flipTimer = 0;
-   } else if ((P.flipTimer += VE.tick) > 39) {
+   } else if ((P.flipTimer += UI.tick) > 39) {
     XZ += Math.abs(YZ) > 90 ? 180 : 0;
     P.speed = XY = YZ = P.flipTimer = 0;
    }
@@ -929,13 +950,13 @@ public class Vehicle extends Instance {
    P.stuntTimer = 0;
    gotStunt = false;
    if (P.mode == Physics.Mode.stunt) {
-    P.stuntXY += 20 * P.stuntSpeedXY * VE.tick;
+    P.stuntXY += 20 * P.stuntSpeedXY * UI.tick;
     rollCheck[0] = P.stuntXY > 135 || rollCheck[0];
     rollCheck[1] = P.stuntXY < -135 || rollCheck[1];
-    P.stuntYZ -= 20 * P.stuntSpeedYZ * VE.tick;
+    P.stuntYZ -= 20 * P.stuntSpeedYZ * UI.tick;
     flipCheck[0] = P.stuntYZ > 135 || flipCheck[0];
     flipCheck[1] = P.stuntYZ < -135 || flipCheck[1];
-    P.stuntXZ += 20 * P.stuntSpeedXZ * VE.tick;
+    P.stuntXZ += 20 * P.stuntSpeedXZ * UI.tick;
     spinCheck[0] = P.stuntXZ > 135 || spinCheck[0];
     spinCheck[1] = P.stuntXZ < -135 || spinCheck[1];
    }

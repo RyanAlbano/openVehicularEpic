@@ -3,9 +3,10 @@ package ve.vehicles;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
-import ve.Camera;
-import ve.Core;
 import ve.environment.E;
+import ve.environment.Ground;
+import ve.instances.Core;
+import ve.utilities.Camera;
 import ve.utilities.U;
 
 class Skidmark extends Core {
@@ -30,7 +31,7 @@ class Skidmark extends Core {
   Y = Math.min(W.Y, W.minimumSkidmarkY);
   C.setScaleZ(1 + V.P.netSpeed * .01);
   if (forSnow) {
-   U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), E.Ground.RGB, .5);
+   U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), Ground.RGB, .5);
   } else {
    U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), defaultRGB, .5);
   }

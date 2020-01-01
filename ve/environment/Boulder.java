@@ -3,10 +3,12 @@ package ve.environment;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
 
-import ve.Core;
-import ve.Sound;
-import ve.VE;
+import ve.instances.CoreAdvanced;
+import ve.ui.Match;
+import ve.ui.UI;
+import ve.utilities.Images;
 import ve.utilities.SL;
+import ve.utilities.Sound;
 import ve.utilities.U;
 import ve.effects.Dust;
 
@@ -32,7 +34,7 @@ public enum Boulder {
   }
  }
 
- public static class Instance extends Core {
+ public static class Instance extends CoreAdvanced {
 
   public final Sphere S;
   public final double speed;
@@ -48,9 +50,9 @@ public enum Boulder {
    Y = -S.getRadius();
    U.Phong.setDiffuseRGB(PM, 1);
    U.Phong.setSpecularRGB(PM, E.Specular.Colors.standard);
-   PM.setDiffuseMap(U.Images.get(SL.rock));
-   PM.setSpecularMap(U.Images.get(SL.rock));
-   PM.setBumpMap(U.Images.getNormalMap(SL.rock));
+   PM.setDiffuseMap(Images.get(SL.rock));
+   PM.setSpecularMap(Images.get(SL.rock));
+   PM.setBumpMap(Images.getNormalMap(SL.rock));
    U.setMaterialSecurely(S, PM);
    U.Nodes.add(S);
    sound = new Sound(SL.boulder, Double.POSITIVE_INFINITY);
@@ -64,8 +66,8 @@ public enum Boulder {
 
   void run(boolean update) {
    if (update) {
-    X += speed * U.sin(XZ) * VE.tick;
-    Z += speed * U.cos(XZ) * VE.tick;
+    X += speed * U.sin(XZ) * UI.tick;
+    Z += speed * U.cos(XZ) * UI.tick;
     dusts.get(currentDust).deploy(this);
     currentDust = ++currentDust >= Dust.defaultQuantity ? 0 : currentDust;
    }
@@ -89,7 +91,7 @@ public enum Boulder {
    } else {
     S.setVisible(false);
    }
-   if (!VE.Match.muteSound && update) {
+   if (!Match.muteSound && update) {
     sound.loop(Math.sqrt(U.distance(this)) * Sound.standardDistance(1));
    } else {
     sound.stop();

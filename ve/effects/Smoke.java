@@ -2,13 +2,13 @@ package ve.effects;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
-import ve.Core;
-import ve.VE;
 import ve.environment.*;
+import ve.instances.CoreAdvanced;
+import ve.ui.UI;
 import ve.utilities.U;
 import ve.vehicles.*;
 
-public class Smoke extends Core {
+public class Smoke extends CoreAdvanced {
 
  public final Cylinder C;
  private double stage;
@@ -38,14 +38,14 @@ public class Smoke extends Core {
  public void run() {
   if (stage > 0) {
    boolean show = false;
-   if ((stage += U.random(VE.tick)) > 10) {
+   if ((stage += U.random(UI.tick)) > 10) {
     stage = 0;
    } else {
-    X += speedX * VE.tick;
-    Y += speedY * VE.tick;
-    Z += speedZ * VE.tick;
-    X += E.Wind.speedX * VE.tick;
-    Z += E.Wind.speedZ * VE.tick;
+    X += speedX * UI.tick;
+    Y += speedY * UI.tick;
+    Z += speedZ * UI.tick;
+    X += Wind.speedX * UI.tick;
+    Z += Wind.speedZ * UI.tick;
     if (U.renderWithLOD(this)) {
      U.randomRotate(C);
      U.setTranslate(C, this);

@@ -8,10 +8,13 @@ import javafx.scene.shape.CullFace;
 import javafx.scene.shape.MeshView;
 
 import javafx.scene.shape.TriangleMesh;
-import ve.Core;
-import ve.Sound;
-import ve.VE;
+import ve.effects.Effects;
+import ve.instances.Core;
+import ve.instances.CoreAdvanced;
+import ve.ui.Match;
+import ve.ui.UI;
 import ve.utilities.SL;
+import ve.utilities.Sound;
 import ve.utilities.U;
 
 public enum Fire {
@@ -43,7 +46,7 @@ public enum Fire {
    Y = U.getValue(s, 2);
    absoluteRadius = U.getValue(s, 3);
    PL = s.contains(SL.light) ? new PointLight() : null;
-   double flameSize = absoluteRadius * .5;
+   double flameSize = absoluteRadius * .25;
    for (int n = 0; n < 50; n++) {
     flames.add(new Flame(this, flameSize));
    }
@@ -87,9 +90,9 @@ public enum Fire {
 
   void run(boolean update) {
    for (Flame flame : flames) {
-    flame.X += flame.speedX * VE.tick + (E.Wind.speedX * VE.tick);
-    flame.Z += flame.speedZ * VE.tick + (E.Wind.speedZ * VE.tick);
-    flame.Y -= .1 * absoluteRadius * VE.tick;
+    flame.X += flame.speedX * UI.tick + (Wind.speedX * UI.tick);
+    flame.Z += flame.speedZ * UI.tick + (Wind.speedZ * UI.tick);
+    flame.Y -= .1 * absoluteRadius * UI.tick;
     if (Math.abs(Y - flame.Y) > absoluteRadius + U.random(absoluteRadius) || Math.abs(X - flame.X) > absoluteRadius + U.random(absoluteRadius) || Math.abs(Z - flame.Z) > absoluteRadius + U.random(absoluteRadius)) {
      flame.X = X + U.randomPlusMinus(absoluteRadius);
      flame.Z = Z + U.randomPlusMinus(absoluteRadius);
@@ -103,7 +106,7 @@ public enum Fire {
     pit.setVisible(true);
     for (Flame flame : flames) {
      U.randomRotate(flame.MV);
-     ((PhongMaterial) flame.MV.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
+     ((PhongMaterial) flame.MV.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
      U.setTranslate(flame.MV, flame);
      flame.MV.setVisible(true);
     }
@@ -124,7 +127,7 @@ public enum Fire {
     }
    }
    if (sound != null) {
-    if (!VE.Match.muteSound && update) {
+    if (!Match.muteSound && update) {
      sound.loop(Math.sqrt(fireToCameraDistance) * .16);
     } else {
      sound.stop();
@@ -136,7 +139,7 @@ public enum Fire {
    if (sound != null) sound.close();
   }
 
-  static class Flame extends Core {
+  static class Flame extends CoreAdvanced {
 
    final MeshView MV;
 

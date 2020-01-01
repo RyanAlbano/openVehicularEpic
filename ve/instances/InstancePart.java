@@ -1,4 +1,4 @@
-package ve;
+package ve.instances;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.MeshView;

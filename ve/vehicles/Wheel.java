@@ -2,11 +2,11 @@ package ve.vehicles;
 
 import java.util.*;
 
-import ve.Core;
 import ve.effects.*;
+import ve.instances.CoreAdvanced;
 import ve.utilities.U;
 
-public /*Must be public, or fails in Tsunami!*/class Wheel extends Core {
+public /*Must be public, or fails in Tsunami!*/class Wheel extends CoreAdvanced {
  private final Vehicle V;
  private int currentSkidmark;
  double pointX, pointZ;
@@ -14,7 +14,7 @@ public /*Must be public, or fails in Tsunami!*/class Wheel extends Core {
  double skidmarkSize;
  double minimumSkidmarkY;
  double sparkPoint;
- boolean inLocalGround, angledSurface, againstWall;
+ boolean beneathLocalGround, angledSurface, againstWall;
  final Collection<Spark> sparks = new ArrayList<>();
  List<Skidmark> skidmarks;
 

@@ -6,11 +6,15 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 import javafx.scene.transform.*;
-import ve.*;
-import ve.Camera;
+import ve.effects.Effects;
 import ve.effects.Smoke;
 import ve.environment.E;
+import ve.instances.InstancePart;
+import ve.ui.Map;
+import ve.ui.Options;
+import ve.ui.UI;
 import ve.utilities.*;
+import ve.utilities.Camera;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -68,11 +72,11 @@ public class VehiclePart extends InstancePart {
   double[] storeX = new double[vertexQuantity], storeY = new double[vertexQuantity], storeZ = new double[vertexQuantity];
   light = type.contains(SL.Thick(SL.light));
   selfIlluminate = type.contains(SL.Thick(SL.selfIlluminate));
-  fireLight = type.contains(SL.Thick(SL.fire)) && VE.Map.defaultVehicleLightBrightness > 0;
+  fireLight = type.contains(SL.Thick(SL.fire)) && Map.defaultVehicleLightBrightness > 0;
   pointLight = light || fireLight ? new PointLight() : null;
   thrust = type.contains(SL.Thick(SL.thrustWhite)) ? Thrust.white : type.contains(SL.Thick(SL.thrustBlue)) ? Thrust.blue : type.contains(SL.Thick(SL.thrust)) ? Thrust.fire : null;
   blink = type.contains(SL.Thick(SL.blink));
-  exterior = type.contains(" exterior ") && VE.status != VE.Status.vehicleViewer;
+  exterior = type.contains(" exterior ") && UI.status != UI.Status.vehicleViewer;
   landingGear = type.contains(SL.Thick(SL.landingGear));
   spinner = type.contains(" spinner ");
   wheel = type.contains(SL.Thick(SL.wheel));
@@ -201,24 +205,24 @@ public class VehiclePart extends InstancePart {
    PM.setSpecularPower(shiny ? E.Specular.Powers.shiny : E.Specular.Powers.standard);
   }
   if (selfIlluminate) {
-   U.Phong.setSelfIllumination(PM, RGB);
+   PM.setSelfIlluminationMap(U.Phong.getSelfIllumination(RGB));
   }
   U.setMaterialSecurely(MV, PM);
-  PM.setDiffuseMap(U.Images.get(textureType));
-  PM.setSpecularMap(U.Images.get(textureType));
-  PM.setBumpMap(U.Images.getNormalMap(textureType));
+  PM.setDiffuseMap(Images.get(textureType));
+  PM.setSpecularMap(Images.get(textureType));
+  PM.setBumpMap(Images.getNormalMap(textureType));
   if (V.realVehicle && thrust == null) {
    chip = new Chip(this);
    flame = new Flame(this);
   }
-  if (VE.status != VE.Status.vehicleViewer) {
+  if (UI.status != UI.Status.vehicleViewer) {
    fastCull = type.contains(SL.Thick(SL.fastCullB)) ? 0 : fastCull;
    fastCull = type.contains(SL.Thick(SL.fastCullF)) ? 2 : fastCull;
    fastCull = type.contains(SL.Thick(SL.fastCullR)) ? -1 : fastCull;
    fastCull = type.contains(SL.Thick(SL.fastCullL)) ? 1 : fastCull;
   }
   flickPolarity = type.contains(SL.Thick(SL.flick1)) ? 1 : type.contains(SL.Thick(SL.flick2)) ? 2 : flickPolarity;
-  setRenderSizeRequirement(storeX, storeY, storeZ, vertexQuantity, light || blink || thrust != null || VE.vehiclesInMatch < 3);
+  setRenderSizeRequirement(storeX, storeY, storeZ, vertexQuantity, light || blink || thrust != null || UI.vehiclesInMatch < 3);
   MV.setVisible(false);
   damage = new Rotate();
   if (matrix != null) {
@@ -229,14 +233,14 @@ public class VehiclePart extends InstancePart {
  }
 
  private void setBrightness() {
-  U.Phong.setSelfIllumination(PM, RGB.getRed() * 2 * brightness, RGB.getGreen() * 2 * brightness, RGB.getBlue() * 2 * brightness);
+  PM.setSelfIlluminationMap(U.Phong.getSelfIllumination(RGB.getRed() * 2 * brightness, RGB.getGreen() * 2 * brightness, RGB.getBlue() * 2 * brightness));
   if (light) {
    U.Nodes.Light.setRGB(pointLight, RGB.getRed() * brightness, RGB.getGreen() * brightness, RGB.getBlue() * brightness);
   }
  }
 
  void setPosition(boolean nullPhysics) {
-  double[] placementX = {displaceX + (controller ? V.driverViewX * VE.Options.driverSeat : 0)}, placementY = {displaceY}, placementZ = {displaceZ};
+  double[] placementX = {displaceX + (controller ? V.driverViewX * Options.driverSeat : 0)}, placementY = {displaceY}, placementZ = {displaceZ};
   if (!V.isIntegral()) {
    if (explodeStage == ExplodeStage.intact) {
     damage.setAxis(new Point3D(U.random(), U.random(), U.random()));
@@ -351,7 +355,9 @@ public class VehiclePart extends InstancePart {
     }
     if (U.render(this, -renderRadius)) {
      if (thrust != null) {
-      PM.setSelfIlluminationMap(U.Images.get(thrust == Thrust.white ? SL.white : ((thrust == Thrust.blue ? SL.blueJet : SL.firelight) + U.random(3))));
+      PM.setSelfIlluminationMap(thrust == Thrust.white ? Images.white :
+      thrust == Thrust.blue ? Effects.blueJet() :
+      Effects.fireLight());
       if (thrustPoint != null) {
        double thrustShift = V.absoluteRadius * .02;
        for (int n = 3; --n >= 0; ) {
@@ -362,7 +368,7 @@ public class VehiclePart extends InstancePart {
      U.setTranslate(MV, this);
      visible = true;
      if (blink) {
-      PM.setSelfIlluminationMap(V.destroyed ? null : U.Images.get(SL.blink + U.random(3)));
+      PM.setSelfIlluminationMap(V.destroyed ? null : Effects.blink());
      }
     }
    }
@@ -375,10 +381,10 @@ public class VehiclePart extends InstancePart {
   }
  }
 
- public void deform() {
+ void deform(double inDamage) {
   if (!noDeformation) {
    damage.setAxis(new Point3D(U.random(), U.random(), U.random()));
-   damage.setAngle(U.randomPlusMinus(V.getDamage(true) * 6.));
+   damage.setAngle(U.randomPlusMinus(inDamage));
   }
  }
 

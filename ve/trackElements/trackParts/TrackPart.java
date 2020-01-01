@@ -7,10 +7,15 @@ import javafx.scene.paint.*;
 import javafx.scene.shape.*;
 import javafx.scene.transform.*;
 import org.fxyz3d.shapes.Torus;
-import ve.*;
 import ve.environment.E;
+import ve.environment.Ground;
+import ve.environment.Terrain;
 import ve.environment.Tornado;
+import ve.instances.Core;
+import ve.instances.Instance;
+import ve.instances.InstancePart;
 import ve.trackElements.TE;
+import ve.ui.UI;
 import ve.utilities.*;
 
 public class TrackPart extends Instance {
@@ -57,7 +62,7 @@ public class TrackPart extends Instance {
   modelNumber = model;
   vehicleModel = isVehicleModel;
   if (model >= 0 || vehicleModel) {
-   modelName = vehicleModel ? VE.vehicleModels.get(modelNumber) : TE.getTrackPartName(modelNumber);
+   modelName = vehicleModel ? UI.vehicleModels.get(modelNumber) : TE.getTrackPartName(modelNumber);
    if (modelName.equals(TE.Models.checkpoint.name())) {//<-Checkpoint sign may glitch otherwise
     while (angle >= 90) angle -= 180;
     while (angle <= -90) angle += 180;//Will always end up at '90' rather then '-90'
@@ -157,7 +162,7 @@ public class TrackPart extends Instance {
       isRepairPoint = true;
       repairTorus = new Torus();
       setRepairTorusDetail(true);
-      repairTorus.setMaterial(E.Terrain.universal);//<-Can't set THIS securely!
+      repairTorus.setMaterial(Terrain.universal);//<-Can't set THIS securely!
       U.Nodes.add(repairTorus);
       repairTorus.setRotationAxis(Rotate.Y_AXIS);
       repairTorus.setRotate(angle);
@@ -211,8 +216,8 @@ public class TrackPart extends Instance {
       trackPlanes.add((new TrackPlane()));
       onTrackPlane = true;
       if (universalPhongMaterialUsage == UniversalPhongMaterialUsage.terrain) {
-       trackPlanes.get(trackPlanes.size() - 1).RGB = E.Ground.RGB;
-       trackPlanes.get(trackPlanes.size() - 1).type += E.Terrain.terrain;
+       trackPlanes.get(trackPlanes.size() - 1).RGB = Ground.RGB;
+       trackPlanes.get(trackPlanes.size() - 1).type += Terrain.terrain;
       } else if (universalPhongMaterialUsage == UniversalPhongMaterialUsage.paved) {
        trackPlanes.get(trackPlanes.size() - 1).RGB = U.getColor(TE.Paved.globalShade);
        trackPlanes.get(trackPlanes.size() - 1).type += SL.Thick(SL.paved);
@@ -254,8 +259,8 @@ public class TrackPart extends Instance {
     }
    } catch (IOException e) {
     System.out.println(U.modelLoadingError + e);
-    System.out.println(VE.UI.At_File_ + model);
-    System.out.println(VE.UI.At_Line_ + s);
+    System.out.println(UI.At_File_ + model);
+    System.out.println(UI.At_Line_ + s);
    }
    maxMinusX[1] /= vertexQuantity;
    maxPlusX[1] /= vertexQuantity;
@@ -296,9 +301,9 @@ public class TrackPart extends Instance {
    }
    if (foliageSphere != null) {
     PhongMaterial PM = new PhongMaterial();
-    PM.setDiffuseMap(U.Images.get(SL.foliage));
-    PM.setBumpMap(U.Images.getNormalMap(SL.foliage));
-    U.Phong.setSelfIllumination(PM, .125, .125, .125);
+    PM.setDiffuseMap(Images.get(SL.foliage));
+    PM.setBumpMap(Images.getNormalMap(SL.foliage));
+    PM.setSelfIlluminationMap(U.Phong.getSelfIllumination(.125));
     U.Phong.setDiffuseRGB(PM, 1);
     U.Phong.setSpecularRGB(PM, 0);
     U.setMaterialSecurely(foliageSphere, PM);
@@ -352,14 +357,14 @@ public class TrackPart extends Instance {
      rock.S.setScaleY(U.random(25.));
      rock.S.setScaleZ(100 + U.random(200.));
      U.rotate(rock.S, 0, U.random(360.));
-     rock.X = X + U.randomPlusMinus(Math.max(850, 3000 * Math.abs(U.sin(XZ))));
+     rock.X = X + U.randomPlusMinus(Math.max(840, 2500 * Math.abs(U.sin(XZ))));
      rock.Y = Y;
-     rock.Z = Z + U.randomPlusMinus(Math.max(850, 3000 * Math.abs(U.cos(XZ))));
+     rock.Z = Z + U.randomPlusMinus(Math.max(840, 2500 * Math.abs(U.cos(XZ))));
      PhongMaterial PM = new PhongMaterial();
      U.setMaterialSecurely(rock.S, PM);
-     PM.setDiffuseMap(U.Images.get(SL.rock));
-     PM.setSpecularMap(U.Images.get(SL.rock));
-     PM.setBumpMap(U.Images.getNormalMap(SL.rock));
+     PM.setDiffuseMap(Images.get(SL.rock));
+     PM.setSpecularMap(Images.get(SL.rock));
+     PM.setBumpMap(Images.getNormalMap(SL.rock));
      U.Nodes.add(rock.S);
      roadRocks.add(rock);
     }
@@ -367,7 +372,7 @@ public class TrackPart extends Instance {
    if (isRepairPoint) {
     PhongMaterial PM = new PhongMaterial();
     U.Phong.setSpecularRGB(PM, 0);
-    PM.setSelfIlluminationMap(U.Images.get(SL.white));
+    PM.setSelfIlluminationMap(Images.white);
     for (int n = 0; n < 8; n++) {
      repairShocks.add(new Cylinder(Math.round(U.random(5.)) + 1, 1100, 4));
      U.setMaterialSecurely(repairShocks.get(n), PM);
@@ -392,7 +397,7 @@ public class TrackPart extends Instance {
    if (universalPhongMaterialUsage == UniversalPhongMaterialUsage.paved) {
     TP.RGB = U.getColor(TE.Paved.globalShade);
    } else if (universalPhongMaterialUsage == UniversalPhongMaterialUsage.terrain) {
-    TP.RGB = E.Ground.RGB;
+    TP.RGB = Ground.RGB;
    } else {
     TP.RGB = RGB;
    }
@@ -453,24 +458,7 @@ public class TrackPart extends Instance {
    }
   } else {
    if (wraps) {
-    boolean setSlope = false;
-    if (Math.abs(X) < E.centerShiftOffAt) {
-     X += U.random() < .5 ? E.centerShiftOffAt : -E.centerShiftOffAt;
-     setSlope = true;
-    }
-    if (Math.abs(X - Camera.X) > 40000) {
-     while (X > Camera.X + 40000) X -= 80000;
-     while (X < Camera.X - 40000) X += 80000;
-     setSlope = true;
-    }
-    if (Math.abs(Z - Camera.Z) > 40000) {
-     while (Z > Camera.Z + 40000) Z -= 80000;
-     while (Z < Camera.Z - 40000) Z += 80000;
-     setSlope = true;
-    }
-    if (setSlope) {
-     E.setTerrainSit(this, false);
-    }
+    E.wrap(this);
    }
    if (isRepairPoint) {
     if (!Tornado.parts.isEmpty() && Tornado.movesRepairPoints) {

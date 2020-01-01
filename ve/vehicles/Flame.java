@@ -2,6 +2,7 @@ package ve.vehicles;
 
 import javafx.scene.paint.*;
 import javafx.scene.shape.*;
+import ve.effects.Effects;
 import ve.utilities.*;
 
 class Flame extends MeshView {
@@ -32,7 +33,7 @@ class Flame extends MeshView {
    setVisible(false);
   } else if (U.random() < .5 && VP.MV.isVisible()) {
    U.setTranslate(this, VP);
-   ((PhongMaterial) getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
+   ((PhongMaterial) getMaterial()).setSelfIlluminationMap(Effects.fireLight());
    U.randomRotate(this);
    setVisible(true);
   } else {

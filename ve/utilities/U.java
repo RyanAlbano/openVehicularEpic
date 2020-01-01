@@ -20,10 +20,14 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Shape3D;
 import javafx.scene.text.*;
 import javafx.scene.text.Font;
-import ve.*;
-import ve.Camera;
 import ve.environment.E;
+import ve.environment.Ground;
+import ve.environment.MapBounds;
 import ve.environment.Pool;
+import ve.instances.Core;
+import ve.instances.CoreAdvanced;
+import ve.ui.Options;
+import ve.ui.UI;
 import ve.vehicles.Vehicle;
 
 public enum U {//Utilities
@@ -41,10 +45,10 @@ public enum U {//Utilities
  modelFolder = "models";
  private static final String mapFolder = "maps";
  public static final String userSubmittedFolder = "User-Submitted";
- private static final String imageExtension = ".png";
+ public static final String imageExtension = ".png";
  public static final String JLayerStuff = "JLayerStuff";
  public static final Charset standardChars = StandardCharsets.UTF_8;
- private static final String imageLoadingException = "Image-loading Exception: ";
+ public static final String imageLoadingException = "Image-loading Exception: ";
  public static final String soundLoadingException = "Sound-loading Exception: ";
  public static final String modelLoadingError = "Model-Loading Error: ";
  public static String debug = "Code executed to this location";
@@ -74,7 +78,7 @@ public enum U {//Utilities
  }
 
  public static boolean sameTeam(long index1, long index2) {
-  long halfOfPlayers = VE.vehiclesInMatch >> 1;
+  long halfOfPlayers = UI.vehiclesInMatch >> 1;
   return index1 < halfOfPlayers == index2 < halfOfPlayers;
  }
 
@@ -83,35 +87,35 @@ public enum U {//Utilities
  }
 
  public static void text(String s, double X, double Y) {
-  VE.graphicsContext.setTextAlign(TextAlignment.CENTER);
-  VE.graphicsContext.fillText(s, VE.width * X, VE.height * Y);
+  UI.graphicsContext.setTextAlign(TextAlignment.CENTER);
+  UI.graphicsContext.fillText(s, UI.width * X, UI.height * Y);
  }
 
  public static void textR(String s, double X, double Y) {
-  VE.graphicsContext.setTextAlign(TextAlignment.RIGHT);
-  VE.graphicsContext.fillText(s, VE.width * X, VE.height * Y);
+  UI.graphicsContext.setTextAlign(TextAlignment.RIGHT);
+  UI.graphicsContext.fillText(s, UI.width * X, UI.height * Y);
  }
 
  public static void textL(String s, double X, double Y) {
-  VE.graphicsContext.setTextAlign(TextAlignment.LEFT);
-  VE.graphicsContext.fillText(s, VE.width * X, VE.height * Y);
+  UI.graphicsContext.setTextAlign(TextAlignment.LEFT);
+  UI.graphicsContext.fillText(s, UI.width * X, UI.height * Y);
  }
 
  public static void fillRGB(Color C) {
-  VE.graphicsContext.setFill(C);
+  UI.graphicsContext.setFill(C);
  }
 
  public static void fillRGB(double shade) {
   shade = clamp(shade);
-  VE.graphicsContext.setFill(Color.color(shade, shade, shade));
+  UI.graphicsContext.setFill(Color.color(shade, shade, shade));
  }
 
  public static void fillRGB(double R, double G, double B) {
-  VE.graphicsContext.setFill(Color.color(clamp(R), clamp(G), clamp(B)));
+  UI.graphicsContext.setFill(Color.color(clamp(R), clamp(G), clamp(B)));
  }
 
  public static void fillRGB(double R, double G, double B, double transparency) {
-  fillRGB(VE.graphicsContext, R, G, B, transparency);
+  fillRGB(UI.graphicsContext, R, G, B, transparency);
  }
 
  public static void fillRGB(GraphicsContext GC, double R, double G, double B, double transparency) {
@@ -120,39 +124,39 @@ public enum U {//Utilities
 
  public static void strokeRGB(double shade) {
   shade = clamp(shade);
-  VE.graphicsContext.setStroke(Color.color(shade, shade, shade));
+  UI.graphicsContext.setStroke(Color.color(shade, shade, shade));
  }
 
  public static void strokeRGB(double R, double G, double B) {
-  VE.graphicsContext.setStroke(Color.color(clamp(R), clamp(G), clamp(B)));
+  UI.graphicsContext.setStroke(Color.color(clamp(R), clamp(G), clamp(B)));
  }
 
  public static void fillRectangle(double X, double Y, double rectangleWidth, double rectangleHeight) {
-  fillRectangle(VE.graphicsContext, X, Y, rectangleWidth, rectangleHeight);
+  fillRectangle(UI.graphicsContext, X, Y, rectangleWidth, rectangleHeight);
  }
 
  public static void fillRectangle(GraphicsContext GC, double X, double Y, double rectangleWidth, double rectangleHeight) {
-  double width = rectangleWidth * VE.width, height = rectangleHeight * VE.height;
-  GC.fillRect((VE.width * X) - (width * .5), (VE.height * Y) - (height * .5), width, height);
+  double width = rectangleWidth * UI.width, height = rectangleHeight * UI.height;
+  GC.fillRect((UI.width * X) - (width * .5), (UI.height * Y) - (height * .5), width, height);
  }
 
  public static void drawRectangle(double X, double Y, double rectangleWidth, double rectangleHeight) {
-  double width = Math.abs(rectangleWidth * VE.width), height = Math.abs(rectangleHeight * VE.height);
-  VE.graphicsContext.strokeRect((VE.width * X) - (width * .5), (VE.height * Y) - (height * .5), width, height);
+  double width = Math.abs(rectangleWidth * UI.width), height = Math.abs(rectangleHeight * UI.height);
+  UI.graphicsContext.strokeRect((UI.width * X) - (width * .5), (UI.height * Y) - (height * .5), width, height);
  }
 
  public static void font(double size) {
-  VE.graphicsContext.setFont(new Font("Arial Black", size * VE.width));
+  UI.graphicsContext.setFont(new Font("Arial Black", size * UI.width));
  }
 
  public static FileInputStream getMapFile(int n) {
-  File F = new File(mapFolder + File.separator + VE.maps.get(n));
+  File F = new File(mapFolder + File.separator + UI.maps.get(n));
   if (!F.exists()) {
-   F = new File(mapFolder + File.separator + userSubmittedFolder + File.separator + VE.maps.get(n));
+   F = new File(mapFolder + File.separator + userSubmittedFolder + File.separator + UI.maps.get(n));
   }
   if (!F.exists()) {
-   VE.map = 0;
-   F = new File(mapFolder + File.separator + VE.maps.get(0));
+   UI.map = 0;
+   F = new File(mapFolder + File.separator + UI.maps.get(0));
   }
   try {
    return new FileInputStream(F);
@@ -165,19 +169,19 @@ public enum U {//Utilities
   ;
 
   public static void add(Node... N) {
-   VE.denyExpensiveInGameCall();
+   UI.denyExpensiveInGameCall();
    for (Node n : N) {
-    if (n != null && !VE.group.getChildren().contains(n)) {
-     VE.group.getChildren().add(n);
+    if (n != null && !UI.group.getChildren().contains(n)) {
+     UI.group.getChildren().add(n);
     }
    }
   }
 
   public static void remove(Node... N) {
-   VE.denyExpensiveInGameCall();
+   UI.denyExpensiveInGameCall();
    for (Node n : N) {
     if (n != null) {
-     VE.group.getChildren().remove(n);
+     UI.group.getChildren().remove(n);
     }
    }
   }
@@ -259,14 +263,18 @@ public enum U {//Utilities
    PM.setSpecularColor(Color.color(clamp(R), clamp(G), clamp(B), clamp(transparency)));
   }
 
-  public static void setSelfIllumination(PhongMaterial PM, Color C) {
-   setSelfIllumination(PM, C.getRed(), C.getGreen(), C.getBlue());
+  public static Image getSelfIllumination(Color C) {
+   return getSelfIllumination(C.getRed(), C.getGreen(), C.getBlue());
   }
 
-  public static void setSelfIllumination(PhongMaterial PM, double R, double G, double B) {
+  public static Image getSelfIllumination(double shade) {
+   return getSelfIllumination(shade, shade, shade);
+  }
+
+  public static Image getSelfIllumination(double R, double G, double B) {
    colorGetter.setFill(Color.color(clamp(R), clamp(G), clamp(B)));
    colorGetter.fillRect(0, 0, 1, 1);
-   PM.setSelfIlluminationMap(colorGetterCanvas.snapshot(null, null));
+   return colorGetterCanvas.snapshot(null, null);
   }
   /*public static PhongMaterial copy(PhongMaterial in) {//In case it's needed again
   PhongMaterial PM = new PhongMaterial();
@@ -278,52 +286,6 @@ public enum U {//Utilities
   PM.setBumpMap(in.getBumpMap());
   return PM;
  }*/
- }
-
- public enum Images {
-  ;
-
-  public static void load(Map<? super String, ? super Image> M, String name) {
-   if (!M.containsKey(name)) {
-    try {
-     M.put(name, new Image(new FileInputStream(imageFolder + File.separator + name + imageExtension)));
-    } catch (FileNotFoundException E) {
-     System.out.println(imageLoadingException + E);
-    }
-   }
-  }
-
-  public static void load(Map<? super String, ? super Image> M, String name, double quantity) {
-   for (int n = 0; n < quantity; n++) {
-    try {
-     load(M, name + n);
-    } catch (RuntimeException E) {
-     if (quantity < Double.POSITIVE_INFINITY) {
-      System.out.println(imageLoadingException + E);
-     }
-     break;
-    }
-   }
-  }
-
-  public static Image get(String name) {
-   return VE.images.getOrDefault(name, null);
-  }
-
-  public static Image getNormalMap(String name) {
-   return VE.Options.normalMapping ? get(name + "N") : null;
-  }
-
-  public static Image getLowResolution(Image I) {
-   VE.denyExpensiveInGameCall();
-   if (I != null) {
-    ImageView IV = new ImageView(I);
-    IV.setScaleX(Math.min(500 / I.getWidth(), 1));//*Don't exceed the original size!
-    IV.setScaleY(Math.min(500 / I.getHeight(), 1));//*
-    return IV.snapshot(null, null);
-   }
-   return null;
-  }
  }
 
  public static void setMaterialSecurely(Shape3D shape3D, PhongMaterial PM) {
@@ -424,7 +386,8 @@ public enum U {//Utilities
  }
 
  public static double randomPlusMinus(double doubleIn) {
-  return doubleIn * (random() - random());
+  //return doubleIn * (random() - random());//<-todo-has been changed to the system below--some areas trying to counter inaccuracies in the older system are no longer needed and should be removed
+  return doubleIn * random() * (random() < .5 ? 1 : -1);
  }
 
  public static double sin(double in) {
@@ -447,7 +410,7 @@ public enum U {//Utilities
   return StrictMath.atan(in) * 57.295779513082320876798154814092;
  }
 
- public static void rotate(Node N, Core core) {
+ public static void rotate(Node N, CoreAdvanced core) {
   rotate(N, core.XY, core.YZ, core.XZ);
  }
 
@@ -555,8 +518,8 @@ public enum U {//Utilities
  }
 
  private static boolean outOfBounds(double x, double y, double z, double tolerance) {
-  double depth = E.Ground.level + (Pool.exists && distance(x, E.pool.X, z, E.pool.Z) < Pool.C[0].getRadius() ? Pool.depth : 0);
-  return y > depth || x > E.mapBounds.right + tolerance || x < E.mapBounds.left - tolerance || z > E.mapBounds.forward + tolerance || z < E.mapBounds.backward - tolerance || y < E.mapBounds.Y - tolerance;
+  double depth = Ground.level + (Pool.exists && distance(x, E.pool.X, z, E.pool.Z) < Pool.C[0].getRadius() ? Pool.depth : 0);
+  return y > depth || x > MapBounds.right + tolerance || x < MapBounds.left - tolerance || z > MapBounds.forward + tolerance || z < MapBounds.backward - tolerance || y < MapBounds.Y - tolerance;
  }
 
  public static void setTranslate(Node N, Core core) {

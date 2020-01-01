@@ -2,9 +2,9 @@ package ve.vehicles.specials;
 
 import javafx.scene.paint.*;
 import javafx.scene.shape.*;
-import ve.Core;
-import ve.VE;
-import ve.utilities.SL;
+import ve.effects.Effects;
+import ve.instances.Core;
+import ve.ui.UI;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
 
@@ -44,7 +44,7 @@ public class Spit extends Core {
  public void run(Vehicle vehicle, Special special, Port port, boolean gamePlay) {
   if (stage > 0) {
    boolean longerSpitDuration = special.type.name().contains(Special.Type.shell.name()) || special.type == Special.Type.shotgun || special.type == Special.Type.missile;
-   if ((stage += gamePlay ? VE.tick : 0) > (longerSpitDuration ? 3 : 2)) {
+   if ((stage += gamePlay ? UI.tick : 0) > (longerSpitDuration ? 3 : 2)) {
     stage = 0;
    } else {
     double[] spitX = {port.X}, spitY = {port.Y}, spitZ = {port.Z};
@@ -71,7 +71,7 @@ public class Spit extends Core {
  public void render() {
   if (stage > 0 && U.render(this)) {
    U.setTranslate(MV, this);
-   ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(U.Images.get(SL.firelight + U.random(3)));
+   ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
    MV.setVisible(true);
   } else {
    MV.setVisible(false);

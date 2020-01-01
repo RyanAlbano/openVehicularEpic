@@ -2,12 +2,12 @@ package ve.effects;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
-import ve.Core;
-import ve.VE;
 import ve.environment.*;
+import ve.instances.CoreAdvanced;
+import ve.ui.UI;
 import ve.utilities.U;
 
-public class GroundBurst extends Core {
+public class GroundBurst extends CoreAdvanced {
 
  private final Sphere S;
  private double brightness;
@@ -16,7 +16,7 @@ public class GroundBurst extends Core {
   S = new Sphere(1, 0);
   PhongMaterial PM = new PhongMaterial();
   brightness = 1;
-  U.Phong.setDiffuseRGB(PM, E.Ground.RGB);
+  U.Phong.setDiffuseRGB(PM, Ground.RGB);
   U.Phong.setSpecularRGB(PM, 1);
   PM.setSpecularPower(0);
   U.setMaterialSecurely(S, PM);
@@ -39,13 +39,13 @@ public class GroundBurst extends Core {
 
  public void run() {
   if (brightness >= 0) {
-   if ((brightness -= U.random(VE.tick * .1)) < 0) {
+   if ((brightness -= U.random(UI.tick * .1)) < 0) {
     S.setVisible(false);
    } else {
     boolean show = false;
-    X += speedX * VE.tick;
-    Y += speedY * VE.tick;
-    Z += speedZ * VE.tick;
+    X += speedX * UI.tick;
+    Y += speedY * UI.tick;
+    Z += speedZ * UI.tick;
     //X += E.Wind.speedX * VE.tick;*<-Applying wind here appears to detract from the overall effect
     //Z += E.Wind.speedZ * VE.tick;*
     if (U.render(this)) {//<-Bright and not common, so ignoring LOD is better

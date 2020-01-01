@@ -2,9 +2,10 @@ package ve.environment;
 
 import javafx.scene.paint.*;
 import javafx.scene.shape.*;
-import ve.Camera;
-import ve.Core;
-import ve.VE;
+import ve.instances.Core;
+import ve.ui.Map;
+import ve.utilities.Camera;
+import ve.utilities.Images;
 import ve.utilities.SL;
 import ve.utilities.U;
 
@@ -40,13 +41,13 @@ public class Pool extends Core {
    PM.setSelfIlluminationMap(null);
    if (s.contains("lava")) {
     type = Pool.Type.lava;
-    U.Phong.setSelfIllumination(PM, E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]);
+    PM.setSelfIlluminationMap(U.Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
    } else if (s.contains("acid")) {
     type = Pool.Type.acid;
     R = B = .25;
     G = 1;
    }
-   PM.setDiffuseMap(U.Images.get(SL.water));
+   PM.setDiffuseMap(Images.get(SL.water));
    U.Phong.setDiffuseRGB(PM, R, G, B);
    U.Phong.setSpecularRGB(PM, E.Specular.Colors.shiny);
    exists = true;
@@ -60,7 +61,7 @@ public class Pool extends Core {
    } else if (type == Pool.Type.acid) {
     U.fillRGB(E.graphicsContext, .25, .5, .25, .5);
    } else {
-    U.fillRGB(E.graphicsContext, 0, 0, VE.Map.defaultVehicleLightBrightness > 0 ? 0 : .5, .5);
+    U.fillRGB(E.graphicsContext, 0, 0, Map.defaultVehicleLightBrightness > 0 ? 0 : .5, .5);
    }
    U.fillRectangle(E.graphicsContext, .5, .5, 1, 1);
   }

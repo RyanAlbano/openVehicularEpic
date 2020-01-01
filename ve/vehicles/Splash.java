@@ -3,22 +3,23 @@ package ve.vehicles;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
 
-import ve.Core;
-import ve.VE;
 import ve.environment.E;
 import ve.environment.Pool;
+import ve.instances.CoreAdvanced;
+import ve.ui.UI;
 import ve.utilities.U;
 
-public class Splash extends Core {
-
+public class Splash extends CoreAdvanced {
+ final Vehicle V;
  private final Cylinder C;
  public static final long defaultQuantity = 384;//<-Too many, maybe?
 
- Splash() {
+ Splash(Vehicle vehicle) {
+  V = vehicle;
   C = new Cylinder(1, 1);
   U.setMaterialSecurely(C, new PhongMaterial());
   if (Pool.type == Pool.Type.lava) {
-   U.Phong.setSelfIllumination((PhongMaterial) C.getMaterial(), E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]);
+   ((PhongMaterial) C.getMaterial()).setSelfIlluminationMap(U.Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
   }
   U.Nodes.add(C);
   C.setVisible(false);
@@ -30,9 +31,15 @@ public class Splash extends Core {
   speedX = inSpeedX;
   speedY = inSpeedY;
   speedZ = inSpeedZ;
-  X = W.X;
-  Y = W.Y;
-  Z = W.Z;
+  if (W == null) {
+   X = V.X;
+   Y = V.Y;
+   Z = V.Z;
+  } else {
+   X = W.X;
+   Y = W.Y;
+   Z = W.Z;
+  }
  }
 
  public void run() {
@@ -42,10 +49,10 @@ public class Splash extends Core {
     C.setVisible(false);
    } else {
     boolean show = false;
-    X += speedX * VE.tick;
-    Y += speedY * VE.tick;
-    Z += speedZ * VE.tick;
-    speedY += E.gravity * VE.tick;
+    X += speedX * UI.tick;
+    Y += speedY * UI.tick;
+    Z += speedZ * UI.tick;
+    speedY += E.gravity * UI.tick;
     if (U.getDepth(this) > 0) {
      U.randomRotate(C);
      double splashRGB = U.random(2.), r = .5 * splashRGB, g = splashRGB, b = 1;
