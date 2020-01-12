@@ -9,10 +9,7 @@ import ve.environment.Sun;
 import ve.instances.I;
 import ve.trackElements.TE;
 import ve.trackElements.trackParts.TrackPart;
-import ve.utilities.Camera;
-import ve.utilities.SL;
-import ve.utilities.Sounds;
-import ve.utilities.U;
+import ve.utilities.*;
 import ve.vehicles.VehiclePart;
 
 public enum Viewer {
@@ -35,8 +32,9 @@ public enum Viewer {
   static {
    PhongMaterial boundSpherePM = new PhongMaterial();
    U.setMaterialSecurely(collisionBounds, boundSpherePM);
-   U.Phong.setDiffuseRGB(boundSpherePM, 1, 1, 1, .5);
-   U.Phong.setSpecularRGB(boundSpherePM, 0);
+   //collisionBounds.setCullFace(CullFace.NONE);<-CullFace.NONE on transparent Spheres does NOT look right!
+   Phong.setDiffuseRGB(boundSpherePM, 1, 1, 1, .5);
+   Phong.setSpecularRGB(boundSpherePM, 0);
   }
 
   public static void run(boolean gamePlay) {
@@ -45,11 +43,11 @@ public enum Viewer {
    U.text("Vehicle Viewer", .075);
    boolean loadModel = false;
    if (UI.page < 1) {
-    UI.resetGraphics();
-    U.Nodes.remove(Sun.S, Ground.C);
-    U.Nodes.Light.remove(Sun.light);
+    Nodes.reset();
+    Nodes.remove(Sun.S, Ground.C);
+    Nodes.removePointLight(Sun.light);
     UI.scene3D.setFill(U.getColor(0));
-    U.Nodes.Light.setRGB(Sun.light, 1, 1, 1);
+    Nodes.setRGB(Sun.light, 1, 1, 1);
     Camera.X = Camera.Y = Camera.Z = Camera.XZ = Camera.YZ = Camera.XY = Y = YZ = 0;
     E.viewableMapDistance = Double.POSITIVE_INFINITY;
     U.rotate(Camera.camera, Camera.YZ, -Camera.XZ);
@@ -59,11 +57,11 @@ public enum Viewer {
     XZ = 180;
     showCollisionBounds = false;//<-Covers vehicle otherwise
     loadModel = true;
-    U.Nodes.Light.setRGB(E.ambientLight, 1, 1, 1);
+    Nodes.setRGB(E.ambientLight, 1, 1, 1);
     U.setTranslate(Sun.light, 0, -Long.MAX_VALUE, 0);
     if (lighting3D) {
-     U.Nodes.Light.setRGB(E.ambientLight, .5, .5, .5);
-     U.Nodes.Light.add(Sun.light);
+     Nodes.setRGB(E.ambientLight, .5, .5, .5);
+     Nodes.addPointLight(Sun.light);
     }
     UI.page = 1;
    }
@@ -71,14 +69,14 @@ public enum Viewer {
    XZ -= Keys.Right ? 5 : 0;
    YZ -= Keys.Up ? 5 : 0;
    YZ += Keys.Down ? 5 : 0;
-   Y += heightChange * UI.tick;
-   Z += depthChange * UI.tick;
+   Y += heightChange * U.tick;
+   Z += depthChange * U.tick;
    if (I.vehicles.get(0) != null) {
     I.vehicles.get(0).Y = Y;
     I.vehicles.get(0).Z = Z;
     I.vehicles.get(0).XZ = XZ;
     I.vehicles.get(0).YZ = YZ;
-    I.vehicles.get(0).thrusting = (UI.timerBase20 <= 0) != I.vehicles.get(0).thrusting;
+    I.vehicles.get(0).thrusting = (U.timerBase20 <= 0) != I.vehicles.get(0).thrusting;
     I.vehicles.get(0).runRender(gamePlay);
     U.font(.02);
     U.text(I.vehicles.get(0).name, .1125);
@@ -88,14 +86,14 @@ public enum Viewer {
     U.text(SL.Vertices_ + I.vehicles.get(0).vertexQuantity, .75, .8);
     if (showCollisionBounds) {
      U.setTranslate(collisionBounds, I.vehicles.get(0));
-     U.Nodes.add(collisionBounds);
+     Nodes.add(collisionBounds);
     } else {
-     U.Nodes.remove(collisionBounds);
+     Nodes.remove(collisionBounds);
     }
    }
    U.fillRGB(1);
    U.text("Move Vehicle with the T, G, U, and J Keys. Rotate with the Arrow Keys", .95 + UI.textOffset);
-   if (UI.yinYang) {
+   if (U.yinYang) {
     U.strokeRGB(1);
     U.drawRectangle(.5, UI.selected == 0 ? .825 : UI.selected == 1 ? .85 : UI.selected == 2 ? .875 : UI.selected == 3 ? .9 : .925, UI.width, UI.selectionHeight);
    }
@@ -108,12 +106,12 @@ public enum Viewer {
     if (Keys.Up) {
      UI.selected = --UI.selected < 0 ? 4 : UI.selected;
      Keys.inUse = true;
-     Sounds.UI.play(0, 0);
+     UI.sound.play(0, 0);
     }
     if (Keys.Down) {
      UI.selected = ++UI.selected > 4 ? 0 : UI.selected;
      Keys.inUse = true;
-     Sounds.UI.play(0, 0);
+     UI.sound.play(0, 0);
     }
    }
    if (Keys.Space || Keys.Enter) {
@@ -122,11 +120,11 @@ public enum Viewer {
     } else if (UI.selected == 1) {
      lighting3D = !lighting3D;
      if (lighting3D) {
-      U.Nodes.Light.setRGB(E.ambientLight, .5, .5, .5);
-      U.Nodes.Light.add(Sun.light);
+      Nodes.setRGB(E.ambientLight, .5, .5, .5);
+      Nodes.addPointLight(Sun.light);
      } else {
-      U.Nodes.Light.setRGB(E.ambientLight, 1, 1, 1);
-      U.Nodes.Light.remove(Sun.light);
+      Nodes.setRGB(E.ambientLight, 1, 1, 1);
+      Nodes.removePointLight(Sun.light);
      }
     } else if (UI.selected == 2) {
      showWireframe = !showWireframe;
@@ -140,18 +138,18 @@ public enum Viewer {
      UI.status = UI.Status.mainMenu;
      I.removeVehicleModel();
     }
-    Sounds.UI.play(1, 0);
+    UI.sound.play(1, 0);
     Keys.Space = Keys.Enter = false;
    }
    if (Keys.Escape) {
     UI.status = UI.Status.mainMenu;
     I.removeVehicleModel();
-    Sounds.UI.play(1, 0);
+    UI.sound.play(1, 0);
     Keys.Escape = false;
    }
    if (loadModel) {
     I.removeVehicleModel();
-    UI.userRandomRGB = U.getColor(U.random(), U.random(), U.random());
+    I.userRandomRGB = U.getColor(U.random(), U.random(), U.random());
     I.addVehicleModel(VS.chosen[0], true);
    }
    if (!Keys.inUse) {
@@ -181,15 +179,15 @@ public enum Viewer {
   Camera.XZ += Keys.Right ? 5 : 0;
   Camera.YZ += Keys.Up ? 5 : 0;
   Camera.YZ -= Keys.Down ? 5 : 0;
-  Y += heightChange * UI.movementSpeedMultiple * UI.tick;
+  Y += heightChange * UI.movementSpeedMultiple * U.tick;
   Camera.Y = Y;
-  Camera.Z += depthChange * U.cos(Camera.XZ) * UI.movementSpeedMultiple * UI.tick;
-  Camera.X += depthChange * U.sin(Camera.XZ) * UI.movementSpeedMultiple * UI.tick;
+  Camera.Z += depthChange * U.cos(Camera.XZ) * UI.movementSpeedMultiple * U.tick;
+  Camera.X += depthChange * U.sin(Camera.XZ) * UI.movementSpeedMultiple * U.tick;
   U.rotate(Camera.camera, Camera.YZ, -Camera.XZ);
   Camera.rotateXY.setAngle(-Camera.XY);
   Camera.setAngleTable();
   if (!E.lights.getChildren().contains(Sun.light)) {
-   U.Nodes.Light.add(E.mapViewerLight);
+   Nodes.addPointLight(E.mapViewerLight);
    U.setTranslate(E.mapViewerLight, Camera.X, Camera.Y, Camera.Z);
   }
   E.run(gamePlay);
@@ -202,7 +200,7 @@ public enum Viewer {
   U.fillRGB(0, 0, 0, UI.colorOpacity.minimal);
   U.fillRectangle(.5, .9, 1, .2);
   U.font(.015);
-  if (UI.yinYang) {
+  if (U.yinYang) {
    U.strokeRGB(1);
    U.drawRectangle(.5, UI.selected == 0 ? .85 : .875, UI.width, UI.selectionHeight);
   }
@@ -213,17 +211,17 @@ public enum Viewer {
   if (UI.selectionReady() && (Keys.Up || Keys.Down)) {
    UI.selected = UI.selected < 1 ? 1 : 0;
    Keys.inUse = true;
-   Sounds.UI.play(0, 0);
+   UI.sound.play(0, 0);
   }
   if (Keys.Space || Keys.Enter) {
    UI.status = UI.selected == 0 ? UI.Status.mapLoadPass0 : UI.Status.mainMenu;
-   Sounds.UI.play(1, 0);
+   UI.sound.play(1, 0);
    Keys.Space = Keys.Enter = false;
    Sounds.clear();
   }
   if (Keys.Escape) {
    UI.status = UI.Status.mainMenu;
-   Sounds.UI.play(1, 0);
+   UI.sound.play(1, 0);
    Keys.Escape = false;
    Sounds.clear();
   }

@@ -2,6 +2,7 @@ package ve.utilities;
 
 import ve.environment.Storm;
 import ve.instances.I;
+import ve.trackElements.Bonus;
 import ve.trackElements.TE;
 import ve.ui.Keys;
 import ve.ui.UI;
@@ -37,7 +38,7 @@ public enum Recorder {
   bonusX = recDouble();
   bonusY = recDouble();
   bonusZ = recDouble();
-  for (int n = UI.maxPlayers; --n >= 0; ) {
+  for (int n = I.maxPlayers; --n >= 0; ) {
    vehicles.add(new Vehicle());
   }
  }
@@ -62,7 +63,7 @@ public enum Recorder {
  }
 
  public static void recordGeneral() {
-  bonusHolder[gameFrame] = UI.bonusHolder;
+  bonusHolder[gameFrame] = Bonus.holder;
   bonusX[gameFrame] = TE.bonus.X;
   bonusY[gameFrame] = TE.bonus.Y;
   bonusZ[gameFrame] = TE.bonus.Z;
@@ -85,11 +86,11 @@ public enum Recorder {
     recordFrame = gameFrame - 1;
     while (recordFrame < 0) recordFrame += totalFrames;
     if (Keys.Enter || Keys.Space || Keys.Escape) {
-     Sounds.UI.play(1, 0);
+     UI.sound.play(1, 0);
     }
     Keys.Up = Keys.Down = Keys.Enter = Keys.Space = Keys.Escape = false;
    }
-   UI.bonusHolder = bonusHolder[recordFrame];
+   Bonus.holder = bonusHolder[recordFrame];
    TE.bonus.X = bonusX[recordFrame];
    TE.bonus.Y = bonusY[recordFrame];
    TE.bonus.Z = bonusZ[recordFrame];
@@ -103,7 +104,7 @@ public enum Recorder {
     Storm.Lightning.Z = Lightning.Z[recordFrame];
     Storm.Lightning.strikeStage = Lightning.strikeStage[recordFrame];
    }
-   for (int n = UI.vehiclesInMatch; --n >= 0; ) {
+   for (int n = I.vehiclesInMatch; --n >= 0; ) {
     vehicles.get(n).playBack();
    }
    recordFrame = ++recordFrame >= totalFrames ? 0 : recordFrame;
@@ -140,9 +141,9 @@ public enum Recorder {
     }
     speedXZ[gameFrame] = vehicle.P.speedXZ;
     speedYZ[gameFrame] = vehicle.P.speedYZ;
-    speedX[gameFrame] = vehicle.P.speedX;
-    speedY[gameFrame] = vehicle.P.speedY;
-    speedZ[gameFrame] = vehicle.P.speedZ;
+    speedX[gameFrame] = vehicle.speedX;
+    speedY[gameFrame] = vehicle.speedY;
+    speedZ[gameFrame] = vehicle.speedZ;
     speed[gameFrame] = vehicle.P.speed;
     damage[gameFrame] = vehicle.getDamage(false);
     mode[gameFrame] = vehicle.P.mode;
@@ -182,9 +183,9 @@ public enum Recorder {
    }
    vehicle.P.speedXZ = speedXZ[recordFrame];
    vehicle.P.speedYZ = speedYZ[recordFrame];
-   vehicle.P.speedX = speedX[recordFrame];
-   vehicle.P.speedY = speedY[recordFrame];
-   vehicle.P.speedZ = speedZ[recordFrame];
+   vehicle.speedX = speedX[recordFrame];
+   vehicle.speedY = speedY[recordFrame];
+   vehicle.speedZ = speedZ[recordFrame];
    vehicle.P.speed = speed[recordFrame];
    vehicle.setDamage(damage[recordFrame]);
    vehicle.P.mode = mode[recordFrame];

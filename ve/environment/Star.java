@@ -3,8 +3,8 @@ package ve.environment;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
 import ve.instances.Core;
-import ve.ui.UI;
 import ve.utilities.Images;
+import ve.utilities.Nodes;
 import ve.utilities.U;
 
 import java.util.ArrayList;
@@ -44,11 +44,11 @@ public enum Star {
    Z = rotateZ[0];
    Y = Ground.level <= 0 ? -Math.abs(rotateY[0]) : rotateY[0];
    U.setMaterialSecurely(S, PM);
-   U.Nodes.add(S);
+   Nodes.add(S);
   }
 
   private void run() {
-   if (U.render(this, -S.getRadius())) {
+   if (U.render(this, -S.getRadius(), false, false)) {
     U.setTranslate(S, this);
     S.setVisible(true);
    } else {

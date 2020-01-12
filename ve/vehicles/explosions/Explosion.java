@@ -1,28 +1,39 @@
-package ve.effects;
+package ve.vehicles.explosions;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 
 import java.util.*;
 
+import ve.effects.Effects;
+import ve.effects.ExplosionPart;
 import ve.instances.Core;
-import ve.ui.UI;
+import ve.instances.I;
+import ve.ui.Match;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
 import ve.utilities.U;
 import ve.vehicles.*;
 
 public class Explosion extends Core {
 
+ final Vehicle V;
+ public Vehicle focusVehicle;
+ final boolean nuclear;
  private final MeshView MV;
- double inX, inY, inZ;
+ public double inX;
+ public double inY;
+ public double inZ;
  public double stage;
  public final boolean[] doneDamaging;
- Vehicle focusVehicle;
  private final Collection<ExplosionPart> explosionParts = new ArrayList<>();
  public static final long defaultQuantity = 12;
 
  public Explosion(Vehicle vehicle) {
+  V = vehicle;
+  nuclear = V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name());
+  absoluteRadius = nuclear ? 20000 : 1500;
   TriangleMesh TM = new TriangleMesh();
-  absoluteRadius = vehicle.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) ? 20000 : 1500;
   TM.getPoints().setAll(
   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
@@ -37,12 +48,12 @@ public class Explosion extends Core {
   MV = new MeshView(TM);
   MV.setCullFace(CullFace.NONE);
   PhongMaterial PM = new PhongMaterial();
-  U.Phong.setDiffuseRGB(PM, 0);
-  U.Phong.setSpecularRGB(PM, 0);
+  Phong.setDiffuseRGB(PM, 0);
+  Phong.setSpecularRGB(PM, 0);
   U.setMaterialSecurely(MV, PM);
-  U.Nodes.add(MV);
+  Nodes.add(MV);
   MV.setVisible(false);
-  doneDamaging = new boolean[UI.vehiclesInMatch];
+  doneDamaging = new boolean[I.vehiclesInMatch];
   for (long n = defaultQuantity; --n >= 0; ) {
    explosionParts.add(new ExplosionPart(this));
   }
@@ -54,7 +65,7 @@ public class Explosion extends Core {
   inZ = z;
   focusVehicle = vehicle;
   stage = Double.MIN_VALUE;
-  for (int n = UI.vehiclesInMatch; --n >= 0; ) {
+  for (int n = I.vehiclesInMatch; --n >= 0; ) {
    doneDamaging[n] = false;
   }
   for (ExplosionPart explosionPart : explosionParts) {
@@ -64,7 +75,7 @@ public class Explosion extends Core {
 
  public void run(boolean gamePlay) {
   if (stage > 0) {
-   if ((stage += gamePlay ? UI.tick : 0) > 5) {
+   if ((stage += gamePlay ? U.tick : 0) > 5) {
     stage = 0;
     MV.setVisible(false);
    } else {
@@ -77,7 +88,7 @@ public class Explosion extends Core {
      Y = inY;
      Z = inZ;
     }
-    if (U.render(this, -absoluteRadius)) {
+    if (U.render(this, -absoluteRadius, false, false)) {
      U.setTranslate(MV, this);
      U.randomRotate(MV);
      ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
@@ -89,6 +100,35 @@ public class Explosion extends Core {
   }
   for (ExplosionPart explosionPart : explosionParts) {
    explosionPart.run(this, gamePlay);
+  }
+ }
+
+ public void vehicleInteract(Vehicle vehicle, boolean replay, boolean greenTeam) {
+  if (stage > 0 && U.distance(this, vehicle) < vehicle.collisionRadius + V.P.explosionDiameter) {
+   if (!doneDamaging[vehicle.index]) {
+    V.P.hitCheck(vehicle);
+    vehicle.addDamage(V.P.explosionDamage);
+    if (!nuclear) {
+     if (vehicle.isIntegral() && !replay) {
+      Match.scoreDamage[greenTeam ? 0 : 1] += V.P.explosionDamage;
+     }
+     doneDamaging[vehicle.index] = true;
+    }
+   }
+   if (vehicle.getsPushed >= 0) {
+    vehicle.speedX += U.randomPlusMinus(V.P.explosionPush);
+    vehicle.speedZ += U.randomPlusMinus(V.P.explosionPush);
+   }
+   if (vehicle.getsLifted >= 0) {
+    vehicle.speedY += U.randomPlusMinus(V.P.explosionPush);
+   }
+   vehicle.deformParts();
+   for (VehiclePart part : vehicle.parts) {
+    part.throwChip(300);
+   }
+   if (nuclear) {
+    V.VA.crashDestroy.play(Double.NaN, V.VA.distanceVehicleToCamera);
+   }
   }
  }
 }

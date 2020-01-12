@@ -2,9 +2,9 @@ package ve.vehicles;
 
 import ve.environment.Pool;
 import ve.environment.Tsunami;
+import ve.instances.I;
 import ve.ui.Match;
 import ve.ui.Mouse;
-import ve.ui.UI;
 import ve.utilities.Camera;
 import ve.utilities.SL;
 import ve.utilities.Sound;
@@ -110,9 +110,15 @@ public class VehicleAudio {
   if (nuke != null) nuke.close();
  }
 
+ void setDistance() {
+  distanceVehicleToCamera =
+  V.index == I.vehiclePerspective && Camera.view == Camera.View.driver ? 0 :
+  Math.sqrt(U.distance(V)) * Sound.standardDistance(1);
+ }
+
  void skid() {
   if (V.isIntegral() && !V.P.flipped() && V.contact == Physics.Contact.rubber) {
-   if (V.P.terrainProperties.contains(SL.Thick(SL.hard))) {
+   if (V.P.terrainProperties.contains(SL.thick(SL.hard))) {
     if (!skidHard.running()) {
      skidHard.resume(Double.NaN, distanceVehicleToCamera);
     }
@@ -233,7 +239,7 @@ public class VehicleAudio {
 
  void run(boolean gamePlay) {
   if (V.engine == Vehicle.Engine.train && gamePlay && Match.started) {
-   if (Math.abs(V.P.speed) * UI.tick > U.random(5000.)) {
+   if (Math.abs(V.P.speed) * U.tick > U.random(5000.)) {
     train.playIfNotPlaying(U.random(9), distanceVehicleToCamera);
    }
    if (U.startsWith(V.P.mode.name(), SL.drive, Physics.Mode.neutral.name()) && !V.destroyed && (V.drive || V.reverse)) {
@@ -253,7 +259,7 @@ public class VehicleAudio {
   }
   engineDiscord = false;
   if (V.isIntegral() && gamePlay) {
-   if (chuff != null && chuffTimer <= 0 && Math.abs(V.P.speed) <= V.accelerationStages[0] * UI.tick && (V.drive || V.reverse)) {
+   if (chuff != null && chuffTimer <= 0 && Math.abs(V.P.speed) <= V.accelerationStages[0] * U.tick && (V.drive || V.reverse)) {
     chuff.play(Double.NaN, distanceVehicleToCamera);
     chuff.play(Double.NaN, distanceVehicleToCamera);
     chuffTimer = 22;
@@ -307,7 +313,7 @@ public class VehicleAudio {
    }
   }
   if (force != null && gamePlay) {
-   forceTimer += U.random(V.P.netSpeed) * UI.tick;
+   forceTimer += U.random(V.P.netSpeed) * U.tick;
    int speedCheck = V.P.netSpeed > 1000 ? 5 : V.P.netSpeed > 500 ? 4 : V.P.netSpeed > 250 ? 3 : 2;
    if (V.steerInPlace && V.P.mode == Physics.Mode.driveSolid && (V.turnL || V.turnR) && !V.P.flipped() && speedCheck < 3) {
     force.play(U.random(2), distanceVehicleToCamera);
@@ -318,9 +324,9 @@ public class VehicleAudio {
     forceTimer = 0;
    }
   }
-  chuffTimer -= chuffTimer > 0 ? UI.tick : 0;
-  crashTimer -= crashTimer > 0 ? UI.tick : 0;
-  landTimer -= landTimer > 0 ? UI.tick : 0;
+  chuffTimer -= chuffTimer > 0 ? U.tick : 0;
+  crashTimer -= crashTimer > 0 ? U.tick : 0;
+  landTimer -= landTimer > 0 ? U.tick : 0;
   if (!Double.isNaN(splashing)) {
    if (splashing > 150 && Camera.Y <= 0) {
     splashOverSurface.loop(distanceVehicleToCamera);
@@ -338,7 +344,7 @@ public class VehicleAudio {
    if (!skidding) {
     skidHard.stop();
     skidOff.stop();
-   } else if (!V.P.terrainProperties.contains(SL.Thick(SL.hard))) {
+   } else if (!V.P.terrainProperties.contains(SL.thick(SL.hard))) {
     skidHard.stop();
    } else {
     skidOff.stop();
@@ -363,7 +369,7 @@ public class VehicleAudio {
    scraping = false;
   }
   if (!Double.isNaN(V.exhausting)) {
-   V.exhausting -= V.exhausting > 0 ? UI.tick : 0;
+   V.exhausting -= V.exhausting > 0 ? U.tick : 0;
    if (exhaustIndex != engineIndex) {
     if (U.random() < 1 / (double) engineClipQuantity) {
      V.exhausting = 5;

@@ -6,6 +6,8 @@ import javafx.scene.shape.Cylinder;
 import ve.instances.Core;
 import ve.ui.Match;
 import ve.ui.UI;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
 import ve.utilities.Sound;
 import ve.utilities.U;
 import ve.vehicles.Splash;
@@ -47,7 +49,7 @@ public enum Tsunami {
    }
    for (Part tsunamiPart : parts) {
     tsunamiPart.Y = -tsunamiPart.C.getRadius() * .5;
-    U.Nodes.add(tsunamiPart.C);
+    Nodes.add(tsunamiPart.C);
    }
    wrap();
   }
@@ -60,8 +62,8 @@ public enum Tsunami {
      wrap();
     }
     if (updateIfMatchBegan) {
-     X += speedX * UI.tick;
-     Z += speedZ * UI.tick;
+     X += speedX * U.tick;
+     Z += speedZ * U.tick;
     }
    }
    double tsunamiPartShift = globalSize * .01;
@@ -110,11 +112,11 @@ public enum Tsunami {
   for (Tsunami.Part tsunamiPart : parts) {
    if (U.distance(V, tsunamiPart) < V.collisionRadius + tsunamiPart.C.getRadius()) {
     if (V.getsPushed >= 0) {
-     V.P.speedX += speedX * .5 * UI.tick;
-     V.P.speedZ += speedZ * .5 * UI.tick;
+     V.speedX += speedX * .5 * U.tick;
+     V.speedZ += speedZ * .5 * U.tick;
     }
     if (V.getsLifted >= 0) {
-     V.P.speedY += E.gravity * UI.tick * 4 * Double.compare(tsunamiPart.Y, V.Y);
+     V.speedY += E.gravity * U.tick * 4 * Double.compare(tsunamiPart.Y, V.Y);
     }
     for (int n1 = 20; --n1 >= 0; ) {
      V.splashes.get(V.currentSplash).deploy(V.wheels.isEmpty() ? null : V.wheels.get(U.random(4)), U.random(V.absoluteRadius * .05),
@@ -137,16 +139,16 @@ public enum Tsunami {
   }
 
   void run() {
-   if (U.render(this, -C.getRadius())) {
+   if (U.render(this, -C.getRadius(), false, false)) {
     U.setTranslate(C, this);
     U.randomRotate(C);
     double waveRG = U.random(2.);
     if (Pool.type == Pool.Type.lava) {
-     U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), 1, waveRG, waveRG * .5);
+     Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), 1, waveRG, waveRG * .5);
     } else if (Pool.type == Pool.Type.acid) {
-     U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), waveRG * .5, 1, waveRG);
+     Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), waveRG * .5, 1, waveRG);
     } else {
-     U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), waveRG * .5, waveRG, 1);
+     Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), waveRG * .5, waveRG, 1);
     }
     C.setVisible(true);
    } else {

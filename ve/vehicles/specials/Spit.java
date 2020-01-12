@@ -4,7 +4,8 @@ import javafx.scene.paint.*;
 import javafx.scene.shape.*;
 import ve.effects.Effects;
 import ve.instances.Core;
-import ve.ui.UI;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
 
@@ -26,10 +27,10 @@ public class Spit extends Core {
   MV = new MeshView(TM);
   MV.setCullFace(CullFace.NONE);
   PhongMaterial PM = new PhongMaterial();
-  U.Phong.setDiffuseRGB(PM, 0);
-  U.Phong.setSpecularRGB(PM, 0);
+  Phong.setDiffuseRGB(PM, 0);
+  Phong.setSpecularRGB(PM, 0);
   U.setMaterialSecurely(MV, PM);
-  U.Nodes.add(MV);
+  Nodes.add(MV);
   MV.setVisible(false);
  }
 
@@ -44,7 +45,7 @@ public class Spit extends Core {
  public void run(Vehicle vehicle, Special special, Port port, boolean gamePlay) {
   if (stage > 0) {
    boolean longerSpitDuration = special.type.name().contains(Special.Type.shell.name()) || special.type == Special.Type.shotgun || special.type == Special.Type.missile;
-   if ((stage += gamePlay ? UI.tick : 0) > (longerSpitDuration ? 3 : 2)) {
+   if ((stage += gamePlay ? U.tick : 0) > (longerSpitDuration ? 3 : 2)) {
     stage = 0;
    } else {
     double[] spitX = {port.X}, spitY = {port.Y}, spitZ = {port.Z};
@@ -69,7 +70,7 @@ public class Spit extends Core {
  }
 
  public void render() {
-  if (stage > 0 && U.render(this)) {
+  if (stage > 0 && U.render(this, false, true)) {
    U.setTranslate(MV, this);
    ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
    MV.setVisible(true);

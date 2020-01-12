@@ -1,7 +1,6 @@
 package ve.effects;
 
 import javafx.scene.image.Image;
-import ve.ui.UI;
 import ve.utilities.Images;
 import ve.utilities.U;
 

@@ -3,8 +3,8 @@ package ve.environment;
 import javafx.scene.shape.Sphere;
 
 import ve.instances.CoreAdvanced;
-import ve.ui.UI;
 import ve.utilities.Camera;
+import ve.utilities.Nodes;
 import ve.utilities.U;
 
 import java.util.ArrayList;
@@ -35,19 +35,19 @@ public enum Snowball {
    double radius = 1 + U.random(9.);
    round = new Sphere(radius);
    lowResolution = new Sphere(radius, 0);
-   U.Nodes.add(round, lowResolution);
+   Nodes.add(round, lowResolution);
   }
 
   private void run() {
-   speedY += U.randomPlusMinus(6.) + (6 * U.random(UI.tick));
+   speedY += U.randomPlusMinus(6.) + (6 * U.random(U.tick));
    speedX += U.randomPlusMinus(6.);
    speedZ += U.randomPlusMinus(6.);
    speedX *= .9;
    speedY *= .9;
    speedZ *= .9;
-   X += speedX * UI.tick + (Wind.speedX * UI.tick);
-   Y += speedY * UI.tick;
-   Z += speedZ * UI.tick + (Wind.speedZ * UI.tick);
+   X += speedX * U.tick + (Wind.speedX * U.tick);
+   Y += speedY * U.tick;
+   Z += speedZ * U.tick + (Wind.speedZ * U.tick);
    while (Math.abs(X - Camera.X) > wrapDistance) {
     X += (X > Camera.X ? -wrapDistance : wrapDistance) * 2;
     rotateAngle = 0;
@@ -60,7 +60,7 @@ public enum Snowball {
     Z += (Z > Camera.Z ? -wrapDistance : wrapDistance) * 2;
     rotateAngle = 0;
    }
-   rotateAngle += UI.tick;
+   rotateAngle += U.tick;
    round.setVisible(false);
    lowResolution.setVisible(false);
    if (U.getDepth(this) > 0) {

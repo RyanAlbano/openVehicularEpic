@@ -42,12 +42,12 @@ public enum Network {
    int n;
    runLoadThread = true;
    if (mode == Mode.HOST) {
-    UI.userPlayerIndex = 0;
+    I.userPlayerIndex = 0;
     UI.playerNames[0] = userName;
     try {
      server = new ServerSocket(port);
      while (runLoadThread) {
-      if (out.size() + 1 < UI.vehiclesInMatch && !server.isClosed()) {
+      if (out.size() + 1 < I.vehiclesInMatch && !server.isClosed()) {
        try (Socket S = server.accept(); S) {
         out.add(new PrintWriter(S.getOutputStream(), true, U.standardChars));
         in.add(new BufferedReader(new InputStreamReader(S.getInputStream(), U.standardChars)));
@@ -66,7 +66,7 @@ public enum Network {
           PW.println(SL.Name + n1 + "(" + UI.playerNames[n1]);
          }
         }
-        out.get(out.size() - 1).println("#Vehicles" + "(" + UI.vehiclesInMatch);
+        out.get(out.size() - 1).println("#Vehicles" + "(" + I.vehiclesInMatch);
         out.get(out.size() - 1).println("Name0(" + userName);
         out.get(out.size() - 1).println("Join#(" + out.size());
         out.get(out.size() - 1).println(SL.MatchLength + "(" + Options.matchLength);
@@ -75,7 +75,7 @@ public enum Network {
         break;
        }
       }
-      if (out.size() + 1 >= UI.vehiclesInMatch) {
+      if (out.size() + 1 >= I.vehiclesInMatch) {
        for (PrintWriter PW : out) {
         PW.println(SL.HostReady);
        }
@@ -100,10 +100,10 @@ public enum Network {
        UI.escapeToLast(false);
        break;
       }
-      UI.vehiclesInMatch = s.startsWith("#Vehicles(") ? (int) Math.round(U.getValue(s, 0)) : UI.vehiclesInMatch;
+      I.vehiclesInMatch = s.startsWith("#Vehicles(") ? (int) Math.round(U.getValue(s, 0)) : I.vehiclesInMatch;
       if (s.startsWith("Join#" + "(")) {
-       UI.userPlayerIndex = (int) Math.round(U.getValue(s, 0));
-       UI.playerNames[UI.userPlayerIndex] = userName;
+       I.userPlayerIndex = (int) Math.round(U.getValue(s, 0));
+       UI.playerNames[I.userPlayerIndex] = userName;
       } else if (s.startsWith(SL.Name)) {
        for (n = maxPlayers; --n >= 0; ) {
         UI.playerNames[n] = s.startsWith(SL.Name + n) ? U.getString(s, 0) : UI.playerNames[n];
@@ -113,7 +113,7 @@ public enum Network {
        out.get(0).println(SL.joinerReady);
       } else if (s.startsWith(SL.HostReady)) {
        UI.status = UI.Status.vehicleSelect;
-       VS.index = UI.userPlayerIndex;
+       VS.index = I.userPlayerIndex;
        UI.page = 0;
        waiting = runLoadThread = false;
       }
@@ -137,13 +137,13 @@ public enum Network {
   if (mode != Mode.OFF) {
    int n;
    if (mode == Mode.HOST) {
-    if (UI.timerBase20 <= 0) {
+    if (U.timerBase20 <= 0) {
      for (PrintWriter PW : out) {
       PW.println(SL.Vehicle + "0" + "(" + I.vehicles.get(0).name);
      }
      if (gamePlay) {
       for (PrintWriter PW : out) {
-       PW.println(SL.Map + "(" + Map.name);
+       PW.println(SL.Map + "(" + Maps.name);
       }
       if (waiting) {
        for (PrintWriter PW : out) {
@@ -152,20 +152,20 @@ public enum Network {
       }
      }
     }
-    for (n = UI.vehiclesInMatch; --n > 0; ) {
+    for (n = I.vehiclesInMatch; --n > 0; ) {
      String s = readIn(n - 1);
      if (s.startsWith(SL.CANCEL)) {
       UI.escapeToLast(false);
      } else if (s.startsWith(SL.Vehicle + "(")) {
-      VS.chosen[n] = UI.getVehicleIndex(U.getString(s, 0));
-      if (UI.vehiclesInMatch > 2) {
+      VS.chosen[n] = I.getVehicleIndex(U.getString(s, 0));
+      if (I.vehiclesInMatch > 2) {
        for (PrintWriter out : out) {
         out.println(SL.Vehicle + n + "(" + U.getString(s, 0));
        }
       }
      } else if (gamePlay && s.startsWith(SL.Ready)) {
       ready[n] = true;
-      if (UI.vehiclesInMatch > 2) {
+      if (I.vehiclesInMatch > 2) {
        for (PrintWriter out : out) {
         out.println(SL.Ready + n);
        }
@@ -173,7 +173,7 @@ public enum Network {
      }
     }
    } else {
-    if (UI.timerBase20 <= 0) {
+    if (U.timerBase20 <= 0) {
      out.get(0).println(SL.Vehicle + "(" + I.vehicles.get(0).name);
      if (gamePlay && waiting) {
       out.get(0).println(SL.Ready);
@@ -183,10 +183,10 @@ public enum Network {
     if (s.startsWith(SL.CANCEL)) {
      UI.escapeToLast(false);
     } else if (UI.status == UI.Status.mapJump && s.startsWith("Map(")) {
-     UI.map = Map.getName(U.getString(s, 0));
+     Maps.map = Maps.getName(U.getString(s, 0));
      UI.status = UI.Status.mapLoadPass0;
     } else if (gamePlay) {
-     for (n = UI.vehiclesInMatch; --n >= 0; ) {
+     for (n = I.vehiclesInMatch; --n >= 0; ) {
       ready[n] = s.startsWith(SL.Ready + n) || ready[n];
      }
     }
@@ -203,8 +203,8 @@ public enum Network {
      s = readIn(n - 1);
      if (s.startsWith(SL.BonusOpen)) {
       bonusHolder = -1;
-      if (UI.vehiclesInMatch > 2) {
-       for (int n1 = UI.vehiclesInMatch; --n1 > 0; ) {
+      if (I.vehiclesInMatch > 2) {
+       for (int n1 = I.vehiclesInMatch; --n1 > 0; ) {
         if (n1 != n) {
          out.get(n1 - 1).println(SL.BonusOpen);
         }
@@ -212,8 +212,8 @@ public enum Network {
       }
      } else if (s.startsWith(SL.BONUS)) {
       bonusHolder = n;
-      if (UI.vehiclesInMatch > 2) {
-       for (int n1 = UI.vehiclesInMatch; --n1 > 0; ) {
+      if (I.vehiclesInMatch > 2) {
+       for (int n1 = I.vehiclesInMatch; --n1 > 0; ) {
         if (n1 != n) {
          out.get(n1 - 1).println(SL.BONUS + n);
         }
@@ -222,8 +222,8 @@ public enum Network {
      } else if (s.startsWith("(")) {
       vehicleData[n] = s;
      }
-     if (UI.vehiclesInMatch > 2 && !lastVehicleData[n].equals(vehicleData[n])) {
-      for (int n1 = UI.vehiclesInMatch; --n1 > 0; ) {
+     if (I.vehiclesInMatch > 2 && !lastVehicleData[n].equals(vehicleData[n])) {
+      for (int n1 = I.vehiclesInMatch; --n1 > 0; ) {
        if (n1 != n) {
         out.get(n1 - 1).println(n + vehicleData[n]);
        }
@@ -259,7 +259,7 @@ public enum Network {
      s = readIn(0);
      hostLeftMatch = s.startsWith(SL.END) || hostLeftMatch;
      for (Vehicle vehicle : I.vehicles) {
-      if (vehicle.index != UI.userPlayerIndex) {
+      if (vehicle.index != I.userPlayerIndex) {
        bonusHolder = s.startsWith(SL.BonusOpen) ? -1 : s.startsWith(SL.BONUS + vehicle.index) ? vehicle.index : bonusHolder;
        if (s.startsWith(vehicle.index + "(")) {
         vehicleData[vehicle.index] = s;
@@ -301,7 +301,7 @@ public enum Network {
  }
 
  public static void matchDataOut() {
-  Vehicle V = I.vehicles.get(UI.userPlayerIndex);
+  Vehicle V = I.vehicles.get(I.userPlayerIndex);
   long specialsQuantity = V.specials.size();
   V.drive = Keys.Up;
   V.reverse = Keys.Down;

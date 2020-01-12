@@ -6,10 +6,7 @@ import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import ve.instances.I;
 import ve.ui.Match;
-import ve.ui.UI;
-import ve.utilities.Camera;
-import ve.utilities.Images;
-import ve.utilities.U;
+import ve.utilities.*;
 import ve.vehicles.Vehicle;
 
 public class EnergyBolt extends MeshView {
@@ -22,8 +19,8 @@ public class EnergyBolt extends MeshView {
   V = vehicle;
   S = special;
   PhongMaterial PM = new PhongMaterial();
-  U.Phong.setDiffuseRGB(PM, 0);
-  U.Phong.setSpecularRGB(PM, 0);
+  Phong.setDiffuseRGB(PM, 0);
+  Phong.setSpecularRGB(PM, 0);
   PM.setSelfIlluminationMap(Images.white);
   U.setMaterialSecurely(this, PM);
   TriangleMesh TM = new TriangleMesh();
@@ -39,7 +36,7 @@ public class EnergyBolt extends MeshView {
   3, 0, 4, 0, 5, 0);
   setMesh(TM);
   setCullFace(CullFace.NONE);
-  U.Nodes.add(this);
+  Nodes.add(this);
  }
 
  void run(boolean gamePlay) {

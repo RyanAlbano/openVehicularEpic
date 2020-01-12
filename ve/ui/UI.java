@@ -1,6 +1,5 @@
 package ve.ui;
 
-import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.scene.*;
 import javafx.scene.canvas.Canvas;
@@ -10,53 +9,34 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import ve.effects.Explosion;
 import ve.environment.*;
+import ve.instances.I;
+import ve.trackElements.Arrow;
 import ve.trackElements.Bonus;
-import ve.trackElements.TE;
-import ve.trackElements.trackParts.TrackPart;
 import ve.utilities.*;
 import ve.utilities.Camera;
 import ve.vehicles.*;
-import ve.vehicles.specials.Port;
-import ve.vehicles.specials.Shot;
-import ve.vehicles.specials.Special;
 
 import java.io.*;
 import java.util.*;
-
-import static ve.instances.I.vehicles;
 
 public class UI/*UserInterface*/ extends Application {
 
  public static Scene scene;
  public static SubScene scene3D;
  public static final Group group = new Group();
- private static Canvas canvas;
- public static GraphicsContext graphicsContext;
- public static final int maxPlayers = (int) Math.round(Math.max(Network.maxPlayers, Runtime.getRuntime().maxMemory() * .00000001125));
- public static int vehiclePerspective;
- public static int userPlayerIndex;
- public static int vehiclesInMatch = 1;
- public static int bonusHolder = -1;
- public static int map;
- public static boolean yinYang;
- public static double tick;
- public static double timerBase20;
+ static Canvas canvas;
+ public static GraphicsContext GC;
  public static double width, height;
  public static double errorTimer;
- public static Color userRandomRGB = U.getColor(U.random(), U.random(), U.random());
  public static double gameFPS = Double.POSITIVE_INFINITY;
- private static long lastTime;
  public static long userFPS = Long.MAX_VALUE;
  private static String initialization = "Loading V.E.";
- public static String vehicleMaker = "";
- private static String error = "";
- public static final String[] playerNames = new String[maxPlayers];
- public static List<String> vehicleModels;
- public static final List<String> maps = new ArrayList<>(Arrays.asList(SL.basic, "lapsGlory", SL.checkpoint, "gunpowder", "underOver", SL.antigravity, "versus1", "versus2", "versus3", "trackless", "desert", "3DRace", "trip", "raceNowhere", "moonlight", "bottleneck", "railing", "twisted", "deathPit", "falls", "pyramid", "combustion", "darkDivide", "arctic", "scenicRoute", "winterMode", "mountainHop", "damage", "crystalCavern", "southPole", "aerialControl", "matrix", "mist", "vansLand", "dustDevil", "forest", "columns", "zipCross", "highlands", "coldFury", SL.tornado, "volcanic", SL.tsunami, SL.boulder, "sands", SL.meteor, "speedway", "endurance", "tunnel", "circle", "circleXL", "circles", "everything", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "lastStand", "parkingLot", "city", "machine", "military", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "space3", "summit", "portal", "blackHole", "doomsday", "+UserMap & TUTORIAL+"));
- public static Status status = UI.Status.mainMenu;
+ static String error = "";
+ public static final String[] playerNames = new String[I.maxPlayers];
+ public static Status status = Status.mainMenu;
  private static Status lastStatus;
+ public static Sound sound;
 
  public enum Status {
   play, replay, paused, optionsMatch, optionsMenu, mainMenu, credits,
@@ -64,8 +44,6 @@ public class UI/*UserInterface*/ extends Application {
   mapJump, mapLoadPass0, mapLoadPass1, mapLoadPass2, mapLoadPass3, mapLoadPass4, mapError, mapView, mapViewer,
   howToPlay, loadLAN
  }
-
- public enum Units {VEs, metric, US}
 
  public static long selected;
  public static double selectionWait;
@@ -104,76 +82,47 @@ public class UI/*UserInterface*/ extends Application {
   public static final double maximal = .75;
  }
 
- public static String getUnitDistanceName() {
-  return Options.units == Units.VEs ? Units.VEs.name() : Options.units == Units.metric ? "Meters" : "Feet";
- }
-
- public static String getUnitSpeedName() {
-  return Options.units == Units.VEs ? Units.VEs.name() : Options.units == Units.metric ? "Kph" : "Mph";
- }
-
- public static double getUnitSpeed(double in) {
-  return in * (Options.units == Units.VEs ? 1 : Options.units == Units.metric ? .5364466667 : 1 / 3.);
- }
-
- public static double getUnitDistance(double in) {
-  return in * (Options.units == Units.VEs ? 1 : Options.units == Units.metric ? .0175 : .0574147);
- }
-
- public static int getVehicleIndex(String s) {
-  String s1, s3 = "";
-  int n;
-  for (n = 0; n < vehicleModels.size(); n++) {
-   File F = new File(U.modelFolder + File.separator + SL.vehicles + File.separator + vehicleModels.get(n));
-   if (!F.exists()) {
-    F = new File(U.modelFolder + File.separator + SL.vehicles + File.separator + U.userSubmittedFolder + File.separator + vehicleModels.get(n));
-   }
-   if (!F.exists()) {
-    F = new File(U.modelFolder + File.separator + SL.vehicles + File.separator + SL.basic);
-   }
-   try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(F), U.standardChars))) {
-    for (String s2; (s2 = BR.readLine()) != null; ) {
-     s1 = s2.trim();
-     if (s1.startsWith(SL.name)) {
-      s3 = U.getString(s1, 0);
-      break;
-     }
-    }
-   } catch (IOException e) {//<-Don't bother
-    e.printStackTrace();
-   }
-   if (s.equals(s3)) {
-    break;
-   }
-  }
-  return n;
- }
-
- public static String getVehicleName(int in) {//<-Keep method in case we need it later
-  String s, s3 = "";
-  File F = new File(U.modelFolder + File.separator + vehicleModels.get(in));
-  if (!F.exists()) {
-   F = new File(U.modelFolder + File.separator + U.userSubmittedFolder + File.separator + vehicleModels.get(in));
-  }
-  if (!F.exists()) {
-   F = new File(U.modelFolder + File.separator + SL.basic);
-  }
-  try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(F), U.standardChars))) {
-   for (String s2; (s2 = BR.readLine()) != null; ) {
-    s = s2.trim();
-    if (s.startsWith(SL.name)) {
-     s3 = U.getString(s, 0);
-     break;
-    }
-   }
-  } catch (IOException e) {
-   e.printStackTrace();
-  }
-  return s3;
- }
-
  public static void run(String[] s) {//<-Will NOT work if moved to Launcher!
   launch(s);
+ }
+
+ public void start(Stage primaryStage) {
+  Thread.currentThread().setPriority(10);
+  primaryStage.setTitle("openVehicularEpic");
+  try {
+   primaryStage.getIcons().add(new Image(new FileInputStream(U.imageFolder + File.separator + "icon" + U.imageExtension)));
+  } catch (FileNotFoundException ignored) {
+  }
+  System.setProperty("sun.java2d.opengl", "true");//<-Is this even necessary?
+  double windowSize = 1;
+  boolean antiAliasing = false;
+  String s;
+  try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(SL.GameSettings), U.standardChars))) {
+   for (String s1; (s1 = BR.readLine()) != null; ) {
+    s = s1.trim();
+    antiAliasing = s.startsWith("AntiAliasing(yes") || antiAliasing;
+    windowSize = s.startsWith("WindowSize(") ? U.getValue(s, 0) : windowSize;
+   }
+  } catch (IOException E) {
+   System.out.println("Error Loading Settings: " + E);
+  }
+  primaryStage.setWidth(U.dimension.getWidth() * windowSize);
+  primaryStage.setHeight(U.dimension.getHeight() * windowSize);
+  width = primaryStage.getWidth();
+  height = primaryStage.getHeight();
+  scene3D = new SubScene(group, width, height, true, antiAliasing ? SceneAntialiasing.BALANCED : SceneAntialiasing.DISABLED);
+  Arrow.scene = new SubScene(Arrow.group, width, height, false, antiAliasing ? SceneAntialiasing.BALANCED : SceneAntialiasing.DISABLED);
+  canvas = new Canvas(width, height);
+  E.canvas = new Canvas(width, height);
+  GC = canvas.getGraphicsContext2D();
+  E.GC = E.canvas.getGraphicsContext2D();
+  scene = new Scene(new StackPane(scene3D, E.canvas, Arrow.scene, canvas), width, height, false, SceneAntialiasing.DISABLED);
+  primaryStage.setScene(scene);
+  primaryStage.show();//<-Don't call before this level!
+  Nodes.reset();
+  Nodes.addPointLight(Sun.light);
+  new GameLoop(primaryStage).start();
+  boot(primaryStage);
  }
 
  private static void boot(Stage stage) {
@@ -181,7 +130,7 @@ public class UI/*UserInterface*/ extends Application {
    try {
     int n;
     scene3D.setFill(U.getColor(0));
-    TE.Arrow.scene.setFill(Color.color(0, 0, 0, 0));
+    Arrow.scene.setFill(Color.color(0, 0, 0, 0));
     initialization = "Loading Images";
     Images.RA = Images.load(SL.RA);
     Images.white = Images.load(SL.white);
@@ -221,9 +170,9 @@ public class UI/*UserInterface*/ extends Application {
      for (String s1; (s1 = BR.readLine()) != null; ) {
       s = s1.trim();
       if (s.startsWith("Units(metric")) {
-       Options.units = Units.metric;
+       Units.units = Units.Unit.metric;
       } else if (s.startsWith("Units(U.S.")) {
-       Options.units = Units.US;
+       Units.units = Units.Unit.US;
       }
       Options.normalMapping = s.startsWith("NormalMapping(yes") || Options.normalMapping;
       Camera.shake = s.startsWith("CameraShake(yes") || Camera.shake;
@@ -234,24 +183,24 @@ public class UI/*UserInterface*/ extends Application {
       Options.degradedSoundEffects = s.startsWith("DegradedSoundEffects(yes") || Options.degradedSoundEffects;
       Options.matchLength = s.startsWith(SL.MatchLength + "(") ? Math.round(U.getValue(s, 0)) : Options.matchLength;
       Options.driverSeat = s.startsWith("DriverSeat(left") ? -1 : s.startsWith("DriverSeat(right") ? 1 : Options.driverSeat;
-      vehiclesInMatch = s.startsWith("#ofPlayers(") ? Math.max(1, Math.min((int) Math.round(U.getValue(s, 0)), maxPlayers)) : vehiclesInMatch;
+      I.vehiclesInMatch = s.startsWith("#ofPlayers(") ? Math.max(1, Math.min((int) Math.round(U.getValue(s, 0)), I.maxPlayers)) : I.vehiclesInMatch;
       Options.headsUpDisplay = s.startsWith("HUD(on") || Options.headsUpDisplay;
-      Options.showInfo = s.startsWith("ShowInfo(yes") || Options.showInfo;
+      Options.showAppInfo = s.startsWith("ShowInfo(yes") || Options.showAppInfo;
       VS.showModel = s.startsWith("ShowVehiclesInVehicleSelect(yes") || VS.showModel;
       Network.userName = s.startsWith(SL.UserName + "(") ? U.getString(s, 0) : Network.userName;
       Network.targetHost = s.startsWith(SL.TargetHost + "(") ? U.getString(s, 0) : Network.targetHost;
       Network.port = s.startsWith(SL.Port + "(") ? (int) Math.round(U.getValue(s, 0)) : Network.port;
       if (s.startsWith(SL.GameVehicles + "(")) {
-       vehicleModels = new ArrayList<>(Arrays.asList(s.substring((SL.GameVehicles + "(").length(), s.length() - 1).split(",")));
+       I.vehicleModels = new ArrayList<>(Arrays.asList(s.substring((SL.GameVehicles + "(").length(), s.length() - 1).split(",")));
       } else if (s.startsWith("UserSubmittedVehicles(")) {
        String[] models = U.regex.split(s);
        for (n = 1; n < models.length; n++) {
-        vehicleModels.add(models[n]);
+        I.vehicleModels.add(models[n]);
        }
       } else if (s.startsWith("UserSubmittedMaps(")) {
        String[] mapList = U.regex.split(s);
        for (n = 1; n < mapList.length; n++) {
-        maps.add(mapList[n]);
+        Maps.maps.add(mapList[n]);
        }
       }
      }
@@ -266,7 +215,7 @@ public class UI/*UserInterface*/ extends Application {
     Tornado.sound = new Sound(SL.tornado);
     Tsunami.sound = new Sound(SL.tsunami);
     Volcano.sound = new Sound("volcano");
-    Sounds.UI = new Sound("UI", 2);
+    sound = new Sound("UI", 2);
     Sounds.finish = new Sound("finish", 2);
     stage.setOnCloseRequest((WindowEvent WE) -> {
      for (PrintWriter PW : Network.out) {
@@ -278,417 +227,12 @@ public class UI/*UserInterface*/ extends Application {
     });
     initialization = "";
     Sounds.stunt.play(0);
-   } catch (Exception E) {//<-Can we further specify without problems?
+   } catch (Exception E) {
     System.out.println("Exception in secondary load thread:" + E);
    }
   });
   loadVE.setDaemon(true);
   loadVE.start();
- }
-
- public void start(Stage primaryStage) {
-  Thread.currentThread().setPriority(10);
-  primaryStage.setTitle("openVehicularEpic");
-  try {
-   primaryStage.getIcons().add(new Image(new FileInputStream(U.imageFolder + File.separator + "icon.png")));
-  } catch (FileNotFoundException ignored) {
-  }
-  System.setProperty("sun.java2d.opengl", "true");//<-Is this even necessary?
-  double windowSize = 1;
-  boolean antiAliasing = false;
-  String s;
-  try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(SL.GameSettings), U.standardChars))) {
-   for (String s1; (s1 = BR.readLine()) != null; ) {
-    s = s1.trim();
-    antiAliasing = s.startsWith("AntiAliasing(yes") || antiAliasing;
-    windowSize = s.startsWith("WindowSize(") ? U.getValue(s, 0) : windowSize;
-   }
-  } catch (IOException E) {
-   System.out.println("Error Loading Settings: " + E);
-  }
-  primaryStage.setWidth(U.dimension.getWidth() * windowSize);
-  primaryStage.setHeight(U.dimension.getHeight() * windowSize);
-  width = primaryStage.getWidth();
-  height = primaryStage.getHeight();
-  scene3D = new SubScene(group, width, height, true, antiAliasing ? SceneAntialiasing.BALANCED : SceneAntialiasing.DISABLED);
-  TE.Arrow.scene = new SubScene(TE.Arrow.group, width, height, false, antiAliasing ? SceneAntialiasing.BALANCED : SceneAntialiasing.DISABLED);
-  canvas = new Canvas(width, height);
-  E.canvas = new Canvas(width, height);
-  graphicsContext = canvas.getGraphicsContext2D();
-  E.graphicsContext = E.canvas.getGraphicsContext2D();
-  scene = new Scene(new StackPane(scene3D, E.canvas, TE.Arrow.scene, canvas), width, height, false, SceneAntialiasing.DISABLED);
-  primaryStage.setScene(scene);
-  resetGraphics();
-  U.Nodes.Light.add(Sun.light);
-  new innerAnimationTimer(primaryStage).start();
-  boot(primaryStage);
-  primaryStage.show();
- }
-
- private static class innerAnimationTimer extends AnimationTimer {
-  private final Stage primaryStage;
-
-  innerAnimationTimer(Stage primaryStage) {
-   this.primaryStage = primaryStage;
-  }
-
-  public void handle(long now) {
-   try {
-    int n;
-    graphicsContext.clearRect(0, 0, width, height);
-    E.graphicsContext.clearRect(0, 0, width, height);
-    E.renderLevel = U.clamp(10000, E.renderLevel * (U.FPS < 30 ? .75 : 1.05), 40000);
-    E.renderLevel = U.maxedFPS(true) ? Double.POSITIVE_INFINITY : E.renderLevel;
-    Camera.zoom = Math.min(Camera.zoom * Camera.zoomChange, 170);
-    Camera.zoom = Camera.restoreZoom[0] && Camera.restoreZoom[1] ? Camera.defaultZoom : Camera.zoom;
-    Camera.camera.setFieldOfView(Camera.zoom);
-    if (userPlayerIndex < vehicles.size() && vehicles.get(userPlayerIndex) != null) {
-     vehicles.get(userPlayerIndex).lightBrightness = U.clamp(vehicles.get(userPlayerIndex).lightBrightness + Match.vehicleLightBrightnessChange);
-    }
-    E.lightsAdded = 0;
-    if (Music.jLayer != null) {
-     Music.jLayer.setGain(Music.gain);
-     if (Music.jLayer.complete) {
-      Music.load(null);
-     }
-    }
-    if (Mouse.click) {
-     Mouse.mouse = Keys.Left = Keys.Right = Keys.Enter = false;
-    }
-    boolean gamePlay = status == Status.play || status == Status.replay,//<-All 'gamePlay' calls in the entire project are determined by this!
-    renderALL = E.renderType == E.RenderType.ALL;
-    if (Mouse.mouse && (!gamePlay || !Match.started)) {
-     if (Mouse.X < .375) {
-      Keys.Left = true;
-     } else if (Mouse.X > .625) {
-      Keys.Right = true;
-     } else {
-      Keys.Enter = Mouse.click = true;
-     }
-     Mouse.click = status != Status.vehicleSelect && status != Status.mapJump && !status.name().contains("options") || Mouse.click;
-    }
-    selectionTimer += tick;
-    if (width != primaryStage.getWidth() || height != primaryStage.getHeight()) {
-     width = primaryStage.getWidth();
-     height = primaryStage.getHeight();
-     scene3D.setWidth(width);
-     scene3D.setHeight(height);
-     TE.Arrow.scene.setWidth(width);
-     TE.Arrow.scene.setHeight(height);
-     canvas.setWidth(width);
-     canvas.setHeight(height);
-     E.canvas.setWidth(width);
-     E.canvas.setHeight(height);
-    }
-    if (gamePlay || status == Status.paused || status == Status.optionsMatch) {
-     for (Vehicle vehicle : vehicles) {//*These are SPLIT so that energy towers can empower specials before the affected vehicles fire, and to make shots render correctly
-      for (Special special : vehicle.specials) {
-       if (special.type == Special.Type.energy) {
-        special.run(gamePlay);//*
-       }
-      }
-     }
-     for (Vehicle vehicle : vehicles) {
-      vehicle.runMiscellaneous(gamePlay);//Energization before miscellaneous is called
-     }
-     if (Match.started) {
-      if (gamePlay && Match.cursorDriving) {
-       Mouse.steerX = 100 * (.5 - Mouse.X);
-       Mouse.steerY = 100 * (Mouse.Y - .5);
-       if (vehicles.get(userPlayerIndex).P.mode != Physics.Mode.fly && !vehicles.get(userPlayerIndex).isFixed()) {
-        if (Mouse.Y < .5) {
-         Keys.Down = false;
-         Keys.Up = true;
-        } else if (Mouse.Y > .75) {
-         Keys.Up = false;
-         Keys.Down = true;
-        } else {
-         Keys.Up = Keys.Down = false;
-        }
-       }
-       Keys.Space = Mouse.mouse;
-      }
-      if (Network.mode != Network.Mode.OFF) {
-       Network.matchDataOut();
-      }
-      if (gamePlay) {
-       for (Vehicle vehicle : vehicles) {
-        vehicle.getPlayerInput();
-        vehicle.P.run();
-       }
-       for (n = vehiclesInMatch; --n >= 0; ) {
-        Recorder.vehicles.get(n).recordVehicle(vehicles.get(n));
-       }
-      }
-      for (Vehicle vehicle : vehicles) {
-       for (Explosion explosion : vehicle.explosions) {
-        explosion.run(gamePlay);
-       }
-       for (Special special : vehicle.specials) {
-        if (special.type != Special.Type.energy) {
-         special.run(gamePlay);//*
-        }
-       }
-      }
-      if (gamePlay) {
-       for (Vehicle vehicle : vehicles) {
-        vehicle.P.runCollisions();
-       }
-       for (Vehicle vehicle : vehicles) {
-        if (vehicle.destroyed && vehicle.P.vehicleHit > -1) {
-         Match.scoreKill[vehicle.index < vehiclesInMatch >> 1 ? 1 : 0] += status == Status.replay ? 0 : 1;
-         if (vehicle.index != userPlayerIndex) {
-          vehicle.AI.target = U.random(vehiclesInMatch);//<-Needed!
-         }
-         vehicle.P.vehicleHit = -1;
-        }
-        vehicle.energyMultiple = 1;//<-Reset vehicle energy levels for next frame
-       }
-       if (status == Status.play) {
-        Recorder.recordGeneral();
-        if (Network.mode == Network.Mode.OFF) {
-         for (Vehicle vehicle : vehicles) {
-          vehicle.AI.run();
-         }
-        }
-       }
-      }
-      Recorder.updateFrame();
-     } else {
-      for (Vehicle vehicle : vehicles) {
-       vehicle.setTurretY();
-      }
-      Network.preMatchCommunication(gamePlay);
-      Match.cursorDriving = false;
-      if (Network.waiting) {
-       U.font(.02);
-       U.fillRGB(yinYang ? 0 : 1);
-       if (vehiclesInMatch < 3) {
-        U.text("..Waiting on " + playerNames[Network.mode == Network.Mode.HOST ? 1 : 0] + "..", .5, .25);
-       } else {
-        U.text("..Waiting for all Players to Start..", .5, .25);
-       }
-       long whoIsReady = 0;
-       for (n = vehiclesInMatch; --n >= 0; ) {
-        whoIsReady += Network.ready[n] ? 1 : 0;
-       }
-       if (whoIsReady >= vehiclesInMatch) {
-        if (Network.mode == Network.Mode.HOST) {
-         for (n = vehiclesInMatch; --n > 0; ) {
-          Network.gamePlay(n);
-         }
-        } else {
-         Network.gamePlay(0);
-        }
-        Match.started = true;
-        Network.waiting = false;
-       }
-      } else if (Keys.Space) {
-       Sounds.UI.play(1, 0);
-       Camera.view = Camera.lastView;
-       if (Network.mode == Network.Mode.OFF) {
-        Match.started = true;
-       } else {
-        Network.ready[userPlayerIndex] = Network.waiting = true;
-        if (Network.mode == Network.Mode.HOST) {
-         for (PrintWriter PW : Network.out) {
-          PW.println(SL.Ready + "0");
-          PW.println(SL.Ready + "0");
-         }
-        } else {
-         Network.out.get(0).println(SL.Ready);
-         Network.out.get(0).println(SL.Ready);
-        }
-       }
-       Keys.Space = false;
-      }
-      if (!Network.waiting) {
-       U.font(.02);
-       U.fillRGB(yinYang ? 0 : 1);
-       if (vehicles.get(vehiclePerspective).isFixed() && (vehiclesInMatch < 2 || vehiclePerspective < vehiclesInMatch >> 1)) {
-        U.text("Use Arrow Keys and E and R to place your infrastructure, then", .2);
-        if (Keys.Up || Keys.Down || Keys.Left || Keys.Right) {
-         movementSpeedMultiple = Math.max(10, movementSpeedMultiple * 1.05);
-         vehicles.get(vehiclePerspective).Z += Keys.Up ? movementSpeedMultiple * tick : 0;
-         vehicles.get(vehiclePerspective).Z -= Keys.Down ? movementSpeedMultiple * tick : 0;
-         vehicles.get(vehiclePerspective).X -= Keys.Left ? movementSpeedMultiple * tick : 0;
-         vehicles.get(vehiclePerspective).X += Keys.Right ? movementSpeedMultiple * tick : 0;
-        } else {
-         movementSpeedMultiple = 0;
-        }
-       }
-       U.text("Press SPACE to Begin" + (Tournament.stage > 0 ? " Round " + Tournament.stage : ""), .25);
-      }
-      if (Keys.Escape) {
-       escapeToLast(true);
-      }
-     }
-     Recorder.playBack();
-     //RENDERING begins here
-     Camera.run(vehicles.get(vehiclePerspective), gamePlay);
-     U.rotate(Camera.camera, Camera.YZ, -Camera.XZ);
-     Camera.rotateXY.setAngle(-Camera.XY);
-     E.run(gamePlay);
-     for (Vehicle vehicle : vehicles) {
-      for (Special special : vehicle.specials) {
-       for (Shot shot : special.shots) {
-        shot.runRender();
-       }
-       for (Port port : special.ports) {
-        if (port.spit != null) {
-         port.spit.render();
-        }
-       }
-       if (special.EB != null) {
-        special.EB.renderMesh();
-       }
-      }
-      for (VehiclePart part : vehicle.parts) {
-       U.Nodes.Light.remove(part.pointLight);
-      }
-     }
-     if (Map.defaultVehicleLightBrightness > 0) {
-      for (Vehicle vehicle : vehicles) {
-       U.Nodes.Light.remove(vehicle.burnLight);
-      }
-     }
-     if (vehiclesInMatch < 2) {
-      vehicles.get(vehiclePerspective).runRender(gamePlay);
-     } else {
-      int closest = vehiclePerspective;
-      double compareDistance = Double.POSITIVE_INFINITY;
-      for (Vehicle vehicle : vehicles) {
-       if (vehicle.index != vehiclePerspective && U.distance(vehicles.get(vehiclePerspective), vehicle) < compareDistance) {
-        closest = vehicle.index;
-        compareDistance = U.distance(vehicles.get(vehiclePerspective), vehicle);
-       }
-      }
-      if (vehicles.get(vehiclePerspective).lightBrightness >= vehicles.get(closest).lightBrightness) {
-       vehicles.get(vehiclePerspective).runRender(gamePlay);
-       vehicles.get(closest).runRender(gamePlay);
-      } else {
-       vehicles.get(closest).runRender(gamePlay);
-       vehicles.get(vehiclePerspective).runRender(gamePlay);
-      }
-      for (Vehicle vehicle : vehicles) {
-       if (vehicle.index != vehiclePerspective && vehicle.index != closest) {
-        vehicle.runRender(gamePlay);
-       }
-      }
-     }
-     for (TrackPart trackPart : TE.trackParts) {
-      trackPart.runGraphics(renderALL);
-     }
-     for (FrustumMound mound : TE.mounds) {
-      mound.runGraphics();
-     }
-     TE.bonus.run();
-     Match.runUI(gamePlay);
-     vehiclePerspective = Camera.toUserPerspective[0] && Camera.toUserPerspective[1] ? userPlayerIndex : vehiclePerspective;
-     gameFPS = Double.POSITIVE_INFINITY;
-     E.renderType = E.RenderType.standard;
-    } else {
-     E.pool.runVision();//<-Not called in-match HERE because it would draw over screenFlash
-    }
-    if (status == Status.paused) {
-     runPaused();
-    } else if (status == Status.optionsMatch || status == Status.optionsMenu) {
-     Options.run();
-    } else if (status == Status.vehicleViewer) {
-     Viewer.Vehicle.run(gamePlay);
-    } else if (status == Status.mapViewer) {
-     Viewer.runMapViewer(gamePlay);
-    } else if (status == Status.credits) {
-     Credits.run();
-    } else if (status == Status.mainMenu) {
-     runMainMenu();
-    } else if (status == Status.howToPlay) {
-     runHowToPlay();
-    } else if (status == Status.vehicleSelect) {
-     VS.run(gamePlay);
-    } else if (status == Status.loadLAN) {
-     runLANMenu();
-    } else if (status == Status.mapError) {
-     Map.runErrored();
-    } else if (status == Status.mapJump) {
-     Map.runQuickSelect(gamePlay);
-    } else if (status == Status.mapView) {
-     Map.runView(gamePlay);
-    } else if (status == Status.mapLoadPass0 || status == Status.mapLoadPass1 || status == Status.mapLoadPass2 || status == Status.mapLoadPass3 || status == Status.mapLoadPass4) {
-     Map.load();
-     Keys.falsify();
-    }
-    yinYang = !yinYang;
-    timerBase20 = (timerBase20 += tick) > 20 ? 0 : timerBase20;
-    if (status != Status.vehicleSelect) {
-     for (Vehicle vehicle : vehicles) {
-      if (vehicle != null && !vehicle.destroyed) {
-       vehicle.flicker = !vehicle.flicker;
-      }
-     }
-    }
-    selectionTimer = (selectionTimer > selectionWait ? 0 : selectionTimer) + 5 * tick;
-    if (Keys.Left || Keys.Right || Keys.Up || Keys.Down || Keys.Space || Keys.Enter) {
-     if (selectionWait == -1) {
-      selectionWait = 30;
-      selectionTimer = 0;
-     }
-     selectionWait -= selectionWait > 0 ? tick : 0;
-    } else {
-     selectionWait = -1;
-     selectionTimer = 0;
-    }
-    double targetFPS = Math.min(gameFPS, userFPS), dividedFPS = 1000 / targetFPS;
-    if (targetFPS < U.refreshRate) {
-     double difference = System.currentTimeMillis() - U.FPSTime;
-     if (difference < dividedFPS) {
-      U.zZz(dividedFPS - difference);
-     }
-    }
-    U.setFPS();
-    if (Options.showInfo) {
-     U.fillRGB(0, 0, 0, colorOpacity.minimal);
-     U.fillRectangle(.25, .9625, .15, .05);
-     U.fillRectangle(.75, .9625, .15, .05);
-     U.fillRGB(1);
-     U.font(.015);
-     U.text("Nodes: " + (group.getChildren().size() + TE.Arrow.group.getChildren().size() + E.lights.getChildren().size()), .25, .965);
-     U.font(.02);
-     U.text(Math.round(U.averageFPS) + " FPS", .75, .965);
-    }
-    long time = System.nanoTime();
-    tick = Math.min((time - lastTime + 500000) * .00000002, 1);
-    lastTime = time;
-   } catch (Exception E) {//<-It's for the entire game loop--a general exception is probably most surefire
-    try (PrintWriter PW = new PrintWriter(new File("V.E. EXCEPTION"), U.standardChars)) {
-     E.printStackTrace(PW);
-    } catch (IOException ignored) {
-    }
-    E.printStackTrace();
-    handleException();
-   }
-  }
- }
-
- private static void handleException() {
-  error = "An Exception Occurred!" + U.lineSeparator + "A File with the exception has been saved to the game folder";
-  status = UI.Status.mainMenu;
-  Tournament.stage = selected = 0;
-  resetGraphics();
-  Sounds.clear();
-  Keys.falsify();
-  for (int n = VS.chosen.length; --n >= 0; ) {//<-Prevents recursive shutout from Vehicle Select if a bugged vehicle is causing such
-   VS.chosen[n] = U.random(vehicleModels.size());
-  }
-  if (Network.mode == Network.Mode.HOST) {
-   for (PrintWriter PW : Network.out) {
-    PW.println(SL.CANCEL);
-    PW.println(SL.CANCEL);
-   }
-  } else if (Network.mode == Network.Mode.JOIN) {
-   Network.out.get(0).println(SL.CANCEL);
-   Network.out.get(0).println(SL.CANCEL);
-  }
  }
 
  public static void escapeToLast(boolean wasUser) {
@@ -704,49 +248,49 @@ public class UI/*UserInterface*/ extends Application {
   Network.mode = Network.Mode.OFF;
   page = Tournament.stage = 0;
   if (wasUser) {
-   Sounds.UI.play(1, 0);
+   sound.play(1, 0);
   }
   Keys.Escape = Network.runLoadThread = false;
-  for (Vehicle vehicle : vehicles) {
+  for (Vehicle vehicle : I.vehicles) {
    vehicle.closeSounds();
   }
  }
 
- private static void runMainMenu() {
+ static void runMainMenu() {
   boolean loaded = initialization.isEmpty();
   scene.setCursor(loaded ? Cursor.CROSSHAIR : Cursor.WAIT);
   if (loaded) {
-   Tournament.wins[0] = Tournament.wins[1] = userPlayerIndex = 0;
+   Tournament.wins[0] = Tournament.wins[1] = I.userPlayerIndex = 0;
    Network.mode = Network.Mode.OFF;
    Tournament.stage = Tournament.finished ? 0 : Tournament.stage;
    Tournament.finished = Network.waiting = Viewer.inUse = false;
-   TE.Arrow.MV.setVisible(false);
+   Arrow.MV.setVisible(false);
    if (selectionReady()) {
     if (Keys.Up) {
      selected = --selected < 0 ? 6 : selected;
      Keys.inUse = true;
-     Sounds.UI.play(0, 0);
+     sound.play(0, 0);
     }
     if (Keys.Down) {
      selected = ++selected > 6 ? 0 : selected;
      Keys.inUse = true;
-     Sounds.UI.play(0, 0);
+     sound.play(0, 0);
     }
    }
-   double C = selected == 0 && yinYang ? 1 : 0;
+   double C = selected == 0 && U.yinYang ? 1 : 0;
    U.fillRGB(C, C, C);
    U.fillRectangle(.5, .6, .2, selectionHeight);
-   U.fillRGB(selected == 1 && yinYang ? 1 : 0);
+   U.fillRGB(selected == 1 && U.yinYang ? 1 : 0);
    U.fillRectangle(.5, .65, .2, selectionHeight);
-   U.fillRGB(0, selected == 2 && yinYang ? 1 : 0, 0);
+   U.fillRGB(0, selected == 2 && U.yinYang ? 1 : 0, 0);
    U.fillRectangle(.5, .7, .2, selectionHeight);
-   U.fillRGB(selected == 3 && yinYang ? 1 : 0, 0, 0);
+   U.fillRGB(selected == 3 && U.yinYang ? 1 : 0, 0, 0);
    U.fillRectangle(.5, .75, .2, selectionHeight);
-   U.fillRGB(0, 0, selected == 4 && yinYang ? 1 : 0);
+   U.fillRGB(0, 0, selected == 4 && U.yinYang ? 1 : 0);
    U.fillRectangle(.5, .8, .2, selectionHeight);
-   U.fillRGB(selected == 5 && yinYang ? .5 : 0);
+   U.fillRGB(selected == 5 && U.yinYang ? .5 : 0);
    U.fillRectangle(.5, .85, .2, selectionHeight);
-   U.fillRGB(selected == 6 && yinYang ? .5 : 0);
+   U.fillRGB(selected == 6 && U.yinYang ? .5 : 0);
    U.fillRectangle(.5, .9, .2, selectionHeight);
    if (Keys.Enter || Keys.Space) {
     Keys.inUse = true;
@@ -755,7 +299,7 @@ public class UI/*UserInterface*/ extends Application {
      selected = VS.index = 0;
     } else if (selected == 1) {
      status = UI.Status.loadLAN;
-     resetGraphics();
+     Nodes.reset();
      selected = 0;
     } else if (selected == 2) {
      lastStatus = UI.Status.mainMenu;
@@ -767,7 +311,7 @@ public class UI/*UserInterface*/ extends Application {
      selected = 0;
     } else if (selected == 5) {
      status = UI.Status.vehicleSelect;
-     vehiclesInMatch = 1;
+     I.vehiclesInMatch = 1;
      VS.index = 0;
      Viewer.inUse = true;
      selected = 1;
@@ -775,7 +319,7 @@ public class UI/*UserInterface*/ extends Application {
      status = UI.Status.mapJump;
      Viewer.inUse = true;
     }
-    Sounds.UI.play(1, 0);
+    sound.play(1, 0);
     page = 0;
     Keys.Enter = Keys.Space = false;
     error = "";
@@ -808,12 +352,12 @@ public class UI/*UserInterface*/ extends Application {
    U.text("VEHICLE VIEWER", .85 + textOffset);
    U.text("MAP VIEWER", .9 + textOffset);
    if (!error.isEmpty()) {
-    U.fillRGB(yinYang ? 1 : 0, 0, 0);
+    U.fillRGB(U.yinYang ? 1 : 0, 0, 0);
     U.text(error, .3);
    }
   } else {
    U.font(.025);
-   U.text(yinYang ? ".. " + initialization + "   " : "   " + initialization + " ..", .5);
+   U.text(U.yinYang ? ".. " + initialization + "   " : "   " + initialization + " ..", .5);
   }
   if (!Keys.inUse) {
    selected =
@@ -829,20 +373,20 @@ public class UI/*UserInterface*/ extends Application {
   gameFPS = U.refreshRate * .5;
  }
 
- private static void runPaused() {
-  boolean ending = false;
+ static void runPaused() {
   if (selectionReady()) {
    if (Keys.Up) {
     selected = --selected < 0 ? 4 : selected;
     Keys.inUse = true;
-    Sounds.UI.play(0, 0);
+    sound.play(0, 0);
    }
    if (Keys.Down) {
     selected = ++selected > 4 ? 0 : selected;
     Keys.inUse = true;
-    Sounds.UI.play(0, 0);
+    sound.play(0, 0);
    }
   }
+  boolean ending = false;
   if (Keys.Enter || Keys.Space) {
    if (selected == 0) {
     status = UI.Status.play;
@@ -859,12 +403,12 @@ public class UI/*UserInterface*/ extends Application {
    } else if (selected == 4) {
     ending = true;
    }
-   Sounds.UI.play(1, 0);
+   sound.play(1, 0);
    Keys.Enter = Keys.Space = false;
   }
   if (Keys.Escape) {
    ending = true;
-   Sounds.UI.play(1, 0);
+   sound.play(1, 0);
    Keys.Escape = false;
   }
   if (ending) {
@@ -916,7 +460,7 @@ public class UI/*UserInterface*/ extends Application {
     }
    }
   }
-  U.fillRGB(yinYang ? .5 : 0);
+  U.fillRGB(U.yinYang ? .5 : 0);
   if (selected == 0) {
    U.fillRectangle(.5, .45, .2, selectionHeight);
   } else if (selected == 1) {
@@ -952,13 +496,13 @@ public class UI/*UserInterface*/ extends Application {
   }
  }
 
- private static void runLANMenu() {
+ static void runLANMenu() {
   U.fillRGB(0, 0, 0, colorOpacity.maximal);
   U.fillRectangle(.5, .5, 1, 1);
   int n;
   if (page < 1) {
    Network.mode = Network.Mode.OFF;
-   vehiclesInMatch = (int) U.clamp(2, vehiclesInMatch, Network.maxPlayers);
+   I.vehiclesInMatch = (int) U.clamp(2, I.vehiclesInMatch, Network.maxPlayers);
    try {
     for (BufferedReader in : Network.in) {
      in.close();
@@ -989,15 +533,15 @@ public class UI/*UserInterface*/ extends Application {
     if (Keys.Up) {
      selected = --selected < 0 ? 1 : selected;
      Keys.inUse = true;
-     Sounds.UI.play(0, 0);
+     sound.play(0, 0);
     }
     if (Keys.Down) {
      selected = ++selected > 1 ? 0 : selected;
      Keys.inUse = true;
-     Sounds.UI.play(0, 0);
+     sound.play(0, 0);
     }
    }
-   if (yinYang && Network.mode == Network.Mode.OFF) {
+   if (U.yinYang && Network.mode == Network.Mode.OFF) {
     if (selected == 0) {
      U.fillRGB(0, 0, 1);
     } else {
@@ -1034,22 +578,22 @@ public class UI/*UserInterface*/ extends Application {
      Network.loadGameThread();
      Network.waiting = true;
     }
-    Sounds.UI.play(1, 0);
+    sound.play(1, 0);
     Keys.Enter = Keys.Space = false;
    }
    U.font(.075);
    U.fillRGB(1);
-   U.text(vehiclesInMatch + "-PLAYER GAME", .175);
+   U.text(I.vehiclesInMatch + "-PLAYER GAME", .175);
    U.font(.01);
    U.fillRGB(1);
    if (Network.mode == Network.Mode.OFF) {
     U.text("HOST GAME", .45);
     U.text("JOIN GAME", .5);
    } else {
-    if (yinYang) {
+    if (U.yinYang) {
      StringBuilder s = new StringBuilder("Players in: " + Network.userName);
-     for (n = 0; n < vehiclesInMatch; n++) {
-      s.append(n == userPlayerIndex ? "" : ", " + playerNames[n]);
+     for (n = 0; n < I.vehiclesInMatch; n++) {
+      s.append(n == I.userPlayerIndex ? "" : ", " + playerNames[n]);
      }
      U.text(s.toString(), .45);
     }
@@ -1058,13 +602,13 @@ public class UI/*UserInterface*/ extends Application {
    if (errorTimer <= 0) {
     Network.joinError = "";
    } else {
-    errorTimer -= tick;
+    errorTimer -= U.tick;
    }
    U.text("Your UserName: " + Network.userName, .7);
    U.text("Your Target Host is: " + Network.targetHost, .725);
    U.text("Your Port #: " + Network.port, .75);
    U.text("For more information about this game mode, please read the Game Documentation", .85);
-   if (yinYang) {
+   if (U.yinYang) {
     U.font(.02);
     U.text(Network.joinError, .625);
    }
@@ -1081,7 +625,7 @@ public class UI/*UserInterface*/ extends Application {
   }
  }
 
- private static void runHowToPlay() {
+ static void runHowToPlay() {
   page = Math.max(page, 1);
   U.fillRGB(0, 0, 0, colorOpacity.maximal);
   U.fillRectangle(.5, .5, 1, 1);
@@ -1101,6 +645,7 @@ public class UI/*UserInterface*/ extends Application {
    U.fillRectangle(.8, .45, keySizeX, keySizeY);//LEFT
    U.fillRectangle(.9, .45, keySizeX, keySizeY);//RIGHT
    U.fillRectangle(.35, .45, keySizeX * 8, keySizeY);//SPACE
+   U.fillRectangle(.125, .225, keySizeX, keySizeY);//Q
    U.fillRectangle(.175, .225, keySizeX, keySizeY);//W
    U.fillRectangle(.125, .3, keySizeX, keySizeY);//A
    U.fillRectangle(.175, .3, keySizeX, keySizeY);//S
@@ -1118,6 +663,7 @@ public class UI/*UserInterface*/ extends Application {
    U.text("LEFT", .8, .45);
    U.text("RIGHT", .9, .45);
    U.text("SPACE", .35, .45);
+   U.text("Q", .125, .225);
    U.text("W", .175, .225);
    U.text("A", .125, .3);
    U.text("S", .175, .3);
@@ -1135,11 +681,12 @@ public class UI/*UserInterface*/ extends Application {
    U.text("While FLYING, hold Spacebar to yaw-steer instead of steer by banking, and use W and S to control throttle", .575);
    U.text("For FIXED TURRETS, Spacebar enables finer Precision while Aiming", .6);
    U.text("B = Boost Speed/Change Aerial Velocity (if available)", .625);
-   U.text("V and/or F = Use weapon(s)/specials if your vehicle has them", .65);
+   U.text("V and/or F = Use weapons/specials if your vehicle has them", .65);
    U.text("For TANKS, control the turret with the W/A/S/D keys", .675);
    U.text("(It is recommended to fire the tank cannon by pressing A and D simultaneously)", .7);
    U.text("+ and - = Adjust Vehicle Light Brightness", .725);
-   U.text("P = Pass bonus to a teammate (if crossing paths)", .75);
+   U.text("Q = Amphibious mode ON/OFF (for amphibious-capable vehicles)", .75);
+   U.text("P = Pass bonus to a teammate (if crossing paths)", .775);
    U.fillRGB(.5, 1, .5);
    U.text("----------Cursor Controls----------", .8);
    U.fillRGB(1);
@@ -1159,10 +706,10 @@ public class UI/*UserInterface*/ extends Application {
    U.text("Kills--How many opposing vehicles were destroyed by you/your team", .375);
    U.text("And last but not least--the Bonus", .4);
    U.fillRGB(U.random(), U.random(), U.random());
-   graphicsContext.fillOval((width * .5) - 50, (height * .5) - 50, 100, 100);
+   GC.fillOval((width * .5) - 50, (height * .5) - 50, 100, 100);
    U.fillRGB(1);
    U.text("Grab the bonus by driving into it--turrets can also get the bonus by shooting it.", .6);
-   U.text("Being in possession of the Bonus when time's up will DOUBLE you/your team's score!", .625);
+   U.text("Being in possession of the Bonus when time's up will DOUBLE your (team's) score!", .625);
    U.text("All these factors get multiplied together. When time's up, the player/team with the higher score wins!", .65);
    U.text("(Some values are handled in scientific notation for brevity)", .675);
    U.text("The user is always on the Green team--except in Multiplayer Games.", .7);
@@ -1196,18 +743,17 @@ public class UI/*UserInterface*/ extends Application {
    U.fillRGB(1);
    U.text("Enter or Escape = Pause/exit out of Match", .325);
    U.text("M = Mute Sound", .35);
-   U.text("< and > = Music Volume", .375);
-   U.text("Control and Shift = Adjust Zoom", .4);
+   U.text("Control and Shift = Adjust Field-Of-View", .375);
    U.fillRGB(.5, 1, .5);
-   U.text("(Press Control and Shift simultaneously to restore Zoom)", .425);
+   U.text("(Press Control and Shift simultaneously to restore F.O.V.)", .4);
    U.fillRGB(1);
-   U.text("E or R = Change Player Perspective (and set turrets/infrastructure before starting a match)", .45);
+   U.text("< or > = Change Player Perspective (and set turrets/infrastructure before starting a match)", .425);
    U.fillRGB(.5, 1, .5);
-   U.text("(Press E and R simultaneously to view yourself again)", .475);
+   U.text("(Press < and > simultaneously to view yourself again)", .45);
    U.fillRGB(1);
-   U.text("H = Heads-up Display ON/OFF", .5);
-   U.text("L = Destruction Log ON/OFF", .525);
-   U.text("I = Show/Hide Application Info", .55);
+   U.text("H = Heads-up Display ON/OFF", .475);
+   U.text("L = Destruction Log ON/OFF", .5);
+   U.text("I = Show/Hide Application Info", .525);
    U.text("There are many other aspects not covered here in these instructions,", .7);
    U.text("but you will learn with experience.", .725);
    U.text("GOOD LUCK", .75);
@@ -1218,76 +764,32 @@ public class UI/*UserInterface*/ extends Application {
      page = 0;
      status = lastStatus;
     }
-    Sounds.UI.play(0, 0);
+    sound.play(0, 0);
    }
    if (Keys.Left) {
     if (--page < 1) {
      page = 0;
      status = lastStatus;
     }
-    Sounds.UI.play(0, 0);
+    sound.play(0, 0);
    }
    if (Keys.Enter) {
     page = 0;
     status = lastStatus;
-    Sounds.UI.play(1, 0);
+    sound.play(1, 0);
     Keys.Enter = false;
    }
   }
   if (Keys.Escape) {
    page = 0;
    status = lastStatus;
-   Sounds.UI.play(1, 0);
+   sound.play(1, 0);
    Keys.Escape = false;
   }
   gameFPS = U.refreshRate * .25;
  }
 
- public static void reset() {
-  Match.started = Camera.flowFlip = false;
-  vehiclePerspective = userPlayerIndex;
-  Match.timeLeft = Options.matchLength;
-  TE.Arrow.target = Math.min(vehiclesInMatch - 1, TE.Arrow.target);
-  Match.scoreCheckpoint[0] = Match.scoreCheckpoint[1] = Match.scoreLap[0] = Match.scoreLap[1] = Match.scoreKill[0] = Match.scoreKill[1] = 1;
-  Match.scoreDamage[0] = Match.scoreDamage[1] = Camera.aroundVehicleXZ = Match.printTimer = Camera.lookAround = Match.scoreStunt[0] = Match.scoreStunt[1] = 0;
-  Bonus.big.setVisible(true);
-  for (Bonus.Ball bonusBall : Bonus.balls) {
-   bonusBall.setVisible(false);
-  }
-  bonusHolder = Network.bonusHolder = -1;
-  Match.stuntTimer = TE.MS.timer = Recorder.recorded = TE.MS.point = 0;
-  int n;
-  for (n = DestructionLog.names.length; --n >= 0; ) {
-   DestructionLog.names[n][0] = "";
-   DestructionLog.names[n][1] = "";
-   DestructionLog.nameColors[n][0] = new Color(0, 0, 0, 1);
-   DestructionLog.nameColors[n][1] = new Color(0, 0, 0, 1);
-  }
-  DestructionLog.inUse = vehiclesInMatch > 1;
-  if (!Viewer.inUse && Network.mode == Network.Mode.OFF) {
-   for (n = vehiclesInMatch; --n >= 0; ) {
-    playerNames[n] = vehicles.get(n).name;
-   }
-  }
-  Camera.mapSelectRandomRotationDirection = U.random() < .5 ? 1 : -1;
-  E.renderLevel = Double.POSITIVE_INFINITY;//<-Render everything once first to prevent frame spikes at match start
-  Network.ready = new boolean[Network.maxPlayers];
-  scene.setCursor(Cursor.CROSSHAIR);
- }
-
- public static void resetGraphics() {
-  boolean addSunlightBack = E.lights.getChildren().contains(Sun.light),//<-Check LIGHT group, not main group!
-  addSunBack = group.getChildren().contains(Sun.S),
-  addGroundBack = group.getChildren().contains(Ground.C);
-  group.getChildren().clear();
-  E.lights.getChildren().clear();
-  U.Nodes.add(E.ambientLight, addSunBack ? Sun.S : null, addGroundBack ? Ground.C : null);
-  U.Nodes.Light.add(addSunlightBack ? Sun.light : null);
-  U.Nodes.add(E.lights);
-  TE.Arrow.group.getChildren().clear();
- }
-
- public static void denyExpensiveInGameCall() {
+ public static void crashOnExpensiveInGameCall() {
   if (status == Status.play || status == Status.replay) {
    throw new IllegalStateException("For performance reasons--this call is not allowed during gameplay.");
   }

@@ -5,11 +5,7 @@ import javafx.scene.shape.Sphere;
 
 import ve.instances.CoreAdvanced;
 import ve.ui.Match;
-import ve.ui.UI;
-import ve.utilities.Images;
-import ve.utilities.SL;
-import ve.utilities.Sound;
-import ve.utilities.U;
+import ve.utilities.*;
 import ve.effects.Dust;
 
 import java.util.*;
@@ -48,13 +44,13 @@ public enum Boulder {
    XZ = U.random(360.);
    PhongMaterial PM = new PhongMaterial();
    Y = -S.getRadius();
-   U.Phong.setDiffuseRGB(PM, 1);
-   U.Phong.setSpecularRGB(PM, E.Specular.Colors.standard);
+   Phong.setDiffuseRGB(PM, 1);
+   Phong.setSpecularRGB(PM, E.Specular.Colors.standard);
    PM.setDiffuseMap(Images.get(SL.rock));
    PM.setSpecularMap(Images.get(SL.rock));
    PM.setBumpMap(Images.getNormalMap(SL.rock));
    U.setMaterialSecurely(S, PM);
-   U.Nodes.add(S);
+   Nodes.add(S);
    sound = new Sound(SL.boulder, Double.POSITIVE_INFINITY);
   }
 
@@ -66,8 +62,8 @@ public enum Boulder {
 
   void run(boolean update) {
    if (update) {
-    X += speed * U.sin(XZ) * UI.tick;
-    Z += speed * U.cos(XZ) * UI.tick;
+    X += speed * U.sin(XZ) * U.tick;
+    Z += speed * U.cos(XZ) * U.tick;
     dusts.get(currentDust).deploy(this);
     currentDust = ++currentDust >= Dust.defaultQuantity ? 0 : currentDust;
    }

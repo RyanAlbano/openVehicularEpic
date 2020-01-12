@@ -5,10 +5,7 @@ import javafx.scene.shape.CullFace;
 import javafx.scene.shape.Cylinder;
 import ve.instances.Core;
 import ve.ui.Match;
-import ve.ui.UI;
-import ve.utilities.Camera;
-import ve.utilities.Sound;
-import ve.utilities.U;
+import ve.utilities.*;
 import ve.vehicles.Physics;
 import ve.vehicles.Vehicle;
 
@@ -27,14 +24,14 @@ public enum Tornado {
    double size = 1;
    for (int n = 0; n < 40; n++) {
     parts.add(new Part(U.getValue(s, 0) * size, U.getValue(s, 0) * size));
-    U.setMaterialSecurely(parts.get(n).C, new PhongMaterial());
     size *= U.getValue(s, 2);
     parts.get(n).Y = U.getValue(s, 1) * n / 40.;
-    U.Nodes.add(parts.get(n).C);
-    parts.get(n).groundDust = new Cylinder(
+    Nodes.add(parts.get(n).C);
+    parts.get(n).groundDustC = new Cylinder(
     (n + 1) * U.getValue(s, 0) * .01,
     (n + 1) * U.getValue(s, 0) * .01);
-    U.Nodes.add(parts.get(n).groundDust);
+    parts.get(n).groundDustPM.setSpecularPower(E.Specular.Powers.dull);
+    Nodes.add(parts.get(n).groundDustC);
    }
    maxTravelDistance = U.getValue(s, 3);
    movesRepairPoints = s.contains("moveRepairPoints");
@@ -44,8 +41,8 @@ public enum Tornado {
  static void run(boolean update) {
   if (!parts.isEmpty()) {
    if (Wind.maxPotency > 0 && update) {
-    parts.get(0).X += Wind.speedX * UI.tick;
-    parts.get(0).Z += Wind.speedZ * UI.tick;
+    parts.get(0).X += Wind.speedX * U.tick;
+    parts.get(0).Z += Wind.speedZ * U.tick;
    }
    if (U.distance(0, parts.get(0).X, 0, parts.get(0).Z) > maxTravelDistance) {
     parts.get(0).X *= .999;
@@ -61,7 +58,7 @@ public enum Tornado {
     tornadoPart.run();
    }
    if (!Match.muteSound && update) {
-    sound.loop(Math.sqrt(U.distance(Camera.X, parts.get(0).X, Camera.Y, 0, Camera.Z, parts.get(0).Z)) * Sound.standardDistance(1));
+    sound.loop(Math.sqrt(U.distance(parts.get(0))) * Sound.standardDistance(1));
    } else {
     sound.stop();
    }
@@ -71,19 +68,19 @@ public enum Tornado {
  public static void vehicleInteract(Vehicle V) {
   V.P.inTornado = false;
   if (!parts.isEmpty() && !V.phantomEngaged && V.Y > parts.get(parts.size() - 1).Y && U.distance(V.X, parts.get(0).X, V.Z, parts.get(0).Z) < parts.get(0).C.getRadius() * 7.5) {
-   double throwEngage = (400000 / U.distance(V.X, parts.get(0).X, V.Z, parts.get(0).Z)) * UI.tick * (V.P.mode == Physics.Mode.fly ? 20 : 1);
+   double throwEngage = (400000 / U.distance(V.X, parts.get(0).X, V.Z, parts.get(0).Z)) * U.tick * (V.P.mode == Physics.Mode.fly ? 20 : 1);
    long maxThrow = 750;
    if (V.getsPushed >= 0) {
-    V.P.speedX += Math.abs(V.P.speedX) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
-    V.P.speedX += 2 *
-    (V.X < parts.get(0).X && V.P.speedX < maxThrow ? Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) :
-    V.X > parts.get(0).X && V.P.speedX > -maxThrow ? -Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) : 0);
-    V.P.speedZ += Math.abs(V.P.speedZ) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
-    V.P.speedZ += 2 *
-    (V.Z < parts.get(0).Z && V.P.speedZ < maxThrow ? Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) :
-    V.Z > parts.get(0).Z && V.P.speedZ > -maxThrow ? -Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) : 0);
+    V.speedX += Math.abs(V.speedX) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
+    V.speedX += 2 *
+    (V.X < parts.get(0).X && V.speedX < maxThrow ? Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) :
+    V.X > parts.get(0).X && V.speedX > -maxThrow ? -Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) : 0);
+    V.speedZ += Math.abs(V.speedZ) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
+    V.speedZ += 2 *
+    (V.Z < parts.get(0).Z && V.speedZ < maxThrow ? Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) :
+    V.Z > parts.get(0).Z && V.speedZ > -maxThrow ? -Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) : 0);
    }
-   V.P.speedY += V.getsLifted >= 0 && Math.abs(V.P.speedY) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
+   V.speedY += V.getsLifted >= 0 && Math.abs(V.speedY) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
    V.P.inTornado = V.getsLifted >= 0;
   }
  }
@@ -91,39 +88,48 @@ public enum Tornado {
  public static class Part extends Core {//<-Do NOT weaken access--will fail in 'TrackPart'!
 
   final Cylinder C;
-  Cylinder groundDust;
+  Cylinder groundDustC;
+  final PhongMaterial PM = new PhongMaterial();
+  final PhongMaterial groundDustPM = new PhongMaterial();
+  final Core groundDust = new Core();
 
   Part(double radius, double height) {
    C = new Cylinder(radius, height);
+   PM.setSpecularPower(E.Specular.Powers.dull);
+   groundDustPM.setSpecularPower(E.Specular.Powers.dull);
+   U.setMaterialSecurely(C, PM);
   }
 
   void run() {
-   double depth = U.getDepth(this), radius0 = parts.get(0).C.getRadius(),
-   groundDustY = -U.random(radius0),
-   dustLocation = (radius0 + groundDustY) * 7.5,
-   groundDustX = parts.get(0).X + U.randomPlusMinus(dustLocation),
-   groundDustZ = parts.get(0).Z + U.randomPlusMinus(dustLocation);
+   double depth = U.getDepth(this);
    if (depth > -C.getRadius()) {
     U.randomRotate(C);
     C.setCullFace(depth > C.getRadius() ? CullFace.BACK : CullFace.NONE);
     double color = 1 - U.random(.75);
-    U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), color);
+    Phong.setDiffuseRGB(PM, color);
     U.setTranslate(C, this);
     C.setVisible(true);
    } else {
     C.setVisible(false);
    }
-   if (U.render(groundDustX, groundDustY, groundDustZ)) {
-    U.randomRotate(groundDust);
-    PhongMaterial PM = new PhongMaterial();
+   runGroundDust();
+  }
+
+  void runGroundDust() {
+   double radius0 = parts.get(0).C.getRadius();
+   groundDust.Y = -U.random(radius0);
+   double strewXZ = (radius0 + groundDust.Y) * 7.5;
+   groundDust.X = parts.get(0).X + U.randomPlusMinus(strewXZ);
+   groundDust.Z = parts.get(0).Z + U.randomPlusMinus(strewXZ);
+   if (U.render(groundDust, false, false)) {
+    U.randomRotate(groundDustC);
     double shade = 1 - U.random(.5);
     double[] mix = {(shade + Ground.RGB.getRed()) * .5, (shade + Ground.RGB.getGreen()) * .5, (shade + Ground.RGB.getBlue()) * .5};
-    U.Phong.setDiffuseRGB(PM, mix[0], mix[1], mix[2]);
-    U.setMaterialSecurely(groundDust, PM);
-    U.setTranslate(groundDust, groundDustX, groundDustY, groundDustZ);
-    groundDust.setVisible(true);
+    Phong.setDiffuseRGB(groundDustPM, mix[0], mix[1], mix[2]);
+    U.setTranslate(groundDustC, groundDust);
+    groundDustC.setVisible(true);
    } else {
-    groundDust.setVisible(false);
+    groundDustC.setVisible(false);
    }
   }
  }

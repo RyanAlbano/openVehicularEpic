@@ -24,7 +24,7 @@ public class FrustumMound extends Core {//NOTE: Small mounds follow the vehicles
   this.renderAlways = renderAlways;
   absoluteRadius = Math.max(mound.getMajorRadius(), Math.max(mound.getMinorRadius(), mound.getHeight()));
   U.setMaterialSecurely(mound, paved ? TE.Paved.universal : Terrain.universal);
-  U.Nodes.add(mound);
+  Nodes.add(mound);
   U.rotate(mound, 0, U.random(360.));//<-For visual variation
  }
 
@@ -33,7 +33,7 @@ public class FrustumMound extends Core {//NOTE: Small mounds follow the vehicles
    E.wrap(this);
   }
   double moundY = Y - (mound.getHeight() * .5), depth = U.getDepth(X, moundY, Z);
-  if (depth > -absoluteRadius && (renderAlways || absoluteRadius * E.renderLevel >= U.distance(this) * Camera.zoom)) {
+  if (depth > -absoluteRadius && (renderAlways || absoluteRadius * E.renderLevel >= U.distance(this) * Camera.FOV)) {
    mound.setCullFace(objectInside(Camera.X, Camera.Y, Camera.Z) ? CullFace.NONE : CullFace.BACK);
    U.setTranslate(mound, X, moundY, Z);
    mound.setVisible(true);

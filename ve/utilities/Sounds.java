@@ -2,12 +2,10 @@ package ve.utilities;
 
 import ve.environment.*;
 import ve.instances.I;
-import ve.utilities.Sound;
 import ve.vehicles.Vehicle;
 
 public enum Sounds {
  ;
- public static Sound UI;
  public static Sound checkpoint;
  public static Sound stunt;
  public static Sound finish;

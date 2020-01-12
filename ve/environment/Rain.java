@@ -4,11 +4,7 @@ import javafx.scene.shape.Cylinder;
 
 import ve.instances.Core;
 import ve.ui.Match;
-import ve.ui.UI;
-import ve.utilities.Camera;
-import ve.utilities.SL;
-import ve.utilities.Sound;
-import ve.utilities.U;
+import ve.utilities.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -46,19 +42,19 @@ public class Rain extends Core {
    C = new Cylinder(.5, 4, 3);
    C.setScaleY(10);
    U.rotate(C, 0, U.random(360.));//<-For visual variation
-   U.Nodes.add(C);
+   Nodes.add(C);
   }
 
   private void run() {
-   X += Wind.speedX * UI.tick;
-   Z += Wind.speedZ * UI.tick;
-   Y += 200 * UI.tick;
+   X += Wind.speedX * U.tick;
+   Z += Wind.speedZ * U.tick;
+   Y += 200 * U.tick;
    if (Y > 0 || Math.abs(X - Camera.X) > wrapDistance || Math.abs(Y - Camera.Y) > wrapDistance || Math.abs(Z - Camera.Z) > wrapDistance) {
     X = Camera.X + U.randomPlusMinus(wrapDistance);
     Y = Camera.Y + U.randomPlusMinus(wrapDistance);
     Z = Camera.Z + U.randomPlusMinus(wrapDistance);
    }
-   if (Y > Storm.stormCloudY && U.render(this, 200)) {
+   if (Y > Storm.stormCloudY && U.render(this, 200, false, false)) {
     U.setTranslate(C, this);
     C.setVisible(true);
    } else {

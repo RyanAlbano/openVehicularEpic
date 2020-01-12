@@ -9,16 +9,11 @@ import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
 import ve.effects.GroundBurst;
 import ve.ui.UI;
-import ve.utilities.Camera;
-import ve.utilities.Images;
-import ve.utilities.Sound;
-import ve.utilities.U;
+import ve.utilities.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import static ve.environment.E.graphicsContext;
 
 public enum Storm {
  ;
@@ -34,15 +29,15 @@ public enum Storm {
  public static void load(String s) {
   if (s.startsWith("storm(")) {
    PhongMaterial PM = new PhongMaterial();
-   U.Phong.setDiffuseRGB(PM, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
+   Phong.setDiffuseRGB(PM, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
    U.setMaterialSecurely(stormCloud, PM);
    stormCloudY = U.getValue(s, 3);
-   U.Nodes.add(stormCloud);
+   Nodes.add(stormCloud);
    Rain.load(s);
    if (s.contains("lightning")) {
     Lightning.exists = true;
     Lightning.runMesh();//<-Must run first or mesh wil not load
-    U.Nodes.add(Lightning.MV);
+    Nodes.add(Lightning.MV);
     for (int n = 75; --n >= 0; ) {
      Lightning.groundBursts.add(new GroundBurst());
     }
@@ -84,7 +79,7 @@ public enum Storm {
    U.setMaterialSecurely(MV, lightningPM);
    for (int n = light.length; --n >= 0; ) {
     light[n] = new PointLight();
-    U.Nodes.Light.setRGB(light[n], 1, 1, 1);
+    Nodes.setRGB(light[n], 1, 1, 1);
    }
   }
 
@@ -101,13 +96,13 @@ public enum Storm {
 
   static void run(boolean update) {
    if (exists) {
-    U.Nodes.Light.remove(light[0]);
+    Nodes.removePointLight(light[0]);
     if (strikeStage < 8) {
      runMesh();
      U.setTranslate(MV, X, 0, Z);
      if (strikeStage < 4) {
       U.setTranslate(light[0], X, 0, Z);
-      U.Nodes.Light.add(light[0]);
+      Nodes.addPointLight(light[0]);
       if (strikeStage < 1) {//<-May call more than once if strikeStage progresses using 'tick'!
        MV.setVisible(true);
        for (int n = 25; --n >= 0; ) {
@@ -120,12 +115,12 @@ public enum Storm {
       }
      }
      U.setTranslate(light[1], X, 0, Z);
-     U.Nodes.Light.add(light[1]);
-     U.fillRGB(graphicsContext, 1, 1, 1, U.random(.5));
-     U.fillRectangle(graphicsContext, .5, .5, 1, 1);
+     Nodes.addPointLight(light[1]);
+     U.fillRGB(E.GC, 1, 1, 1, U.random(.5));
+     U.fillRectangle(E.GC, .5, .5, 1, 1);
     } else {
      MV.setVisible(false);
-     U.Nodes.Light.remove(light[1]);
+     Nodes.removePointLight(light[1]);
     }
     if (UI.status != UI.Status.replay && ++strikeStage > U.random(13000.)) {//<-Progress strikeStage using tick?
      X = Camera.X + U.randomPlusMinus(200000.);

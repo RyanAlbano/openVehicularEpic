@@ -1,7 +1,6 @@
 package ve.ui;
 
 import javafx.scene.paint.PhongMaterial;
-import ve.environment.E;
 import ve.environment.Ground;
 import ve.environment.Rain;
 import ve.environment.Snowball;
@@ -16,7 +15,7 @@ import java.io.PrintWriter;
 public enum VS {//VehicleSelect
  ;
  public static int index;
- public static final int[] chosen = new int[UI.maxPlayers];
+ public static final int[] chosen = new int[I.maxPlayers];
  static boolean allSame;
  public static boolean showModel;
 
@@ -25,24 +24,24 @@ public enum VS {//VehicleSelect
   U.font(.03);
   if (Network.waiting) {
    U.fillRGB(1);
-   if (UI.vehiclesInMatch < 3) {
+   if (I.vehiclesInMatch < 3) {
     U.text(UI.Please_Wait_For_ + UI.playerNames[Network.mode == Network.Mode.HOST ? 1 : 0] + " to Select Vehicle..", .5, .5);
    } else {
     U.text("..Please Wait for all other players to Select their Vehicle..", .5, .5);
    }
    if (Network.mode == Network.Mode.HOST) {
-    if (UI.timerBase20 <= 0) {
+    if (U.timerBase20 <= 0) {
      for (PrintWriter PW : Network.out) {
       PW.println(SL.Vehicle + "0" + "(" + I.vehicles.get(0).name);
      }
     }
-    for (n = UI.vehiclesInMatch; --n > 0; ) {
+    for (n = I.vehiclesInMatch; --n > 0; ) {
      String s = Network.readIn(n - 1);
      if (s.startsWith(SL.CANCEL)) {
       UI.escapeToLast(false);
      } else if (s.startsWith(SL.Vehicle + "(")) {
-      chosen[n] = UI.getVehicleIndex(U.getString(s, 0));
-      if (UI.vehiclesInMatch > 2) {
+      chosen[n] = I.getVehicleIndex(U.getString(s, 0));
+      if (I.vehiclesInMatch > 2) {
        for (PrintWriter out : Network.out) {
         out.println(SL.Vehicle + n + "(" + U.getString(s, 0));
        }
@@ -52,17 +51,17 @@ public enum VS {//VehicleSelect
      }
     }
    } else {
-    if (UI.timerBase20 <= 0) {
+    if (U.timerBase20 <= 0) {
      Network.out.get(0).println(SL.Vehicle + "(" + I.vehicles.get(0).name);
     }
     String s = Network.readIn(0);
     if (s.startsWith(SL.CANCEL)) {
      UI.escapeToLast(false);
     } else {
-     for (n = UI.vehiclesInMatch; --n >= 0; ) {
-      if (n != UI.userPlayerIndex) {
+     for (n = I.vehiclesInMatch; --n >= 0; ) {
+      if (n != I.userPlayerIndex) {
        if (s.startsWith(SL.Vehicle + n + "(")) {
-        chosen[n] = UI.getVehicleIndex(U.getString(s, 0));
+        chosen[n] = I.getVehicleIndex(U.getString(s, 0));
         Network.ready[n] = true;
        }
       }
@@ -70,16 +69,16 @@ public enum VS {//VehicleSelect
     }
    }
    long whoIsReady = 0;
-   for (n = UI.vehiclesInMatch; --n >= 0; ) {
+   for (n = I.vehiclesInMatch; --n >= 0; ) {
     whoIsReady = Network.ready[n] ? ++whoIsReady : whoIsReady;
    }
-   if (whoIsReady >= UI.vehiclesInMatch) {
+   if (whoIsReady >= I.vehiclesInMatch) {
     UI.status = UI.Status.mapJump;
     Network.waiting = false;
    }
   } else {
    if (UI.page == 0) {
-    UI.resetGraphics();
+    Nodes.reset();
     I.vehicles.clear();
     UI.scene3D.setFill(U.getColor(0));
     Camera.X = Camera.Z = Camera.YZ = Camera.XY = 0;
@@ -88,12 +87,12 @@ public enum VS {//VehicleSelect
     Camera.rotateXY.setAngle(0);
     Camera.setAngleTable();
     U.setTranslate(Ground.C, 0, 0, 0);
-    U.Phong.setDiffuseRGB((PhongMaterial) Ground.C.getMaterial(), .1);
+    Phong.setDiffuseRGB((PhongMaterial) Ground.C.getMaterial(), .1);
     for (Rain.Drop raindrop : Rain.raindrops) {
-     U.Nodes.add(raindrop.C);
+     Nodes.add(raindrop.C);
     }
     for (Snowball.Instance snowball : Snowball.instances) {
-     U.Nodes.add(snowball.round, snowball.lowResolution);
+     Nodes.add(snowball.round, snowball.lowResolution);
     }
     I.addVehicleModel(chosen[index], showModel);
     allSame = false;
@@ -106,20 +105,20 @@ public enum VS {//VehicleSelect
    V.inDriverView = false;
    V.runRender(gamePlay);
    V.Z = -1000;
-   V.XZ += (.5 - Mouse.X) * 20 * UI.tick;
+   V.XZ += (.5 - Mouse.X) * 20 * U.tick;
    if (V.spinner != null) {
     V.spinner.XZ = -V.XZ * 2;
    }
    if (V.isFixed()) {
     V.Y = -V.turretBaseY;
-    V.YZ -= (.5 - Mouse.Y) * 20 * UI.tick;
+    V.YZ -= (.5 - Mouse.Y) * 20 * U.tick;
     V.YZ = U.clamp(-90, V.YZ, 90);
    } else {
     V.Y = -V.clearanceY;
    }
    U.font(.0125);
-   if (UI.vehiclesInMatch > 2) {
-    if (index < UI.vehiclesInMatch >> 1) {
+   if (I.vehiclesInMatch > 2) {
+    if (index < I.vehiclesInMatch >> 1) {
      U.fillRGB(0, 1, 0);
      U.text(Network.mode == Network.Mode.OFF ? "(GREEN TEAM)" : "You're on the GREEN TEAM", .1);
     } else {
@@ -139,13 +138,13 @@ public enum VS {//VehicleSelect
    }
    U.text("Vehicles [" + (showModel ? "SHOW (can be slow--not recommended)" : UI.HIDE) + "]", .875);
    U.text(UI.CONTINUE + (allSame ? " (with all players as " + V.name + ")" : ""), .9);
-   boolean singleSelection = !Viewer.inUse && (UI.vehiclesInMatch < 2 || Network.mode != Network.Mode.OFF);
+   boolean singleSelection = !Viewer.inUse && (I.vehiclesInMatch < 2 || Network.mode != Network.Mode.OFF);
    if (singleSelection) {
     UI.selected = Math.min(1, UI.selected);
    } else {
     U.text(Viewer.inUse ? "START .OBJ-to-V.E. CONVERTER" : "SELECT NEXT VEHICLE", .925);
    }
-   if (UI.yinYang) {
+   if (U.yinYang) {
     U.strokeRGB(1);
     U.drawRectangle(.5, UI.selected == 0 ? .875 : UI.selected == 1 ? .9 : .925, UI.width, UI.selectionHeight);
    }
@@ -162,30 +161,30 @@ public enum VS {//VehicleSelect
      } else {
       UI.selected = --UI.selected < 0 ? (singleSelection ? 1 : 2) : UI.selected;
      }
-     Sounds.UI.play(0, 0);
+     UI.sound.play(0, 0);
      Keys.inUse = true;
     }
     if (Keys.Right) {
      I.removeVehicleModel();
-     if (++chosen[index] >= UI.vehicleModels.size()) {
+     if (++chosen[index] >= I.vehicleModels.size()) {
       chosen[index] = 0;
      }
-     if (index == UI.userPlayerIndex) {
-      UI.userRandomRGB = U.getColor(U.random(), U.random(), U.random());
+     if (index == I.userPlayerIndex) {
+      I.userRandomRGB = U.getColor(U.random(), U.random(), U.random());
      }
      I.addVehicleModel(chosen[index], showModel);
-     Sounds.UI.play(0, 0);
+     UI.sound.play(0, 0);
     }
     if (Keys.Left) {
      I.removeVehicleModel();
      if (--chosen[index] < 0) {
-      chosen[index] = UI.vehicleModels.size() - 1;
+      chosen[index] = I.vehicleModels.size() - 1;
      }
-     if (index == UI.userPlayerIndex) {
-      UI.userRandomRGB = U.getColor(U.random(), U.random(), U.random());
+     if (index == I.userPlayerIndex) {
+      I.userRandomRGB = U.getColor(U.random(), U.random(), U.random());
      }
      I.addVehicleModel(chosen[index], showModel);
-     Sounds.UI.play(0, 0);
+     UI.sound.play(0, 0);
     }
     if (Keys.Space || Keys.Enter) {
      if (Viewer.inUse && UI.selected == 2) {
@@ -198,30 +197,30 @@ public enum VS {//VehicleSelect
       } else {
        if (Network.mode == Network.Mode.OFF) {
         index++;
-        if (index < UI.vehiclesInMatch) {
+        if (index < I.vehiclesInMatch) {
          I.addVehicleModel(chosen[index], showModel);
         }
        }
-       if (index > (UI.vehiclesInMatch * (Tournament.stage > 0 ? .5 : 1)) - 1 || UI.selected == 1) {
+       if (index > (I.vehiclesInMatch * (Tournament.stage > 0 ? .5 : 1)) - 1 || UI.selected == 1) {
         if (Viewer.inUse) {
          UI.status = UI.Status.vehicleViewer;
          UI.page = 0;
         } else if (Network.mode != Network.Mode.OFF) {
-         Network.ready[UI.userPlayerIndex] = Network.waiting = true;
+         Network.ready[I.userPlayerIndex] = Network.waiting = true;
         } else {
          UI.status = UI.Status.mapJump;
          if (allSame) {
           for (n = chosen.length; --n > 0; ) {
            chosen[n] = chosen[0];
           }
-         } else for (n = index; n < UI.vehiclesInMatch; n++) {
-          chosen[n] = U.random(UI.vehicleModels.size());
+         } else for (n = index; n < I.vehiclesInMatch; n++) {
+          chosen[n] = U.random(I.vehicleModels.size());
          }
         }
        }
       }
      }
-     Sounds.UI.play(1, 0);
+     UI.sound.play(1, 0);
      Keys.Space = Keys.Enter = false;
     }
    }
@@ -251,7 +250,7 @@ public enum VS {//VehicleSelect
    U.text(V.name, .5);
   }
   U.font(.015);
-  U.text(UI.Made_by_ + UI.vehicleMaker, .2);
+  U.text(UI.Made_by_ + Vehicle.vehicleMaker, .2);
   double lineLL = .1125, lineLR = .125, lineRL = 1 - lineLR, lineRR = 1 - lineLL,
   Y0 = .725, Y1 = .75, Y2 = .775, Y3 = .8, Y4 = .825, Y5 = .85;
   U.font(.00875);
@@ -268,8 +267,8 @@ public enum VS {//VehicleSelect
     U.textR("Top Speed:", lineLL, Y1);
     String topSpeed = V.topSpeeds[1] >= Long.MAX_VALUE ? SL.None :
     V.speedBoost > 0 && V.topSpeeds[2] >= Long.MAX_VALUE ? "None (Speed Boost)" :
-    V.speedBoost > 0 ? Math.round(UI.getUnitSpeed(V.topSpeeds[2])) + " " + UI.getUnitSpeedName() + " (Speed Boost)" :
-    Math.round(UI.getUnitSpeed(V.topSpeeds[1])) + " " + UI.getUnitSpeedName();
+    V.speedBoost > 0 ? Math.round(Units.getSpeed(V.topSpeeds[2])) + " " + Units.getSpeedName() + " (Speed Boost)" :
+    Math.round(Units.getSpeed(V.topSpeeds[1])) + " " + Units.getSpeedName();
     U.textL(topSpeed, lineLR, Y1);
     U.textR("Acceleration Phases:", lineLL, Y2);
     U.textL("+" + V.accelerationStages[0] + ",  +" + V.accelerationStages[1], lineLR, Y2);

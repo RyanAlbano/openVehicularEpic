@@ -2,7 +2,7 @@ package ve.environment;
 
 import javafx.scene.paint.*;
 import javafx.scene.shape.*;
-import ve.ui.UI;
+import ve.utilities.Phong;
 import ve.utilities.U;
 
 import java.util.ArrayList;
@@ -29,8 +29,8 @@ public enum Fog {
     U.setScale(spheres.get(spheres.size() - 1), radius);
     radius += E.viewableMapDistance / currentQuantity;
    }
-   U.Phong.setDiffuseRGB(PM, E.skyRGB, Math.min(opacityBase / currentQuantity, .5));
-   U.Phong.setSpecularRGB(PM, 0);
+   Phong.setDiffuseRGB(PM, E.skyRGB, Math.min(opacityBase / currentQuantity, .5));
+   Phong.setSpecularRGB(PM, 0);
    PM.setSpecularPower(Double.POSITIVE_INFINITY);
    for (Sphere fog : spheres) {
     fog.setMaterial(PM);
@@ -45,10 +45,10 @@ public enum Fog {
   if (exists) {
    if (U.averageFPS < 30 && currentQuantity > 1) {
     recalibrate(Recalibration.decrement);
-   } else if (UI.yinYang && U.averageFPS > 45 && currentQuantity < spheres.size()) {
+   } else if (U.yinYang && U.averageFPS > 45 && currentQuantity < spheres.size()) {
     recalibrate(Recalibration.increment);
    }
-   recalibrationTimer -= UI.tick;
+   recalibrationTimer -= U.tick;
   }
  }
 
@@ -61,7 +61,7 @@ public enum Fog {
     radius += E.viewableMapDistance / currentQuantity;
     fog.setVisible(spheres.indexOf(fog) < currentQuantity);
    }
-   U.Phong.setDiffuseRGB(PM, E.skyRGB, Math.min(opacityBase / currentQuantity, .5));
+   Phong.setDiffuseRGB(PM, E.skyRGB, Math.min(opacityBase / currentQuantity, .5));
    recalibrationTimer = 10;
   }
  }

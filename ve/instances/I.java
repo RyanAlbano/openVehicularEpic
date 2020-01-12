@@ -5,27 +5,81 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.scene.paint.Color;
-import ve.trackElements.TE;
-import ve.trackElements.trackParts.TrackPart;
-import ve.trackElements.trackParts.TrackPartPart;
-import ve.ui.Map;
+import ve.ui.Maps;
 import ve.ui.Viewer;
 import ve.utilities.*;
 import ve.vehicles.Vehicle;
 import ve.vehicles.VehiclePart;
 
-import static ve.ui.UI.maxPlayers;
-
-public abstract class I {//<-Abstract class for handling Instances
-
+public enum I {//<-handles Instances
+ ;
+ public static final int maxPlayers = (int) Math.round(Math.max(Network.maxPlayers, Runtime.getRuntime().maxMemory() * .00000001125));
+ public static List<String> vehicleModels;
  public static final List<Vehicle> vehicles = new ArrayList<>(maxPlayers);
+ public static int vehiclePerspective;
+ public static int userPlayerIndex;
+ public static int vehiclesInMatch = 1;
+ public static Color userRandomRGB = U.getColor(U.random(), U.random(), U.random());
+ public static final float[] textureCoordinateBase0 = {0, 1, 1, 1, 1, 0, 0, 0}, textureCoordinateBase1 = {0, 0, 1, 0, 1, 1, 0, 1};
+
+ public static int getVehicleIndex(String s) {
+  String s1, s3 = "";
+  int n;
+  for (n = 0; n < vehicleModels.size(); n++) {
+   File F = new File(U.modelFolder + File.separator + SL.vehicles + File.separator + vehicleModels.get(n));
+   if (!F.exists()) {
+    F = new File(U.modelFolder + File.separator + SL.vehicles + File.separator + U.userSubmittedFolder + File.separator + vehicleModels.get(n));
+   }
+   if (!F.exists()) {
+    F = new File(U.modelFolder + File.separator + SL.vehicles + File.separator + SL.basic);
+   }
+   try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(F), U.standardChars))) {
+    for (String s2; (s2 = BR.readLine()) != null; ) {
+     s1 = s2.trim();
+     if (s1.startsWith(SL.name)) {
+      s3 = U.getString(s1, 0);
+      break;
+     }
+    }
+   } catch (IOException e) {//<-Don't bother
+    e.printStackTrace();
+   }
+   if (s.equals(s3)) {
+    break;
+   }
+  }
+  return n;
+ }
+
+ public static String getVehicleName(int in) {//<-Keep method in case we need it later
+  String s, s3 = "";
+  File F = new File(U.modelFolder + File.separator + vehicleModels.get(in));
+  if (!F.exists()) {
+   F = new File(U.modelFolder + File.separator + U.userSubmittedFolder + File.separator + vehicleModels.get(in));
+  }
+  if (!F.exists()) {
+   F = new File(U.modelFolder + File.separator + SL.basic);
+  }
+  try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(F), U.standardChars))) {
+   for (String s2; (s2 = BR.readLine()) != null; ) {
+    s = s2.trim();
+    if (s.startsWith(SL.name)) {
+     s3 = U.getString(s, 0);
+     break;
+    }
+   }
+  } catch (IOException e) {
+   e.printStackTrace();
+  }
+  return s3;
+ }
 
  public static void addVehicleModel(int v, boolean show) {
   vehicles.clear();
   vehicles.add(new Vehicle(v, 0, false, show));
-  vehicles.get(0).lightBrightness = Map.defaultVehicleLightBrightness;
+  vehicles.get(0).lightBrightness = Maps.defaultVehicleLightBrightness;
   for (VehiclePart part : vehicles.get(0).parts) {
-   U.Nodes.add(part.MV);
+   Nodes.add(part.MV);
    part.MV.setVisible(true);
    part.setDrawMode(Viewer.Vehicle.showWireframe);
   }
@@ -34,8 +88,8 @@ public abstract class I {//<-Abstract class for handling Instances
  public static void removeVehicleModel() {
   if (!vehicles.isEmpty() && vehicles.get(0) != null) {
    for (VehiclePart part : vehicles.get(0).parts) {
-    U.Nodes.remove(part.MV);
-    U.Nodes.Light.remove(part.pointLight);
+    Nodes.remove(part.MV);
+    Nodes.removePointLight(part.pointLight);
    }
   }
  }

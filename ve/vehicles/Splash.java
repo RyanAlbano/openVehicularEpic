@@ -6,7 +6,8 @@ import javafx.scene.shape.Cylinder;
 import ve.environment.E;
 import ve.environment.Pool;
 import ve.instances.CoreAdvanced;
-import ve.ui.UI;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
 import ve.utilities.U;
 
 public class Splash extends CoreAdvanced {
@@ -19,9 +20,9 @@ public class Splash extends CoreAdvanced {
   C = new Cylinder(1, 1);
   U.setMaterialSecurely(C, new PhongMaterial());
   if (Pool.type == Pool.Type.lava) {
-   ((PhongMaterial) C.getMaterial()).setSelfIlluminationMap(U.Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
+   ((PhongMaterial) C.getMaterial()).setSelfIlluminationMap(Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
   }
-  U.Nodes.add(C);
+  Nodes.add(C);
   C.setVisible(false);
  }
 
@@ -49,10 +50,10 @@ public class Splash extends CoreAdvanced {
     C.setVisible(false);
    } else {
     boolean show = false;
-    X += speedX * UI.tick;
-    Y += speedY * UI.tick;
-    Z += speedZ * UI.tick;
-    speedY += E.gravity * UI.tick;
+    X += speedX * U.tick;
+    Y += speedY * U.tick;
+    Z += speedZ * U.tick;
+    speedY += E.gravity * U.tick;
     if (U.getDepth(this) > 0) {
      U.randomRotate(C);
      double splashRGB = U.random(2.), r = .5 * splashRGB, g = splashRGB, b = 1;
@@ -64,7 +65,7 @@ public class Splash extends CoreAdvanced {
       r = b = .5 * splashRGB;
       g = 1;
      }
-     U.Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), r, g, b);
+     Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), r, g, b);
      U.setTranslate(C, this);
      show = true;
     }

@@ -27,7 +27,7 @@ public enum SL {//StringLiterals--don't EVER change the texts!
  white = "white", wood = "wood", wheel = "wheel", water = "water", wheelPoint = "wheelPoint", wheelFaces = "wheelFaces", wheelRingFaces = "wheelRingFaces",
  XY = "XY", XZ = "XZ", YZ = "YZ";
 
- public static String Thick(String s) {
+ public static String thick(String s) {
   return " " + s + " ";
  }
 

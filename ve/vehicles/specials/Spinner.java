@@ -1,5 +1,6 @@
 package ve.vehicles.specials;
 
+import ve.instances.I;
 import ve.ui.Match;
 import ve.ui.UI;
 import ve.utilities.Camera;
@@ -20,10 +21,10 @@ public class Spinner {
  public void run(boolean gamePlay) {
   if (gamePlay) {
    if (V.destroyed) {
-    if (Math.abs(speed) < .01 * UI.tick) {
+    if (Math.abs(speed) < .01 * U.tick) {
      speed = 0;
     } else {
-     speed += .01 * (speed > 0 ? -1 : 1) * UI.tick;
+     speed += .01 * (speed > 0 ? -1 : 1) * U.tick;
     }
    } else {
     boolean runSpinner = false;
@@ -34,12 +35,12 @@ public class Spinner {
      }
     }
     if (runSpinner) {
-     double speedChange = UI.tick * .005 * V.energyMultiple;
+     double speedChange = U.tick * .005 * V.energyMultiple;
      speed += speed > 0 ? speedChange : speed < 0 ? -speedChange : (U.random() < .5 ? -1 : 1) * Double.MIN_VALUE;
     }
    }
   }
-  XZ += speed * 120 * UI.tick;
+  XZ += speed * 120 * U.tick;
   while (XZ > 180) XZ -= 360;
   while (XZ < -180) XZ += 360;
   speed = U.clamp(-1, speed, 1);
@@ -66,7 +67,7 @@ public class Spinner {
     if (absSpeed > .125) {
      double damageAmount = vehicle.durability * absSpeed * speedReduction + (speedReduction >= 1 ? vehicle.damageCeiling() - vehicle.durability : 0);
      vehicle.addDamage(damageAmount);
-     Match.scoreDamage[V.index < UI.vehiclesInMatch >> 1 ? 0 : 1] += UI.status == UI.Status.replay ? 0 : damageAmount;
+     Match.scoreDamage[V.index < I.vehiclesInMatch >> 1 ? 0 : 1] += UI.status == UI.Status.replay ? 0 : damageAmount;
      V.P.hitCheck(vehicle);
      if (absSpeed > .5) {
       for (Wheel wheel : vehicle.wheels) {
@@ -79,11 +80,11 @@ public class Spinner {
      }
     }
     if (vehicle.getsPushed >= 0) {
-     vehicle.P.speedX += (U.random() < .5 ? 1 : -1) * V.renderRadius * absSpeed * speedReduction * 4;
-     vehicle.P.speedZ += (U.random() < .5 ? 1 : -1) * V.renderRadius * absSpeed * speedReduction * 4;
+     vehicle.speedX += (U.random() < .5 ? 1 : -1) * V.renderRadius * absSpeed * speedReduction * 4;
+     vehicle.speedZ += (U.random() < .5 ? 1 : -1) * V.renderRadius * absSpeed * speedReduction * 4;
     }
     if (vehicle.getsLifted >= 0) {
-     vehicle.P.speedY += (U.random() < .5 ? 1 : -1) * V.renderRadius * absSpeed * speedReduction;
+     vehicle.speedY += (U.random() < .5 ? 1 : -1) * V.renderRadius * absSpeed * speedReduction;
     }
    }
    speed -= speed * speedReduction;

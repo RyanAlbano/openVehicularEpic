@@ -2,7 +2,8 @@ package ve.ui;
 
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import ve.trackElements.TE;
+import ve.instances.I;
+import ve.trackElements.Arrow;
 import ve.utilities.Camera;
 
 public enum Keys {
@@ -79,15 +80,15 @@ public enum Keys {
    } else if (KC == KeyCode.D) {
     D = true;
    } else if (KC == KeyCode.C) {
-    TE.Arrow.status =
-    TE.Arrow.status == TE.Arrow.Status.racetrack ? TE.Arrow.Status.vehicles :
-    TE.Arrow.status == TE.Arrow.Status.vehicles ? TE.Arrow.Status.locked :
-    TE.Arrow.Status.racetrack;
-   } else if (KC == KeyCode.E) {
-    UI.vehiclePerspective = --UI.vehiclePerspective < 0 ? UI.vehiclesInMatch - 1 : UI.vehiclePerspective;
+    Arrow.status =
+    Arrow.status == Arrow.Status.racetrack ? Arrow.Status.vehicles :
+    Arrow.status == Arrow.Status.vehicles ? Arrow.Status.locked :
+    Arrow.Status.racetrack;
+   } else if (KC == KeyCode.COMMA) {
+    I.vehiclePerspective = --I.vehiclePerspective < 0 ? I.vehiclesInMatch - 1 : I.vehiclePerspective;
     Camera.toUserPerspective[1] = true;
-   } else if (KC == KeyCode.R) {
-    UI.vehiclePerspective = ++UI.vehiclePerspective >= UI.vehiclesInMatch ? 0 : UI.vehiclePerspective;
+   } else if (KC == KeyCode.PERIOD) {
+    I.vehiclePerspective = ++I.vehiclePerspective >= I.vehiclesInMatch ? 0 : I.vehiclePerspective;
     Camera.toUserPerspective[0] = true;
    } else if (KC == KeyCode.H) {
     Options.headsUpDisplay = !Options.headsUpDisplay;
@@ -96,17 +97,13 @@ public enum Keys {
    } else if (KC == KeyCode.P) {
     PassBonus = true;
    } else if (KC == KeyCode.SHIFT) {
-    Camera.zoomChange = .98;
+    Camera.adjustFOV = .98;
     Camera.restoreZoom[1] = true;
    } else if (KC == KeyCode.CONTROL) {
-    Camera.zoomChange = 1.02;
+    Camera.adjustFOV = 1.02;
     Camera.restoreZoom[0] = true;
    } else if (KC == KeyCode.M) {
     Match.muteSound = !Match.muteSound;
-   } else if (KC == KeyCode.COMMA) {
-    Music.gain = Math.max(Music.gain * 2 - 1, -100);
-   } else if (KC == KeyCode.PERIOD) {
-    Music.gain = Math.min(Music.gain * .5 + 1, 0);
    } else if (KC == KeyCode.T || KC == KeyCode.G || KC == KeyCode.U || KC == KeyCode.J) {
     Viewer.heightChange = KC == KeyCode.J ? 10 : KC == KeyCode.U ? -10 : Viewer.heightChange;
     Viewer.depthChange = KC == KeyCode.T ? 10 : KC == KeyCode.G ? -10 : Viewer.depthChange;
@@ -118,7 +115,7 @@ public enum Keys {
    } else if (KC == KeyCode.Q) {
     Amphibious = !Amphibious;
    } else if (KC == KeyCode.I) {
-    Options.showInfo = !Options.showInfo;
+    Options.showAppInfo = !Options.showAppInfo;
    }
   });
   UI.scene.setOnKeyReleased((KeyEvent keyEvent) -> {
@@ -145,10 +142,10 @@ public enum Keys {
     keyBoost = false;
    } else if (KC == KeyCode.P) {
     PassBonus = false;
-   } else if (KC == KeyCode.E || KC == KeyCode.R) {
+   } else if (KC == KeyCode.COMMA || KC == KeyCode.PERIOD) {
     Camera.toUserPerspective[0] = Camera.toUserPerspective[1] = false;
    } else if (KC == KeyCode.SHIFT || KC == KeyCode.CONTROL) {
-    Camera.zoomChange = 1;
+    Camera.adjustFOV = 1;
     Camera.restoreZoom[0] = Camera.restoreZoom[1] = false;
    } else if (KC == KeyCode.T || KC == KeyCode.G || KC == KeyCode.U || KC == KeyCode.J) {
     if (KC == KeyCode.U || KC == KeyCode.J) {

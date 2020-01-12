@@ -11,8 +11,6 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static ve.utilities.U.*;
-
 public enum Images {
  ;
  public static Image RA, white, amphibious,
@@ -22,9 +20,9 @@ public enum Images {
 
  public static Image load(String name) {
   try {
-   return new Image(new FileInputStream(imageFolder + File.separator + name + imageExtension));
+   return new Image(new FileInputStream(U.imageFolder + File.separator + name + U.imageExtension));
   } catch (FileNotFoundException E) {
-   System.out.println(imageLoadingException + E);
+   System.out.println(U.imageLoadingException + E);
    return null;
   }
  }
@@ -33,11 +31,11 @@ public enum Images {
   List<Image> I = new ArrayList<>();
   try {
    for (int n = 0; n < quantity; n++) {
-    I.add(new Image(new FileInputStream(imageFolder + File.separator + name + n + imageExtension)));
+    I.add(new Image(new FileInputStream(U.imageFolder + File.separator + name + n + U.imageExtension)));
    }
   } catch (FileNotFoundException E) {
    if (quantity < Double.POSITIVE_INFINITY) {
-    System.out.println(imageLoadingException + E);
+    System.out.println(U.imageLoadingException + E);
    }
   }
   return I;
@@ -106,7 +104,7 @@ public enum Images {
  }
 
  public static Image getLowResolution(Image I) {
-  UI.denyExpensiveInGameCall();
+  UI.crashOnExpensiveInGameCall();
   if (I != null) {
    ImageView IV = new ImageView(I);
    IV.setScaleX(Math.min(500 / I.getWidth(), 1));//*Don't exceed the original size!
@@ -117,6 +115,6 @@ public enum Images {
  }
 
  public static void draw(Image I, double X, double Y) {
-  UI.graphicsContext.drawImage(I, UI.width * X - (I.getWidth() * .5), UI.height * Y - (I.getHeight() * .5));
+  UI.GC.drawImage(I, UI.width * X - (I.getWidth() * .5), UI.height * Y - (I.getHeight() * .5));
  }
 }

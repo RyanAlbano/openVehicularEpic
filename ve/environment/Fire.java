@@ -12,10 +12,7 @@ import ve.effects.Effects;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.ui.Match;
-import ve.ui.UI;
-import ve.utilities.SL;
-import ve.utilities.Sound;
-import ve.utilities.U;
+import ve.utilities.*;
 
 public enum Fire {
  ;
@@ -82,17 +79,17 @@ public enum Fire {
    TM.getFaces().setAll(0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8, 0, 9, 0, 10, 0, 11, 0, 12, 0, 13, 0, 14, 0, 15, 0, 16, 0, 17, 0, 18, 0, 19, 0, 20, 0, 21, 0, 22, 0, 23, 0);
    pit = new MeshView(TM);
    PhongMaterial PM = new PhongMaterial();
-   U.Phong.setDiffuseRGB(PM, 0);
-   U.Phong.setSpecularRGB(PM, 0);
+   Phong.setDiffuseRGB(PM, 0);
+   Phong.setSpecularRGB(PM, 0);
    U.setMaterialSecurely(pit, PM);
-   U.Nodes.add(pit);
+   Nodes.add(pit);
   }
 
   void run(boolean update) {
    for (Flame flame : flames) {
-    flame.X += flame.speedX * UI.tick + (Wind.speedX * UI.tick);
-    flame.Z += flame.speedZ * UI.tick + (Wind.speedZ * UI.tick);
-    flame.Y -= .1 * absoluteRadius * UI.tick;
+    flame.X += flame.speedX * U.tick + (Wind.speedX * U.tick);
+    flame.Z += flame.speedZ * U.tick + (Wind.speedZ * U.tick);
+    flame.Y -= .1 * absoluteRadius * U.tick;
     if (Math.abs(Y - flame.Y) > absoluteRadius + U.random(absoluteRadius) || Math.abs(X - flame.X) > absoluteRadius + U.random(absoluteRadius) || Math.abs(Z - flame.Z) > absoluteRadius + U.random(absoluteRadius)) {
      flame.X = X + U.randomPlusMinus(absoluteRadius);
      flame.Z = Z + U.randomPlusMinus(absoluteRadius);
@@ -119,11 +116,11 @@ public enum Fire {
    double fireToCameraDistance = U.distance(this);
    if (PL != null) {
     if (fireToCameraDistance < E.viewableMapDistance) {
-     U.Nodes.Light.setRGB(PL, 1, .5 + U.random(.4), U.random(.25));
+     Nodes.setRGB(PL, 1, .5 + U.random(.4), U.random(.25));
      U.setTranslate(PL, this);
-     U.Nodes.Light.add(PL);
+     Nodes.addPointLight(PL);
     } else {
-     U.Nodes.Light.remove(PL);
+     Nodes.removePointLight(PL);
     }
    }
    if (sound != null) {
@@ -157,10 +154,10 @@ public enum Fire {
     Z = FI.Z;
     MV.setCullFace(CullFace.NONE);
     PhongMaterial PM = new PhongMaterial();
-    U.Phong.setDiffuseRGB(PM, 0);
-    U.Phong.setSpecularRGB(PM, 0);
+    Phong.setDiffuseRGB(PM, 0);
+    Phong.setSpecularRGB(PM, 0);
     U.setMaterialSecurely(MV, PM);
-    U.Nodes.add(MV);
+    Nodes.add(MV);
    }
   }
  }

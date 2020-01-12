@@ -1,10 +1,9 @@
 package ve.utilities;
 
 import java.awt.*;
-import java.io.*;
 import java.nio.charset.*;
 import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
@@ -12,9 +11,6 @@ import java.util.regex.Pattern;
 import javafx.geometry.Point3D;
 import javafx.scene.*;
 import javafx.scene.canvas.*;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.paint.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Shape3D;
@@ -26,7 +22,7 @@ import ve.environment.MapBounds;
 import ve.environment.Pool;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
-import ve.ui.Options;
+import ve.instances.I;
 import ve.ui.UI;
 import ve.vehicles.Vehicle;
 
@@ -35,6 +31,10 @@ public enum U {//Utilities
 
  public static final String lineSeparator = System.lineSeparator();
  public static final Pattern regex = Pattern.compile("[(,)]");
+ public static double tick;
+ public static long lastTime;
+ public static boolean yinYang;
+ public static double timerBase20;
  public static double FPS, averageFPS;
  public static double FPSTime;
  public static final double sin45 = .70710678118654752440084436210485;
@@ -43,17 +43,13 @@ public enum U {//Utilities
  public static final Dimension dimension = Toolkit.getDefaultToolkit().getScreenSize();
  public static final String imageFolder = "images", soundFolder = "sounds", soundExtension = ".au",
  modelFolder = "models";
- private static final String mapFolder = "maps";
+ public static final String mapFolder = "maps";
  public static final String userSubmittedFolder = "User-Submitted";
  public static final String imageExtension = ".png";
- public static final String JLayerStuff = "JLayerStuff";
  public static final Charset standardChars = StandardCharsets.UTF_8;
  public static final String imageLoadingException = "Image-loading Exception: ";
  public static final String soundLoadingException = "Sound-loading Exception: ";
  public static final String modelLoadingError = "Model-Loading Error: ";
- public static String debug = "Code executed to this location";
- private static final Canvas colorGetterCanvas = new Canvas(1, 1);
- private static final GraphicsContext colorGetter = colorGetterCanvas.getGraphicsContext2D();
  public static final DecimalFormat DF = new DecimalFormat("0.#E0");
  public static final Quaternion inert = new Quaternion();
 
@@ -78,7 +74,7 @@ public enum U {//Utilities
  }
 
  public static boolean sameTeam(long index1, long index2) {
-  long halfOfPlayers = UI.vehiclesInMatch >> 1;
+  long halfOfPlayers = I.vehiclesInMatch >> 1;
   return index1 < halfOfPlayers == index2 < halfOfPlayers;
  }
 
@@ -87,35 +83,35 @@ public enum U {//Utilities
  }
 
  public static void text(String s, double X, double Y) {
-  UI.graphicsContext.setTextAlign(TextAlignment.CENTER);
-  UI.graphicsContext.fillText(s, UI.width * X, UI.height * Y);
+  UI.GC.setTextAlign(TextAlignment.CENTER);
+  UI.GC.fillText(s, UI.width * X, UI.height * Y);
  }
 
  public static void textR(String s, double X, double Y) {
-  UI.graphicsContext.setTextAlign(TextAlignment.RIGHT);
-  UI.graphicsContext.fillText(s, UI.width * X, UI.height * Y);
+  UI.GC.setTextAlign(TextAlignment.RIGHT);
+  UI.GC.fillText(s, UI.width * X, UI.height * Y);
  }
 
  public static void textL(String s, double X, double Y) {
-  UI.graphicsContext.setTextAlign(TextAlignment.LEFT);
-  UI.graphicsContext.fillText(s, UI.width * X, UI.height * Y);
+  UI.GC.setTextAlign(TextAlignment.LEFT);
+  UI.GC.fillText(s, UI.width * X, UI.height * Y);
  }
 
  public static void fillRGB(Color C) {
-  UI.graphicsContext.setFill(C);
+  UI.GC.setFill(C);
  }
 
  public static void fillRGB(double shade) {
   shade = clamp(shade);
-  UI.graphicsContext.setFill(Color.color(shade, shade, shade));
+  UI.GC.setFill(Color.color(shade, shade, shade));
  }
 
  public static void fillRGB(double R, double G, double B) {
-  UI.graphicsContext.setFill(Color.color(clamp(R), clamp(G), clamp(B)));
+  UI.GC.setFill(Color.color(clamp(R), clamp(G), clamp(B)));
  }
 
  public static void fillRGB(double R, double G, double B, double transparency) {
-  fillRGB(UI.graphicsContext, R, G, B, transparency);
+  fillRGB(UI.GC, R, G, B, transparency);
  }
 
  public static void fillRGB(GraphicsContext GC, double R, double G, double B, double transparency) {
@@ -124,15 +120,15 @@ public enum U {//Utilities
 
  public static void strokeRGB(double shade) {
   shade = clamp(shade);
-  UI.graphicsContext.setStroke(Color.color(shade, shade, shade));
+  UI.GC.setStroke(Color.color(shade, shade, shade));
  }
 
  public static void strokeRGB(double R, double G, double B) {
-  UI.graphicsContext.setStroke(Color.color(clamp(R), clamp(G), clamp(B)));
+  UI.GC.setStroke(Color.color(clamp(R), clamp(G), clamp(B)));
  }
 
  public static void fillRectangle(double X, double Y, double rectangleWidth, double rectangleHeight) {
-  fillRectangle(UI.graphicsContext, X, Y, rectangleWidth, rectangleHeight);
+  fillRectangle(UI.GC, X, Y, rectangleWidth, rectangleHeight);
  }
 
  public static void fillRectangle(GraphicsContext GC, double X, double Y, double rectangleWidth, double rectangleHeight) {
@@ -142,74 +138,11 @@ public enum U {//Utilities
 
  public static void drawRectangle(double X, double Y, double rectangleWidth, double rectangleHeight) {
   double width = Math.abs(rectangleWidth * UI.width), height = Math.abs(rectangleHeight * UI.height);
-  UI.graphicsContext.strokeRect((UI.width * X) - (width * .5), (UI.height * Y) - (height * .5), width, height);
+  UI.GC.strokeRect((UI.width * X) - (width * .5), (UI.height * Y) - (height * .5), width, height);
  }
 
  public static void font(double size) {
-  UI.graphicsContext.setFont(new Font("Arial Black", size * UI.width));
- }
-
- public static FileInputStream getMapFile(int n) {
-  File F = new File(mapFolder + File.separator + UI.maps.get(n));
-  if (!F.exists()) {
-   F = new File(mapFolder + File.separator + userSubmittedFolder + File.separator + UI.maps.get(n));
-  }
-  if (!F.exists()) {
-   UI.map = 0;
-   F = new File(mapFolder + File.separator + UI.maps.get(0));
-  }
-  try {
-   return new FileInputStream(F);
-  } catch (FileNotFoundException E) {
-   return null;
-  }
- }
-
- public enum Nodes {
-  ;
-
-  public static void add(Node... N) {
-   UI.denyExpensiveInGameCall();
-   for (Node n : N) {
-    if (n != null && !UI.group.getChildren().contains(n)) {
-     UI.group.getChildren().add(n);
-    }
-   }
-  }
-
-  public static void remove(Node... N) {
-   UI.denyExpensiveInGameCall();
-   for (Node n : N) {
-    if (n != null) {
-     UI.group.getChildren().remove(n);
-    }
-   }
-  }
-
-  public enum Light {
-   ;
-
-   public static void add(Node N) {//Find way to throw exception if node is not a light
-    if (N != null && !E.lights.getChildren().contains(N) && E.lightsAdded < 3) {
-     E.lights.getChildren().add(N);
-     E.lightsAdded++;
-    }
-   }
-
-   public static void remove(Node N) {
-    if (N != null) {
-     E.lights.getChildren().remove(N);
-    }
-   }
-
-   public static void setRGB(AmbientLight AL, double R, double G, double B) {
-    AL.setColor(Color.color(clamp(R), clamp(G), clamp(B)));
-   }
-
-   public static void setRGB(PointLight PL, double R, double G, double B) {
-    PL.setColor(Color.color(clamp(R), clamp(G), clamp(B)));
-   }
-  }
+  UI.GC.setFont(new Font("Arial Black", size * UI.width));
  }
 
  public static Color getColor(Color C) {
@@ -224,71 +157,8 @@ public enum U {//Utilities
   return Color.color(clamp(R), clamp(G), clamp(B));
  }
 
- public enum Phong {
-  ;
-
-  public static void setDiffuseRGB(PhongMaterial PM, Color C) {
-   PM.setDiffuseColor(C);
-  }
-
-  public static void setDiffuseRGB(PhongMaterial PM, Color C, double transparency) {
-   setDiffuseRGB(PM, C.getRed(), C.getGreen(), C.getBlue(), transparency);
-  }
-
-  public static void setDiffuseRGB(PhongMaterial PM, double shade) {
-   setDiffuseRGB(PM, shade, shade, shade);
-  }
-
-  public static void setDiffuseRGB(PhongMaterial PM, double R, double G, double B) {
-   PM.setDiffuseColor(Color.color(clamp(R), clamp(G), clamp(B)));
-  }
-
-  public static void setDiffuseRGB(PhongMaterial PM, double R, double G, double B, double transparency) {
-   PM.setDiffuseColor(Color.color(clamp(R), clamp(G), clamp(B), clamp(transparency)));
-  }
-
-  public static void setSpecularRGB(PhongMaterial PM, Color C) {
-   PM.setSpecularColor(C);
-  }
-
-  public static void setSpecularRGB(PhongMaterial PM, double shade) {
-   setSpecularRGB(PM, shade, shade, shade);
-  }
-
-  public static void setSpecularRGB(PhongMaterial PM, double R, double G, double B) {
-   PM.setSpecularColor(Color.color(clamp(R), clamp(G), clamp(B)));
-  }
-
-  public static void setSpecularRGB(PhongMaterial PM, double R, double G, double B, double transparency) {//<-Keep method in case we need it later
-   PM.setSpecularColor(Color.color(clamp(R), clamp(G), clamp(B), clamp(transparency)));
-  }
-
-  public static Image getSelfIllumination(Color C) {
-   return getSelfIllumination(C.getRed(), C.getGreen(), C.getBlue());
-  }
-
-  public static Image getSelfIllumination(double shade) {
-   return getSelfIllumination(shade, shade, shade);
-  }
-
-  public static Image getSelfIllumination(double R, double G, double B) {
-   colorGetter.setFill(Color.color(clamp(R), clamp(G), clamp(B)));
-   colorGetter.fillRect(0, 0, 1, 1);
-   return colorGetterCanvas.snapshot(null, null);
-  }
-  /*public static PhongMaterial copy(PhongMaterial in) {//In case it's needed again
-  PhongMaterial PM = new PhongMaterial();
-  PM.setDiffuseColor(in.getDiffuseColor());
-  PM.setDiffuseMap(in.getDiffuseMap());
-  PM.setSpecularColor(in.getSpecularColor());
-  PM.setSpecularPower(in.getSpecularPower());
-  PM.setSpecularMap(in.getSpecularMap());
-  PM.setBumpMap(in.getBumpMap());
-  return PM;
- }*/
- }
-
  public static void setMaterialSecurely(Shape3D shape3D, PhongMaterial PM) {
+  UI.crashOnExpensiveInGameCall();//It's not really that expensive, but there's no reason this void should ever be called in-game, regardless
   if (PM == null) {
    throw new IllegalStateException("Blocked attempt at setting from a null PhongMaterial");
   } else {
@@ -402,7 +272,7 @@ public enum U {//Utilities
   return StrictMath.cos(in * .01745329251994329576923690768489);
  }
 
- private static double arcCos(double in) {
+ public static double arcCos(double in) {
   return StrictMath.acos(in);
  }
 
@@ -513,6 +383,22 @@ public enum U {//Utilities
   return distance(C1.X, C2.X, C1.Z, C2.Z);
  }
 
+ /*public static double distanceXY(Core core) {
+  return distance(core.X, Camera.X, core.Y, Camera.Y);
+ }
+
+ public static double distanceXY(Core C1, Core C2) {
+  return distance(C1.X, C2.X, C1.Y, C2.Y);
+ }
+
+ public static double distanceYZ(Core core) {
+  return distance(core.Y, Camera.Y, core.Z, Camera.Z);
+ }
+
+ public static double distanceYZ(Core C1, Core C2) {
+  return distance(C1.Y, C2.Y, C1.Z, C2.Z);
+ }*/
+
  public static boolean outOfBounds(Core core, double tolerance) {
   return outOfBounds(core.X, core.Y, core.Z, tolerance);
  }
@@ -546,32 +432,29 @@ public enum U {//Utilities
   return (Y - Camera.Y) * Camera.sinYZ + ((X - Camera.X) * Camera.sinXZ + (Z - Camera.Z) * Camera.cosXZ) * Camera.cosYZ;
  }
 
- public static boolean render(Core core) {
-  return render(core, 0);
+ public static boolean render(Core core, boolean useLOD, boolean useViewableMapDistance) {
+  return render(core, 0, useLOD, useViewableMapDistance);
  }
 
- public static boolean render(Core core, double depthTolerance) {
-  return render(core.X, core.Y, core.Z, depthTolerance);
+ public static boolean render(Core core, double depthTolerance, boolean useLOD, boolean useViewableMapDistance) {
+  return render(core.X, core.Y, core.Z, core.absoluteRadius, depthTolerance, useLOD, useViewableMapDistance);
  }
 
- public static boolean render(double X, double Y, double Z) {
-  return render(X, Y, Z, 0);
+ public static boolean render(double X, double Y, double Z, double absoluteRadius, boolean useLOD, boolean useViewableMapDistance) {
+  return render(X, Y, Z, absoluteRadius, 0, useLOD, useViewableMapDistance);
  }
 
- public static boolean render(double X, double Y, double Z, double depthTolerance) {
-  return E.renderType == E.RenderType.ALL || (getDepth(X, Y, Z) > depthTolerance);
- }
-
- public static boolean renderWithLOD(Core core) {
-  return renderWithLOD(core, 0);
- }
-
- private static boolean renderWithLOD(Core core, double depthTolerance) {
-  return renderWithLOD(core.X, core.Y, core.Z, core.absoluteRadius, depthTolerance);
- }
-
- private static boolean renderWithLOD(double X, double Y, double Z, double absoluteRadius, double depthTolerance) {
-  return E.renderType == E.RenderType.ALL || (getDepth(X, Y, Z) > depthTolerance && absoluteRadius * E.renderLevel >= distance(X, Y, Z) * Camera.zoom);
+ private static boolean render(double X, double Y, double Z, double absoluteRadius, double depthTolerance, boolean useLOD, boolean useViewableMapDistance) {
+  if (E.renderType == E.RenderType.ALL) {
+   return true;
+  } else if (getDepth(X, Y, Z) < depthTolerance) {
+   return false;
+  } else if (useLOD && useViewableMapDistance) {
+   double distance = distance(X, Y, Z);
+   return distance < E.viewableMapDistance && absoluteRadius * E.renderLevel >= distance * Camera.FOV;
+  }
+  return (!useLOD || absoluteRadius * E.renderLevel >= distance(X, Y, Z) * Camera.FOV) &&
+  (!useViewableMapDistance || distance(X, Y, Z) < E.viewableMapDistance);
  }
 
  public static void setFPS() {
@@ -596,5 +479,9 @@ public enum U {//Utilities
   } catch (InterruptedException e) {
    e.printStackTrace();
   }
+ }
+
+ public static void printSuccess() {
+  System.out.println("Code executed to this location");
  }
 }

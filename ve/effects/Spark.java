@@ -4,7 +4,8 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
 
 import ve.instances.CoreAdvanced;
-import ve.ui.UI;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
 import ve.utilities.U;
 
 public class Spark extends CoreAdvanced {
@@ -15,11 +16,11 @@ public class Spark extends CoreAdvanced {
  public Spark() {
   C = new Cylinder(.001, 1, 3);
   PhongMaterial PM = new PhongMaterial();
-  U.Phong.setDiffuseRGB(PM, 0);
-  U.Phong.setSpecularRGB(PM, 0);
+  Phong.setDiffuseRGB(PM, 0);
+  Phong.setSpecularRGB(PM, 0);
   PM.setSelfIlluminationMap(Effects.fireLight());
   U.setMaterialSecurely(C, PM);
-  U.Nodes.add(C);
+  Nodes.add(C);
   C.setVisible(false);
  }
 
@@ -36,7 +37,7 @@ public class Spark extends CoreAdvanced {
 
  public void run(boolean gamePlay) {
   if (stage > 0) {
-   if ((stage += U.random(UI.tick)) > 2) {
+   if ((stage += U.random(U.tick)) > 2) {
     stage = 0;
     C.setVisible(false);
    } else {
@@ -46,7 +47,7 @@ public class Spark extends CoreAdvanced {
      Y += speedY;
      Z += speedZ;
     }
-    if (U.render(this)) {
+    if (U.render(this, false, true)) {
      U.setTranslate(C, this);
      U.randomRotate(C);
      show = true;

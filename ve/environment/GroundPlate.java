@@ -3,8 +3,10 @@ package ve.environment;
 import javafx.scene.shape.Cylinder;
 
 import javafx.scene.transform.Rotate;
-import ve.ui.Map;
+import ve.instances.Core;
+import ve.ui.Maps;
 import ve.utilities.Camera;
+import ve.utilities.Nodes;
 import ve.utilities.SL;
 import ve.utilities.U;
 
@@ -16,9 +18,9 @@ enum GroundPlate {
  public static final List<Instance> instances = new ArrayList<>();
 
  static void load(String terrain) {
-  if (Ground.level <= 0 && !terrain.contains(SL.Thick(SL.snow))) {
+  if (Ground.level <= 0 && !terrain.contains(SL.thick(SL.snow))) {
    for (int n = 0; n < 419; n++) {//<-'419' is the minimum needed to have groundPlates cover the entire ground surface with NO gaps, before duplicates get removed
-    instances.add(new Instance(Map.name.equals("Epic Trip") ? 1500 : 1732.0508075688772935274463415059));
+    instances.add(new Instance(Maps.name.equals("Epic Trip") ? 1500 : 1732.0508075688772935274463415059));
    }
    double baseX = -30000, baseZ = -30000;
    boolean shift = false;
@@ -33,11 +35,11 @@ enum GroundPlate {
      baseX += 2598.0762113533159402911695122588;
     }
     //double varyRGB = 1 + U.randomPlusMinus(.05);<-In case we decide using it again
-    U.setMaterialSecurely(groundPlate, Terrain.universal);
+    U.setMaterialSecurely(groundPlate.C, Terrain.universal);
     groundPlate.clampXZ();
-    groundPlate.setRotationAxis(Rotate.Y_AXIS);
-    groundPlate.setRotate(-30 + (60 * U.random(6)));//<-INT random for hex-rotation!
-    U.Nodes.add(groundPlate);
+    groundPlate.C.setRotationAxis(Rotate.Y_AXIS);
+    groundPlate.C.setRotate(-30 + (60 * U.random(6)));//<-INT random for hex-rotation!
+    Nodes.add(groundPlate.C);
    }
    for (int n = 0; n < instances.size(); n++) {//<-NO enhanced loop--ConcurrentModificationException will occur!
     instances.get(n).checkDuplicate();
@@ -47,29 +49,29 @@ enum GroundPlate {
 
  static void run() {
   if (!instances.isEmpty()) {
-   double radius = Pool.C[0].getRadius() - instances.get(0).getRadius();
+   double radius = Pool.C[0].getRadius() - instances.get(0).C.getRadius();
    for (GroundPlate.Instance groundPlate : instances) {
     groundPlate.run(radius);
    }
   }
  }
 
- static class Instance extends Cylinder {
+ static class Instance extends Core {
 
-  double X, Z;
+  final Cylinder C;
 
   Instance(double radius) {
-   super(radius, 0, 6);
+   C = new Cylinder(radius, 0, 6);
   }
 
   void run(double radius) {
    clampXZ();
-   double y = Math.max(0, -Camera.Y * .005);
-   if (y > Camera.Y && (!Pool.exists || U.distance(X, E.pool.X, Z, E.pool.Z) > radius) && U.render(X, y, Z, -getRadius())) {
-    U.setTranslate(this, X, y, Z);
-    setVisible(true);
+   Y = Math.max(0, -Camera.Y * .005);
+   if (Y > Camera.Y && (!Pool.exists || U.distanceXZ(this, E.pool) > radius) && U.render(this, -C.getRadius(), false, true)) {//todo--CHECK if useViewableMapDistance is safe
+    U.setTranslate(C, this);
+    C.setVisible(true);
    } else {
-    setVisible(false);
+    C.setVisible(false);
    }
   }
 
@@ -84,8 +86,8 @@ enum GroundPlate {
 
   void checkDuplicate() {
    for (int n = 0; n < instances.size(); n++) {
-    if (instances.get(n) != this && U.distance(X, instances.get(n).X, Z, instances.get(n).Z) < 2000) {
-     U.Nodes.remove(instances.get(n));
+    if (instances.get(n) != this && U.distanceXZ(this, instances.get(n)) < 2000) {
+     Nodes.remove(instances.get(n).C);
      instances.remove(n);
      checkDuplicate();
     }

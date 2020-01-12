@@ -1,6 +1,7 @@
 package ve.ui;
 
 import javafx.scene.paint.Color;
+import ve.instances.I;
 import ve.utilities.SL;
 import ve.utilities.U;
 
@@ -53,6 +54,16 @@ public enum DestructionLog {
    nameColors[n - 1][0] = nameColors[n][0];
    nameColors[n - 1][1] = nameColors[n][1];
   }
+ }
+
+ static void reset() {
+  for (int n = names.length; --n >= 0; ) {
+   names[n][0] = "";
+   names[n][1] = "";
+   nameColors[n][0] = new Color(0, 0, 0, 1);
+   nameColors[n][1] = new Color(0, 0, 0, 1);
+  }
+  inUse = I.vehiclesInMatch > 1;
  }
 }
 

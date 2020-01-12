@@ -3,18 +3,15 @@ package ve.vehicles.specials;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 import ve.effects.Effects;
-import ve.effects.Explosion;
 import ve.environment.E;
 import ve.environment.FrustumMound;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.instances.I;
 import ve.trackElements.TE;
-import ve.ui.UI;
-import ve.utilities.Images;
-import ve.utilities.Sound;
-import ve.utilities.U;
+import ve.utilities.*;
 import ve.vehicles.Vehicle;
+import ve.vehicles.explosions.Explosion;
 
 public class Shot extends CoreAdvanced {
  final Vehicle V;
@@ -75,11 +72,11 @@ public class Shot extends CoreAdvanced {
   MV.setCullFace(CullFace.NONE);
   PhongMaterial PM = new PhongMaterial();
   if (S.type == Special.Type.raygun || S.type.name().contains(Special.Type.blaster.name()) || S.type == Special.Type.forcefield || S.type == Special.Type.thewrath) {
-   U.Phong.setSpecularRGB(PM, 0);
+   Phong.setSpecularRGB(PM, 0);
    PM.setSelfIlluminationMap(Images.white);
   } else {
-   U.Phong.setDiffuseRGB(PM, .5);
-   U.Phong.setSpecularRGB(PM, 1);//<-E.Specular.Shiny not called, since it's not really a 'shiny' object
+   Phong.setDiffuseRGB(PM, .5);
+   Phong.setSpecularRGB(PM, 1);//<-E.Specular.Shiny not called, since it's not really a 'shiny' object
   }
   PM.setSpecularPower(S.type == Special.Type.flamethrower ? 0 : E.Specular.Powers.standard);
   U.setMaterialSecurely(MV, PM);
@@ -102,10 +99,10 @@ public class Shot extends CoreAdvanced {
    U.setMaterialSecurely(thrust, new PhongMaterial());
    thrust.setVisible(false);
   }
-  U.Nodes.add(thrust);//<-MV added with transparent Nodes (for flamethrower)
+  Nodes.add(thrust);//<-MV added with transparent Nodes (for flamethrower)
   MV.setVisible(false);
   if (S.type == Special.Type.forcefield) {
-   doneDamaging = new boolean[UI.vehiclesInMatch];
+   doneDamaging = new boolean[I.vehiclesInMatch];
   }
   homingSteerSpeed = S.useSmallHits ? 10 : 5;
  }
@@ -125,9 +122,9 @@ public class Shot extends CoreAdvanced {
   X = (V.X + shotX[0]) + U.randomPlusMinus(S.randomPosition);
   Y = (V.Y + shotY[0]) + U.randomPlusMinus(S.randomPosition);
   Z = (V.Z + shotZ[0]) + U.randomPlusMinus(S.randomPosition);
-  behindX = X + (speed * (U.sin(XZ) * U.cos(YZ)) * UI.tick);
-  behindY = Y + (speed * U.sin(YZ) * UI.tick);
-  behindZ = Z - (speed * (U.cos(XZ) * U.cos(YZ)) * UI.tick);
+  behindX = X + (speed * (U.sin(XZ) * U.cos(YZ)) * U.tick);
+  behindY = Y + (speed * U.sin(YZ) * U.tick);
+  behindZ = Z - (speed * (U.cos(XZ) * U.cos(YZ)) * U.tick);
   XZ = setXZ + (port.XZ * U.cos(V.XY)) + (port.YZ * U.sin(V.XY)) * V.P.polarity + U.randomPlusMinus(S.randomAngle);
   YZ = setYZ + (port.YZ * U.cos(V.XY)) + (port.XZ * U.sin(V.XY)) + U.randomPlusMinus(S.randomAngle);
   speed = S.type == Special.Type.mine ? 0 : S.speed + (V.P.speed * U.cos(Math.abs(V.XZ - XZ)));
@@ -157,7 +154,7 @@ public class Shot extends CoreAdvanced {
      }
     }
     if (hit < 1) {
-     if (S.type == Special.Type.flamethrower && (stage += UI.tick) > 50) {
+     if (S.type == Special.Type.flamethrower && (stage += U.tick) > 50) {
       stage = 0;
      }
      behindX = X;
@@ -165,13 +162,13 @@ public class Shot extends CoreAdvanced {
      behindZ = Z;
      //^behinds getting the last positions of the shot
      runHoming();
-     X -= speed * (U.sin(XZ) * U.cos(YZ)) * UI.tick;
-     Z += speed * (U.cos(XZ) * U.cos(YZ)) * UI.tick;
-     Y -= speed * U.sin(YZ) * UI.tick;
+     X -= speed * (U.sin(XZ) * U.cos(YZ)) * U.tick;
+     Z += speed * (U.cos(XZ) * U.cos(YZ)) * U.tick;
+     Y -= speed * U.sin(YZ) * U.tick;
      if (S.type != Special.Type.flamethrower) {
       stage++;
       if (S.type == Special.Type.bomb) {
-       gravityDistance += E.gravity * UI.tick;
+       gravityDistance += E.gravity * U.tick;
        Y += gravityDistance;
       } else if (S.type == Special.Type.forcefield && stage > 2) {
        stage = 0;
@@ -201,14 +198,14 @@ public class Shot extends CoreAdvanced {
  }
 
  public void runRender() {
-  if (stage > 0 && U.render(this)) {
+  if (stage > 0 && U.render(this, false, true)) {
    if (S.type == Special.Type.flamethrower) {
     U.setScale(MV, 5 + stage * 2);
     double r = Math.max(0, 1 - (stage * .015625)),
     g = Math.max(0, 1 - (stage * .03125)),
     b = Math.max(0, 1 - (stage * .0625));
-    U.Phong.setDiffuseRGB((PhongMaterial) MV.getMaterial(), r, g, b, .25);
-    U.Phong.setSpecularRGB((PhongMaterial) MV.getMaterial(), r, g, b);
+    Phong.setDiffuseRGB((PhongMaterial) MV.getMaterial(), r, g, b, .25);
+    Phong.setSpecularRGB((PhongMaterial) MV.getMaterial(), r, g, b);
    }
    U.setTranslate(MV, this);
    if (S.type == Special.Type.flamethrower || S.type == Special.Type.forcefield || S.type == Special.Type.thewrath || S.type.name().contains(Special.Type.blaster.name())) {
@@ -221,8 +218,8 @@ public class Shot extends CoreAdvanced {
     double size = S.length + S.width;
     U.setTranslate(thrust, X + size * U.sin(XZ) * U.cos(YZ), Y + size * U.sin(YZ), Z - size * U.cos(XZ) * U.cos(YZ));
     U.randomRotate(thrust);
-    U.Phong.setDiffuseRGB((PhongMaterial) thrust.getMaterial(), 0);
-    U.Phong.setSpecularRGB((PhongMaterial) thrust.getMaterial(), 0);
+    Phong.setDiffuseRGB((PhongMaterial) thrust.getMaterial(), 0);
+    Phong.setSpecularRGB((PhongMaterial) thrust.getMaterial(), 0);
     ((PhongMaterial) thrust.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
    }
   } else {
@@ -235,7 +232,7 @@ public class Shot extends CoreAdvanced {
 
  void runHoming() {
   if (S.homing) {
-   int shotTarget = UI.userPlayerIndex;
+   int shotTarget = I.userPlayerIndex;
    double compareDistance = Double.POSITIVE_INFINITY;
    for (Vehicle vehicle : I.vehicles) {
     if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(this, vehicle) < compareDistance) {
@@ -243,21 +240,22 @@ public class Shot extends CoreAdvanced {
      compareDistance = U.distance(this, vehicle);
     }
    }
-   homeXZ = (I.vehicles.get(shotTarget).X < X ? 90 : I.vehicles.get(shotTarget).X > X ? -90 : 0) + U.arcTan((I.vehicles.get(shotTarget).Z - Z) / (I.vehicles.get(shotTarget).X - X));
+   Vehicle targetV = I.vehicles.get(shotTarget);
+   homeXZ = (targetV.X < X ? 90 : targetV.X > X ? -90 : 0) + U.arcTan((targetV.Z - Z) / (targetV.X - X));
    while (Math.abs(XZ - homeXZ) > 180) {
     homeXZ += homeXZ < XZ ? 360 : -360;
    }
-   XZ += homingSteerSpeed * UI.tick * Double.compare(homeXZ, XZ);
-   double distance = U.netValue(I.vehicles.get(shotTarget).Z - Z, I.vehicles.get(shotTarget).X - X);
+   XZ += homingSteerSpeed * U.tick * Double.compare(homeXZ, XZ);
+   double distance = U.netValue(targetV.Z - Z, targetV.X - X);
    homeYZ =
-   I.vehicles.get(shotTarget).Y < Y ? -(-90 - U.arcTan(distance / (I.vehicles.get(shotTarget).Y - Y))) :
-   I.vehicles.get(shotTarget).Y > Y ? -(90 - U.arcTan(distance / (I.vehicles.get(shotTarget).Y - Y))) :
+   targetV.Y < Y ? -(-90 - U.arcTan(distance / (targetV.Y - Y))) :
+   targetV.Y > Y ? -(90 - U.arcTan(distance / (targetV.Y - Y))) :
    homeYZ;
    if (homeYZ < YZ) {
-    YZ -= homingSteerSpeed * UI.tick;
+    YZ -= homingSteerSpeed * U.tick;
    }
-   if (homeYZ > YZ || Y > -S.diameter * .5 - (I.vehicles.get(shotTarget).isFixed() ? I.vehicles.get(shotTarget).turretBaseY : I.vehicles.get(shotTarget).clearanceY)) {
-    YZ += homingSteerSpeed * UI.tick;
+   if (homeYZ > YZ || Y > -S.diameter * .5 - (targetV.isFixed() ? targetV.turretBaseY : targetV.clearanceY)) {
+    YZ += homingSteerSpeed * U.tick;
    }
   }
  }

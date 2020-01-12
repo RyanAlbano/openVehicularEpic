@@ -4,8 +4,8 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
 import ve.effects.Effects;
 import ve.instances.CoreAdvanced;
-import ve.ui.UI;
 import ve.utilities.Images;
+import ve.utilities.Phong;
 import ve.utilities.U;
 
 class ThrustTrail extends CoreAdvanced {
@@ -18,10 +18,10 @@ class ThrustTrail extends CoreAdvanced {
   B = new Box(1, 1, 1);
   PhongMaterial PM = new PhongMaterial();
   if (VP.thrust == VehiclePart.Thrust.blue) {
-   U.Phong.setDiffuseRGB(PM, 0);
-   U.Phong.setSpecularRGB(PM, 0);
+   Phong.setDiffuseRGB(PM, 0);
+   Phong.setSpecularRGB(PM, 0);
   } else {
-   U.Phong.setSpecularRGB(PM, 1);
+   Phong.setSpecularRGB(PM, 1);
    PM.setSelfIlluminationMap(VP.thrust == VehiclePart.Thrust.fire ? Images.fireLight.get(2) : Images.white);//<-Blue thrust selfIllumination set in real-time
   }
   U.setMaterialSecurely(B, PM);
@@ -48,20 +48,20 @@ class ThrustTrail extends CoreAdvanced {
 
  public void run(VehiclePart VP) {
   if (stage > 0) {
-   if ((stage += UI.tick) > 10) {
+   if ((stage += U.tick) > 10) {
     stage = 0;
     B.setVisible(false);
    } else {
-    X += speedX * UI.tick;
-    Y += speedY * UI.tick;
-    Z += speedZ * UI.tick;
-    if (U.renderWithLOD(this)) {
+    X += speedX * U.tick;
+    Y += speedY * U.tick;
+    Z += speedZ * U.tick;
+    if (U.render(this, /*ThrustTrails should ALWAYS be clearly visible!->*/false, true)) {
      U.setTranslate(B, this);
      U.randomRotate(B);
      if (VP.thrust == VehiclePart.Thrust.blue) {
       ((PhongMaterial) B.getMaterial()).setSelfIlluminationMap(Effects.blueJet());
      } else {
-      U.Phong.setDiffuseRGB((PhongMaterial) B.getMaterial(), 1 - (.05 * stage / Math.sqrt(UI.tick)), 1 - (.1 * stage / Math.sqrt(UI.tick)), 0);
+      Phong.setDiffuseRGB((PhongMaterial) B.getMaterial(), 1 - (.05 * stage / Math.sqrt(U.tick)), 1 - (.1 * stage / Math.sqrt(U.tick)), 0);
      }
      B.setVisible(true);
     } else {

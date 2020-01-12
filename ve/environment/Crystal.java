@@ -6,7 +6,9 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
 import ve.instances.Core;
 import ve.trackElements.TE;
-import ve.ui.Map;
+import ve.ui.Maps;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
 import ve.utilities.U;
 
 import java.util.ArrayList;
@@ -26,17 +28,17 @@ public enum Crystal {
 
  public static void run() {
   if (!instances.isEmpty()) {
-   if (Map.defaultVehicleLightBrightness > 0) {
+   if (Maps.defaultVehicleLightBrightness > 0) {
     int closest = -1;
     double compareDistance = Double.POSITIVE_INFINITY;
     for (Crystal.Instance crystal : instances) {
-     U.Nodes.Light.remove(crystal.light);
+     Nodes.removePointLight(crystal.light);
      if (U.distance(crystal) < compareDistance) {
       closest = instances.indexOf(crystal);
       compareDistance = U.distance(crystal);
      }
     }
-    instances.get(closest).addLight();
+    instances.get(closest).addLight();//<-fixme--'closest' can be -1 (incorrect) for some reason
     for (Crystal.Instance crystal : instances) {
      crystal.addLight();
     }
@@ -70,20 +72,20 @@ public enum Crystal {
     RGB[1] *= 1.0001;
     RGB[2] *= 1.0001;
    }
-   U.Phong.setDiffuseRGB(PM, RGB[0], RGB[1], RGB[2]);
-   U.Phong.setSpecularRGB(PM, E.Specular.Colors.shiny);
+   Phong.setDiffuseRGB(PM, RGB[0], RGB[1], RGB[2]);
+   Phong.setSpecularRGB(PM, E.Specular.Colors.shiny);
    PM.setSpecularPower(E.Specular.Powers.shiny);
-   selfIllumination = U.Phong.getSelfIllumination(RGB[0], RGB[1], RGB[2]);
+   selfIllumination = Phong.getSelfIllumination(RGB[0], RGB[1], RGB[2]);
    U.setMaterialSecurely(S, PM);
-   U.Nodes.add(S);
+   Nodes.add(S);
    U.randomRotate(S);
-   if (Map.defaultVehicleLightBrightness > 0) {
+   if (Maps.defaultVehicleLightBrightness > 0) {
     light = new PointLight(U.getColor(RGB[0], RGB[1], RGB[2]));
    }
   }
 
   private void run() {
-   if (U.distance(this) < E.viewableMapDistance && U.render(this)) {//todo-improve rendering system so rendering factors like viewableMapDistance can be opted in or out, etc.
+   if (U.render(this, false, true)) {
     U.setTranslate(S, this);
     if (U.random() < .1) {
      PM.setSelfIlluminationMap(U.random() < .5 ? selfIllumination : null);
@@ -97,7 +99,7 @@ public enum Crystal {
   void addLight() {
    if (U.distance(this) < E.viewableMapDistance) {
     U.setTranslate(light, this);
-    U.Nodes.Light.add(light);
+    Nodes.addPointLight(light);
    }
   }
  }

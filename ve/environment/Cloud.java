@@ -4,8 +4,9 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 
 import ve.instances.Core;
-import ve.ui.Map;
-import ve.ui.UI;
+import ve.ui.Maps;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
 import ve.utilities.SL;
 import ve.utilities.U;
 
@@ -26,8 +27,8 @@ public enum Cloud {
  public static void load(String s) {
   if (s.startsWith("clouds(")) {
    globalHeight = U.getValue(s, 3);
-   wrapDistance = U.equals(Map.name, "the Test of Endurance", "an Immense Relevance", SL.Maps.summitOfEpic) ? 10000000 : 1000000;
-   U.Phong.setDiffuseRGB(PM, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
+   wrapDistance = U.equals(Maps.name, "the Test of Endurance", "an Immense Relevance", SL.Maps.summitOfEpic) ? 10000000 : 1000000;
+   Phong.setDiffuseRGB(PM, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
    for (int n = 0; n < U.random(120); n++) {
     instances.add(new Instance());
    }
@@ -44,26 +45,28 @@ public enum Cloud {
   private final Sphere S;
 
   Instance() {
-   S = new Sphere(1000 + U.random(4000));
+   S = new Sphere();
    X = U.randomPlusMinus(wrapDistance);
    Z = U.randomPlusMinus(wrapDistance);
    Y = globalHeight - U.randomPlusMinus(globalHeight * .5);
-   S.setScaleX(8 + U.random(8.));
-   S.setScaleY(1 + U.random());
-   S.setScaleZ(8 + U.random(8.));
+   double sizeRandom = 1000 + U.random(4000.);
+   S.setScaleX(sizeRandom * (8 + U.random(8.)));
+   S.setScaleY(sizeRandom * (1 + U.random()));
+   S.setScaleZ(sizeRandom * (8 + U.random(8.)));
+   absoluteRadius = Math.max(S.getScaleX(), Math.max(S.getScaleY(), S.getScaleZ()));
    U.setMaterialSecurely(S, PM);
    U.rotate(S, 0, U.random(360.));
-   U.Nodes.add(S);
+   Nodes.add(S);
   }
 
   private void run() {
    if (Wind.maxPotency > 0) {
-    X += Wind.speedX * UI.tick + (wrapDistance * (X < -wrapDistance ? 2 : X > wrapDistance ? -2 : 0));
-    Z += Wind.speedZ * UI.tick + (wrapDistance * (Z < -wrapDistance ? 2 : Z > wrapDistance ? -2 : 0));
+    X += Wind.speedX * U.tick + (wrapDistance * (X < -wrapDistance ? 2 : X > wrapDistance ? -2 : 0));
+    Z += Wind.speedZ * U.tick + (wrapDistance * (Z < -wrapDistance ? 2 : Z > wrapDistance ? -2 : 0));
    }
-   double size = S.getRadius() * Math.max(S.getScaleX(), Math.max(S.getScaleY(), S.getScaleZ()));
-   if (U.render(this, -size)) {
-    S.setCullFace(U.getDepth(this) > size ? CullFace.BACK : CullFace.NONE);
+
+   if (U.render(this, -absoluteRadius, false, false)) {
+    S.setCullFace(U.getDepth(this) > absoluteRadius ? CullFace.BACK : CullFace.NONE);
     U.setTranslate(S, this);
     S.setVisible(true);
    } else {

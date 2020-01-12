@@ -7,8 +7,8 @@ import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
 import ve.effects.Effects;
 import ve.instances.CoreAdvanced;
-import ve.ui.UI;
 import ve.utilities.*;
+import ve.vehicles.Physics;
 import ve.vehicles.Vehicle;
 import ve.vehicles.VehiclePart;
 
@@ -115,11 +115,11 @@ public enum Volcano {
  public static void load(String s) {
   if (s.startsWith("volcano(")) {
    PhongMaterial volcanoPM = new PhongMaterial();
-   U.Phong.setDiffuseRGB(volcanoPM, Ground.RGB);
+   Phong.setDiffuseRGB(volcanoPM, Ground.RGB);
    U.setMaterialSecurely(MV, volcanoPM);
    X = U.getValue(s, 0);
    Z = U.getValue(s, 1);
-   U.Nodes.add(MV);
+   Nodes.add(MV);
    exists = true;
    if (s.contains("active")) {
     boolean isLava = true;
@@ -128,8 +128,8 @@ public enum Volcano {
      PhongMaterial PM = new PhongMaterial();
      if (isLava) {
       rocks.get(n).isLava = true;
-      U.Phong.setDiffuseRGB(PM, 0);
-      U.Phong.setSpecularRGB(PM, 0);
+      Phong.setDiffuseRGB(PM, 0);
+      Phong.setSpecularRGB(PM, 0);
      } else {
       PM.setDiffuseMap(Images.get(SL.rock));
       PM.setSpecularMap(Images.get(SL.rock));
@@ -137,7 +137,7 @@ public enum Volcano {
      }
      U.setMaterialSecurely(rocks.get(n).S, PM);
      isLava = !isLava;
-     U.Nodes.add(rocks.get(n).S);
+     Nodes.add(rocks.get(n).S);
     }
    }
   }
@@ -158,7 +158,7 @@ public enum Volcano {
         volcanoRock.X += volcanoRock.speedX;
         volcanoRock.Y += volcanoRock.speedY;
         volcanoRock.Z += volcanoRock.speedZ;
-        volcanoRock.speedY += E.gravity * UI.tick;
+        volcanoRock.speedY += E.gravity * U.tick;
        }
        if (volcanoRock.Y > volcanoRock.S.getRadius()) {
         volcanoRock.groundHit = true;
@@ -167,7 +167,7 @@ public enum Volcano {
        }
       }
      }
-     eruptionStage = rocksLanded >= rocks.size() ? 0 : eruptionStage + UI.tick;
+     eruptionStage = rocksLanded >= rocks.size() ? 0 : eruptionStage + U.tick;
     } else if (updateIfMatchBegan) {
      for (Volcano.Rock volcanoRock : rocks) {
       volcanoRock.deploy();
@@ -179,7 +179,28 @@ public enum Volcano {
     for (Volcano.Rock volcanoRock : rocks) {
      volcanoRock.run();
     }
-    cameraShake -= cameraShake > 0 ? UI.tick : 0;
+    cameraShake -= cameraShake > 0 ? U.tick : 0;
+   }
+  }
+ }
+
+ public static void runVehicleInteract(Vehicle V) {
+  if (exists) {
+   V.P.onVolcano = false;
+   double volcanoDistance = U.distance(V.X, X, V.Z, Z);
+   if (volcanoDistance < radiusBottom && volcanoDistance > radiusTop && V.Y > -radiusBottom + volcanoDistance - V.P.clearance) {
+    V.P.onVolcano = true;
+    V.terrainRGB = Ground.RGB;
+    V.P.mode = Physics.Mode.driveSolid;
+    V.P.terrainProperties = Terrain.vehicleDefaultTerrain;
+    double halfRadiusBottom = radiusBottom * .5,
+    baseAngle = V.P.flipped() ? 225 : 45, vehicleVolcanoXZ = V.XZ,
+    volcanoPlaneY = Math.max(radiusTop * .5, halfRadiusBottom - (halfRadiusBottom * (Math.abs(V.Y) / height)));
+    vehicleVolcanoXZ += V.Z < Z && Math.abs(V.X - X) < volcanoPlaneY ? 180 : V.X >= X + volcanoPlaneY ? 90 : V.X <= X - volcanoPlaneY ? -90 : 0;
+    V.XY += (baseAngle * U.sin(vehicleVolcanoXZ) - V.XY) * Physics.valueAdjustSmoothing * U.tick;
+    V.YZ += (-baseAngle * U.cos(vehicleVolcanoXZ) - V.YZ) * Physics.valueAdjustSmoothing * U.tick;
+    V.Y = -radiusBottom + volcanoDistance - V.P.clearance;//<-'onVolcano' is already confirmed, so there should be no reason not to hard-set this
+    V.speedY = Math.min(V.speedY, 0);
    }
   }
  }
@@ -225,7 +246,7 @@ public enum Volcano {
   }
 
   void run() {
-   if (U.render(this, -S.getRadius())) {
+   if (U.render(this, -S.getRadius(), false, false)) {
     U.rotate(S, rotation[0] * eruptionStage, rotation[1] * eruptionStage);
     if (isLava) {
      ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(Effects.fireLight());

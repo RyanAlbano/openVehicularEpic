@@ -2,8 +2,10 @@ package ve.vehicles;
 
 import javafx.scene.shape.*;
 import ve.environment.E;
+import ve.instances.Core;
 import ve.instances.CoreAdvanced;
-import ve.ui.UI;
+import ve.instances.I;
+import ve.utilities.Nodes;
 import ve.utilities.SL;
 import ve.utilities.U;
 
@@ -14,19 +16,20 @@ class Chip extends CoreAdvanced {
  private double stage;
  private double gravitySpeed;
  private double speedXZ, speedXY, speedYZ;
+ final Core core = new Core();
 
  Chip(VehiclePart vp) {
   VP = vp;
   absoluteRadius = .1 * VP.absoluteRadius;
   TriangleMesh chipMesh = new TriangleMesh();
   setPoints(chipMesh);//<-Call it here as well so mesh loads properly
-  chipMesh.getTexCoords().addAll(U.random() < .5 ? E.textureCoordinateBase0 : E.textureCoordinateBase1);
+  chipMesh.getTexCoords().addAll(U.random() < .5 ? I.textureCoordinateBase0 : I.textureCoordinateBase1);
   chipMesh.getFaces().addAll(0, 0, 1, 1, 2, 2);
   chipMesh.getFaces().addAll(2, 2, 1, 1, 0, 0);
   MV = new MeshView(chipMesh);
   MV.setCullFace(CullFace.BACK);
   U.setMaterialSecurely(MV, VP.PM);
-  U.Nodes.add(MV);
+  Nodes.add(MV);
   MV.setVisible(false);
  }
 
@@ -56,21 +59,24 @@ class Chip extends CoreAdvanced {
 
  public void run(Vehicle V, boolean gamePlay) {
   if (stage > 0) {
-   if (Y + VP.Y > V.P.localGround || (stage += gamePlay ? U.random(UI.tick) : 0) > 10) {
+   if (Y + VP.Y > V.P.localGround || (stage += gamePlay ? U.random(U.tick) : 0) > 10) {
     stage = 0;
     MV.setVisible(false);
    } else {
-    XZ += speedXZ * UI.tick;
-    XY += speedXY * UI.tick;
-    YZ += speedYZ * UI.tick;
+    XZ += speedXZ * U.tick;
+    XY += speedXY * U.tick;
+    YZ += speedYZ * U.tick;
     if (gamePlay) {
-     X += speedX * UI.tick;
-     Z += speedZ * UI.tick;
-     gravitySpeed += E.gravity * UI.tick;
-     Y += speedY * UI.tick + (V.P.mode.name().startsWith(SL.drive) ? gravitySpeed * UI.tick : 0);
+     X += speedX * U.tick;
+     Z += speedZ * U.tick;
+     gravitySpeed += E.gravity * U.tick;
+     Y += speedY * U.tick + (V.P.mode.name().startsWith(SL.drive) ? gravitySpeed * U.tick : 0);
     }
-    if (VP.MV.isVisible() && U.render(X + VP.X, Y + VP.Y, Z + VP.Z)) {
-     U.setTranslate(MV, X + VP.X, Y + VP.Y, Z + VP.Z);
+    core.X = X + VP.X;
+    core.Y = X + VP.Y;
+    core.Z = X + VP.Z;
+    if (VP.MV.isVisible() && U.render(core, absoluteRadius, true, true)) {
+     U.setTranslate(MV, core);
      U.rotate(MV, this);
      MV.setVisible(true);
     } else {

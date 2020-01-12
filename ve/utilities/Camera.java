@@ -7,6 +7,7 @@ import ve.environment.Ground;
 import ve.environment.Pool;
 import ve.environment.Volcano;
 import ve.instances.I;
+import ve.trackElements.Arrow;
 import ve.trackElements.TE;
 import ve.ui.Options;
 import ve.ui.UI;
@@ -21,9 +22,9 @@ public enum Camera {//<-Don't extend Core!
  public static double XY;
  public static double XZ, YZ;
  public static double sinXZ, cosXZ, sinYZ, cosYZ;
- public static final double defaultZoom = 75;
- public static double zoom = defaultZoom;
- public static double zoomChange = 1;
+ public static final double defaultFOV = 75;
+ public static double FOV = defaultFOV;
+ public static double adjustFOV = 1;
  public static boolean shake;
  public static final boolean[] toUserPerspective = new boolean[2];
  public static final boolean[] restoreZoom = new boolean[2];
@@ -62,16 +63,18 @@ public enum Camera {//<-Don't extend Core!
   camera.setTranslateY(0);
   camera.setTranslateZ(0);
   PerspectiveCamera camera2 = new PerspectiveCamera(true);
-  camera2.setFieldOfView(75);
+  camera2.setFieldOfView(defaultFOV);
   camera2.setTranslateX(0);
   camera2.setTranslateY(0);
   camera2.setTranslateZ(0);
   UI.scene3D.setCamera(camera);
-  TE.Arrow.scene.setCamera(camera2);
+  Arrow.scene.setCamera(camera2);
  }
 
  public static void run(Vehicle playerV, boolean gamePlay) {
-  aroundVehicleXZ = lookForward[0] && lookForward[1] ? 0 : aroundVehicleXZ;
+  if (lookForward[0] && lookForward[1]) {
+   aroundVehicleXZ = 0;
+  }
   camera.setNearClip(view == View.driver ? clipRange.minimumNear : clipRange.normalNear);
   double cameraVehicleXZ, cameraVehicleY;
   if (view == View.flow || view == View.distant) {
@@ -108,7 +111,7 @@ public enum Camera {//<-Don't extend Core!
    Z = playerV.Z + driverViewZ[0];
   } else if (view == View.flow) {
    XY = 0;
-   double moveRate = .125 * UI.tick,
+   double moveRate = .125 * U.tick,
    xd = -cameraVehicleY - (lastViewNear ? 0 : playerV.extraViewHeight) - (gamePlay ? Math.abs(playerV.P.speed) : 0);
    flowFlip = playerV.P.speed != 0 ? playerV.P.speed < 0 : flowFlip;
    if (flowFlip) {
@@ -191,6 +194,8 @@ public enum Camera {//<-Don't extend Core!
   }
   runShake();
   setAngleTable();
+  U.rotate(camera, YZ, -XZ);
+  rotateXY.setAngle(-XY);
  }
 
  public static void runAroundTrack() {
@@ -200,19 +205,19 @@ public enum Camera {//<-Don't extend Core!
   X = TE.MS.X - (17000 * U.sin(aroundMapXZ));
   Z = TE.MS.Z - (17000 * U.cos(aroundMapXZ));
   mapSelectRandomRotationDirection *= U.random() > .999 ? -1 : 1;
-  aroundMapXZ += mapSelectRandomRotationDirection * UI.tick;
+  aroundMapXZ += mapSelectRandomRotationDirection * U.tick;
   while (aroundMapXZ > 180) aroundMapXZ -= 360;
   while (aroundMapXZ < -180) aroundMapXZ += 360;
-  if ((TE.MS.timer += UI.tick) > 6) {
+  if ((TE.MS.timer += U.tick) > 6) {
    TE.MS.point = ++TE.MS.point >= TE.points.size() ? 0 : TE.MS.point;
    TE.MS.timer = 0;
   }
   if (TE.points.isEmpty()) {
    TE.MS.X = TE.MS.Z = TE.MS.Y = 0;
   } else {
-   TE.MS.X -= (TE.MS.X - TE.points.get(TE.MS.point).X) * .1 * UI.tick;
-   TE.MS.Y -= (TE.MS.Y - TE.points.get(TE.MS.point).Y) * .1 * UI.tick;
-   TE.MS.Z -= (TE.MS.Z - TE.points.get(TE.MS.point).Z) * .1 * UI.tick;
+   TE.MS.X -= (TE.MS.X - TE.points.get(TE.MS.point).X) * .1 * U.tick;
+   TE.MS.Y -= (TE.MS.Y - TE.points.get(TE.MS.point).Y) * .1 * U.tick;
+   TE.MS.Z -= (TE.MS.Z - TE.points.get(TE.MS.point).Z) * .1 * U.tick;
    TE.MS.Y = Math.min(TE.MS.Y, 0);
   }
   XZ = aroundMapXZ;

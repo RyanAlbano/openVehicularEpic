@@ -1,17 +1,16 @@
 package ve.ui;
 
+import ve.instances.I;
 import ve.utilities.Camera;
 import ve.utilities.SL;
-import ve.utilities.Sounds;
 import ve.utilities.U;
 
 public enum Options {
  ;
  public static long driverSeat, matchLength;
- public static UI.Units units = UI.Units.VEs;
  public static boolean normalMapping, headsUpDisplay = true;
  public static boolean degradedSoundEffects;
- public static boolean showInfo;
+ public static boolean showAppInfo;
 
  public static void run() {
   boolean fromMenu = UI.status == UI.Status.optionsMenu;
@@ -26,14 +25,14 @@ public enum Options {
   U.text(UI.RETURN, .875 + UI.textOffset);
   U.fillRGB(1);
   U.text("DriverSeat [" + (driverSeat > 0 ? "RIGHT->" : driverSeat < 0 ? "<-LEFT" : "CENTER") + "]", .3 + UI.textOffset);
-  U.text("Units [" + (units == UI.Units.metric ? "METRIC" : units == UI.Units.US ? "U.S." : UI.Units.VEs.name()) + "]", .35 + UI.textOffset);
+  U.text("Units [" + (Units.units == Units.Unit.metric ? "METRIC" : Units.units == Units.Unit.US ? "U.S." : Units.Unit.VEs.name()) + "]", .35 + UI.textOffset);
   U.text("Limit FPS to [" + (UI.userFPS > U.refreshRate ? "JavaFX Default" : Long.valueOf(UI.userFPS)) + "]", .4 + UI.textOffset);
   U.text("Camera-Shake Effects [" + (Camera.shake ? UI.ON : UI.OFF) + "]", .45 + UI.textOffset);
   if (fromMenu) {
    U.text("Normal-Mapping [" + (normalMapping ? UI.ON : UI.OFF) + "]", .5 + UI.textOffset);
    U.text("Match Length [" + matchLength + "]", .55 + UI.textOffset);
    U.text("Game Mode [" + (Tournament.stage > 0 ? "TOURNAMENT" : "NORMAL") + "]", .6 + UI.textOffset);
-   U.text("# of Players [" + UI.vehiclesInMatch + "]", .65 + UI.textOffset);
+   U.text("# of Players [" + I.vehiclesInMatch + "]", .65 + UI.textOffset);
   }
   if (UI.selectionReady()) {
    if (Keys.Up) {
@@ -41,15 +40,15 @@ public enum Options {
      UI.selected = fromMenu ? 8 : 4;
     }
     Keys.inUse = true;
-    Sounds.UI.play(0, 0);
+    UI.sound.play(0, 0);
    }
    if (Keys.Down) {
     UI.selected = ++UI.selected > 8 || (!fromMenu && UI.selected > 4) ? 0 : UI.selected;
     Keys.inUse = true;
-    Sounds.UI.play(0, 0);
+    UI.sound.play(0, 0);
    }
   }
-  U.strokeRGB(UI.yinYang ? 1 : 0);
+  U.strokeRGB(U.yinYang ? 1 : 0);
   U.drawRectangle(.5, UI.selected == 0 ? .875 : .25 + (.05 * UI.selected), UI.width, UI.selectionHeight);
   U.fillRGB(1);
   boolean isAdjustFunction = false;
@@ -59,34 +58,28 @@ public enum Options {
    if (UI.selectionReady()) {
     if (Keys.Left && driverSeat > -1) {
      driverSeat--;
-     Sounds.UI.play(0, 0);
+     UI.sound.play(0, 0);
     }
     if (Keys.Right && driverSeat < 1) {
      driverSeat++;
-     Sounds.UI.play(0, 0);
+     UI.sound.play(0, 0);
     }
    }
   } else if (UI.selected == 2) {
    U.text("Switch between Metric, U.S., or the game's raw units (VEs)", .75);
    if ((Keys.Enter || Keys.Space) && UI.selectionReady()) {
-    if (units == UI.Units.VEs) {
-     units = UI.Units.metric;
-    } else if (units == UI.Units.metric) {
-     units = UI.Units.US;
-    } else if (units == UI.Units.US) {
-     units = UI.Units.VEs;
-    }
+    Units.cycle();
    }
   } else if (UI.selected == 3) {
    isAdjustFunction = true;
    if (UI.selectionReady()) {
     if (Keys.Left && UI.userFPS > 1) {
      UI.userFPS = UI.userFPS > U.refreshRate ? U.refreshRate - 1 : --UI.userFPS;
-     Sounds.UI.play(0, 0);
+     UI.sound.play(0, 0);
     }
     if (Keys.Right && UI.userFPS < Long.MAX_VALUE) {
      UI.userFPS = ++UI.userFPS >= U.refreshRate ? Long.MAX_VALUE : UI.userFPS;
-     Sounds.UI.play(0, 0);
+     UI.sound.play(0, 0);
     }
    }
    U.text("Lower the FPS ceiling if your PC can't process V.E. well (i.e. overheating). Leave maxed otherwise.", .75);
@@ -110,11 +103,11 @@ public enum Options {
     if (UI.selectionReady()) {
      if (Keys.Left && matchLength > 0) {
       matchLength = Math.max(0, matchLength - 10);
-      Sounds.UI.play(0, 0);
+      UI.sound.play(0, 0);
      }
      if (Keys.Right) {
       matchLength += 10;
-      Sounds.UI.play(0, 0);
+      UI.sound.play(0, 0);
      }
     }
     U.text("Set how long the match lasts", .75);
@@ -136,12 +129,12 @@ public enum Options {
     if (UI.selectionReady()) {
      int playerFloor = Tournament.stage > 0 ? 2 : 1;
      if (Keys.Left) {
-      UI.vehiclesInMatch = --UI.vehiclesInMatch < playerFloor ? UI.maxPlayers : UI.vehiclesInMatch;
-      Sounds.UI.play(0, 0);
+      I.vehiclesInMatch = --I.vehiclesInMatch < playerFloor ? I.maxPlayers : I.vehiclesInMatch;
+      UI.sound.play(0, 0);
      }
      if (Keys.Right) {
-      UI.vehiclesInMatch = ++UI.vehiclesInMatch > UI.maxPlayers ? playerFloor : UI.vehiclesInMatch;
-      Sounds.UI.play(0, 0);
+      I.vehiclesInMatch = ++I.vehiclesInMatch > I.maxPlayers ? playerFloor : I.vehiclesInMatch;
+      UI.sound.play(0, 0);
      }
     }
     U.text("More players may slow down performance", .825);
@@ -153,15 +146,17 @@ public enum Options {
   U.text(UI.selected > 0 ? isAdjustFunction ? "Use Left and Right arrow keys to Adjust" : "Click or hit Enter/Space to Change" : "", .8);
   if ((Keys.Enter || Keys.Space) && UI.selectionReady()) {
    UI.status = UI.selected == 0 ? fromMenu ? UI.Status.mainMenu : UI.Status.paused : UI.status;
-   Sounds.UI.play(1, 0);
+   UI.sound.play(1, 0);
    Keys.Enter = Keys.Space = false;
   }
   if (Keys.Escape) {
    UI.status = fromMenu ? UI.Status.mainMenu : UI.Status.paused;
-   Sounds.UI.play(1, 0);
+   UI.sound.play(1, 0);
    Keys.Escape = false;
   }
-  UI.vehiclesInMatch = Tournament.stage > 0 ? Math.max(2, UI.vehiclesInMatch) : UI.vehiclesInMatch;
+  if (Tournament.stage > 0) {
+   I.vehiclesInMatch = Math.max(2, I.vehiclesInMatch);
+  }
   if (!Keys.inUse) {
    double clickOffset = .025;
    UI.selected =

@@ -1,5 +1,6 @@
 package ve.vehicles.specials;
 
+import ve.instances.I;
 import ve.ui.UI;
 import ve.utilities.SL;
 import ve.utilities.Sound;
@@ -228,7 +229,7 @@ public class Special {
    V.VA.hitRicochet = new Sound("hitRicochet", Double.POSITIVE_INFINITY);
   }
   if (type == Type.thewrath && V.P.wrathStuck == null) {//*
-   V.P.wrathStuck = new boolean[UI.vehiclesInMatch];
+   V.P.wrathStuck = new boolean[I.vehiclesInMatch];
   }
  }
 
@@ -243,18 +244,18 @@ public class Special {
       fire();//<-Comes before engaging wrath so that wrath sound gets played ONCE
       V.P.wrathEngaged = type == Type.thewrath;
       if (V.P.wrathEngaged) {
-       for (int n = UI.vehiclesInMatch; --n >= 0; ) {
+       for (int n = I.vehiclesInMatch; --n >= 0; ) {
         V.P.wrathStuck[n] = false;
        }
       }
      }
     } else {
-     timer -= UI.tick * (type != Type.thewrath || !V.P.wrathEngaged ? V.energyMultiple : 1);//<-Don't shorten wrath duration if energized
+     timer -= U.tick * (type != Type.thewrath || !V.P.wrathEngaged ? V.energyMultiple : 1);//<-Don't shorten wrath duration if energized
     }
     if (V.P.wrathEngaged) {
      fire();
      V.thrusting = true;
-     V.P.speed = Math.min(V.P.speed + ((U.random() < .5 ? V.accelerationStages[0] : V.accelerationStages[1]) * 4 * UI.tick), V.topSpeeds[2]);
+     V.P.speed = Math.min(V.P.speed + ((U.random() < .5 ? V.accelerationStages[0] : V.accelerationStages[1]) * 4 * U.tick), V.topSpeeds[2]);
      V.setDamage(Math.min(V.getDamage(false), V.durability));
      V.screenFlash = (.5 + U.random(.5)) / Math.max(Math.sqrt(U.distance(V)) * .015, 1);
      V.P.wrathEngaged = !(timer < 850) && V.P.wrathEngaged;
@@ -296,7 +297,7 @@ public class Special {
    }
   } else if (type == Type.phantom) {
    sound.loop(V.VA.distanceVehicleToCamera);
-  } else if ((type != Type.flamethrower || UI.yinYang) && !V.P.wrathEngaged) {
+  } else if ((type != Type.flamethrower || U.yinYang) && !V.P.wrathEngaged) {
    sound.play(V.VA.distanceVehicleToCamera * (type == Type.thewrath ? .5 : 1));
   }
  }

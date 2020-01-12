@@ -4,24 +4,24 @@ import javafx.scene.Cursor;
 import javafx.scene.paint.PhongMaterial;
 import ve.environment.*;
 import ve.instances.I;
-import ve.trackElements.Bonus;
-import ve.trackElements.Checkpoint;
-import ve.trackElements.Point;
-import ve.trackElements.TE;
+import ve.trackElements.*;
 import ve.trackElements.trackParts.TrackPart;
 import ve.utilities.*;
+import ve.vehicles.AI;
 import ve.vehicles.Vehicle;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
-public enum Map {
+public enum Maps {
  ;
+ public static int map;
+ public static final List<String> maps = new ArrayList<>(Arrays.asList(SL.basic, "lapsGlory", SL.checkpoint, "gunpowder", "underOver", SL.antigravity, "versus1", "versus2", "versus3", "trackless", "desert", "3DRace", "trip", "raceNowhere", "moonlight", "bottleneck", "railing", "twisted", "deathPit", "falls", "pyramid", "combustion", "darkDivide", "arctic", "scenicRoute", "winterMode", "mountainHop", "damage", "crystalCavern", "southPole", "aerialControl", "matrix", "mist", "vansLand", "dustDevil", "forest", "columns", "zipCross", "highlands", "coldFury", SL.tornado, "volcanic", SL.tsunami, SL.boulder, "sands", SL.meteor, "speedway", "endurance", "tunnel", "circle", "circleXL", "circles", "everything", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "lastStand", "parkingLot", "city", "machine", "military", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "space3", "summit", "portal", "blackHole", "doomsday", "+UserMap & TUTORIAL+"));
  public static String name = "";
  public static boolean randomVehicleStartAngle, guardCheckpointAI;
- public static double speedLimitAI;
  public static double defaultVehicleLightBrightness;
 
  public static void load() {
@@ -31,8 +31,8 @@ public enum Map {
   if (UI.status == UI.Status.mapLoadPass0) {
    UI.scene.setCursor(Cursor.WAIT);
   } else if (UI.status == UI.Status.mapLoadPass1) {
-   UI.resetGraphics();
-   TE.Arrow.addToScene();
+   Nodes.reset();
+   Arrow.addToScene();
    I.vehicles.clear();
    E.reset();
    TE.reset();
@@ -40,17 +40,17 @@ public enum Map {
    UI.scene3D.setFill(U.getColor(0));
    defaultVehicleLightBrightness = 0;
    randomVehicleStartAngle = guardCheckpointAI = false;
-   speedLimitAI = Double.POSITIVE_INFINITY;
+   AI.speedLimit = Double.POSITIVE_INFINITY;
   }
   int n;
   String s = "";
-  try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(U.getMapFile(UI.map)), U.standardChars))) {
+  try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(getMapFile(map)), U.standardChars))) {
    for (; (s = BR.readLine()) != null; ) {
     s = s.trim();
     if (UI.status == UI.Status.mapLoadPass2) {
      name = s.startsWith(SL.name) ? U.getString(s, 0) : name;
      if (s.startsWith("ambientLight(")) {
-      U.Nodes.Light.setRGB(E.ambientLight, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
+      Nodes.setRGB(E.ambientLight, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
      }
      Star.load(s);
      E.loadSky(s);
@@ -64,7 +64,7 @@ public enum Map {
       E.soundMultiple = U.getValue(s, 0);
      }
      E.gravity = s.startsWith("gravity(") ? U.getValue(s, 0) : E.gravity;
-     Sun.load(s);
+     E.sun.load(s);
      defaultVehicleLightBrightness = s.startsWith("defaultBrightness(") ? U.getValue(s, 0) : defaultVehicleLightBrightness;
      randomVehicleStartAngle = s.startsWith("randomStartAngle") || randomVehicleStartAngle;
      MapBounds.left = s.startsWith("xLimitLeft(") ? U.getValue(s, 0) : MapBounds.left;
@@ -73,7 +73,7 @@ public enum Map {
      MapBounds.backward = s.startsWith("zLimitBack(") ? U.getValue(s, 0) : MapBounds.backward;
      MapBounds.Y = s.startsWith("yLimit(") ? U.getValue(s, 0) : MapBounds.Y;
      MapBounds.slowVehicles = s.startsWith("slowVehiclesWhenAtLimit") || MapBounds.slowVehicles;
-     speedLimitAI = s.startsWith("speedLimit(") ? U.getValue(s, 0) : speedLimitAI;
+     AI.speedLimit = s.startsWith("speedLimit(") ? U.getValue(s, 0) : AI.speedLimit;
      Ground.level = s.startsWith("noGround") ? Double.POSITIVE_INFINITY : Ground.level;
      guardCheckpointAI = s.startsWith("guardCheckpoint") || guardCheckpointAI;
      if (s.startsWith("snow(")) {
@@ -119,9 +119,6 @@ public enum Map {
      Tsunami.load(s);
      Volcano.load(s);
      Meteor.load(s);
-     if (s.startsWith("music(")) {
-      Music.load(U.getString(s, 0));
-     }
     }
     TE.instanceSize = s.startsWith(SL.size + "(") ? U.getValue(s, 0) : TE.instanceSize;
     if (s.startsWith(SL.scale + "(")) {
@@ -212,7 +209,7 @@ public enum Map {
        TE.addTrackPart(s, trackNumber, summedPositionX, summedPositionY, summedPositionZ, Double.NaN);
       }
      } else if (s.startsWith("vehicleModel")) {
-      TE.trackParts.add(new TrackPart(UI.getVehicleIndex(U.getString(s, 0)), U.getValue(s, 1), U.getValue(s, 3), U.getValue(s, 2), U.getValue(s, 4), true));
+      TE.trackParts.add(new TrackPart(I.getVehicleIndex(U.getString(s, 0)), U.getValue(s, 1), U.getValue(s, 3), U.getValue(s, 2), U.getValue(s, 4), true));
      }
     }
    }
@@ -234,9 +231,9 @@ public enum Map {
      TE.trackParts.add(new TrackPart(TE.getTrackPartIndex(TE.Models.cube.name()), calculatedX, 0, calculatedZ, n - 90, TE.instanceSize, TE.instanceScale));
     }
    } else if (name.equals("World's Biggest Parking Lot")) {
-    for (n = 0; n < UI.vehicleModels.size(); n++) {
+    for (n = 0; n < I.vehicleModels.size(); n++) {
      double xRandom = U.randomPlusMinus(30000.), zRandom = U.randomPlusMinus(30000.), randomXZ = U.randomPlusMinus(180.);
-     UI.userRandomRGB = U.getColor(U.random(), U.random(), U.random());
+     I.userRandomRGB = U.getColor(U.random(), U.random(), U.random());
      /*{//<-This block's used to get the V.E. logo image on the World's Biggest Parking Lot
       double vehicleCircle = 360 * n / (double) vehicleModels.size();
       xRandom = 4000 * U.sin(vehicleCircle);
@@ -258,30 +255,34 @@ public enum Map {
    }
    if (Pool.type == Pool.Type.lava) {
     for (Tsunami.Part tsunamiPart : Tsunami.parts) {//Setting the illumination here in case the lava pool gets called AFTER tsunami definition
-     ((PhongMaterial) tsunamiPart.C.getMaterial()).setSelfIlluminationMap(U.Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
+     ((PhongMaterial) tsunamiPart.C.getMaterial()).setSelfIlluminationMap(Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
     }
    }
    TE.bonus.X = TE.bonus.Y = TE.bonus.Z = 0;
-   U.Nodes.add(Bonus.big);
+   Nodes.add(Bonus.big);
    for (Bonus.Ball bonusBall : Bonus.balls) {
-    U.Nodes.add(bonusBall);
+    Nodes.add(bonusBall.S);
    }
   } else if (UI.status == UI.Status.mapLoadPass4) {
    if (!Viewer.inUse) {
-    for (n = UI.vehiclesInMatch; --n >= 0; ) {
+    for (n = I.vehiclesInMatch; --n >= 0; ) {
      I.vehicles.add(null);
     }
-    I.vehicles.set(UI.userPlayerIndex, new Vehicle(VS.chosen[UI.userPlayerIndex], UI.userPlayerIndex, true));
-    for (n = UI.vehiclesInMatch; --n >= 0; ) {
-     if (n != UI.userPlayerIndex) {//<-User player set first for Linux sound optimization
+    I.vehicles.set(I.userPlayerIndex, new Vehicle(VS.chosen[I.userPlayerIndex], I.userPlayerIndex, true));
+    for (n = I.vehiclesInMatch; --n >= 0; ) {
+     if (n != I.userPlayerIndex) {//<-User player set first for Linux sound optimization
       I.vehicles.set(n, new Vehicle(VS.chosen[n], n, true));
      }
     }
    }
    addTransparentNodes();
-   UI.reset();
+   Match.reset();
   }
-  String loadText = UI.status == UI.Status.mapLoadPass0 ? "Removing Previous Content" : UI.status == UI.Status.mapLoadPass1 ? "Loading Properties & Scenery" : UI.status == UI.Status.mapLoadPass2 ? "Adding Track Parts" : "Adding " + UI.vehiclesInMatch + " Vehicle(s)";
+  String loadText =
+  UI.status == UI.Status.mapLoadPass0 ? "Removing Previous Content" :
+  UI.status == UI.Status.mapLoadPass1 ? "Loading Properties & Scenery" :
+  UI.status == UI.Status.mapLoadPass2 ? "Adding Track Parts" :
+  "Adding " + I.vehiclesInMatch + " Vehicle(s)";
   U.fillRGB(0, 0, 0, UI.colorOpacity.maximal);
   U.fillRectangle(.5, .5, 1, 1);
   U.font(.025);
@@ -308,15 +309,15 @@ public enum Map {
    vehicle.addTransparentNodes();
   }
   for (int n = Fog.spheres.size(); --n >= 0; ) {//<-Adding spheres in forward order doesn't layer fog correctly
-   U.Nodes.add(Fog.spheres.get(n));
+   Nodes.add(Fog.spheres.get(n));
   }
  }
 
  public static int getName(String s) {
   int n;
   String s1;
-  for (n = 0; n < UI.maps.size(); n++) {
-   try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(U.getMapFile(n)), U.standardChars))) {
+  for (n = 0; n < maps.size(); n++) {
+   try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(getMapFile(n)), U.standardChars))) {
     for (String s2; (s2 = BR.readLine()) != null; ) {
      s1 = s2.trim();
      name = s1.startsWith(SL.name) ? U.getString(s1, 0) : name;
@@ -332,6 +333,22 @@ public enum Map {
   return n;
  }
 
+ public static FileInputStream getMapFile(int n) {
+  File F = new File(U.mapFolder + File.separator + maps.get(n));
+  if (!F.exists()) {
+   F = new File(U.mapFolder + File.separator + U.userSubmittedFolder + File.separator + maps.get(n));
+  }
+  if (!F.exists()) {
+   map = 0;
+   F = new File(U.mapFolder + File.separator + maps.get(0));
+  }
+  try {
+   return new FileInputStream(F);
+  } catch (FileNotFoundException E) {
+   return null;
+  }
+ }
+
  public static void runQuickSelect(boolean gamePlay) {
   if (Network.mode == Network.Mode.JOIN) {
    U.font(.03);
@@ -339,9 +356,9 @@ public enum Map {
   } else {
    String mapMaker;
    name = mapMaker = "";
-   UI.map = Tournament.stage > 0 ? U.random(UI.maps.size()) : UI.map;
+   map = Tournament.stage > 0 ? U.random(maps.size()) : map;
    String s;
-   try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(U.getMapFile(UI.map)), U.standardChars))) {
+   try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(getMapFile(map)), U.standardChars))) {
     for (String s1; (s1 = BR.readLine()) != null; ) {
      s = s1.trim();
      name = s.startsWith(SL.name) ? U.getString(s, 0) : name;
@@ -370,16 +387,16 @@ public enum Map {
     U.text(UI.notifyUserOfArrowKeyNavigation, .95);
     if (UI.selectionReady()) {
      if (Keys.Right) {
-      UI.map = ++UI.map >= UI.maps.size() ? 0 : UI.map;
-      Sounds.UI.play(0, 0);
+      map = ++map >= maps.size() ? 0 : map;
+      UI.sound.play(0, 0);
      }
      if (Keys.Left) {
-      UI.map = --UI.map < 0 ? UI.maps.size() - 1 : UI.map;
-      Sounds.UI.play(0, 0);
+      map = --map < 0 ? maps.size() - 1 : map;
+      UI.sound.play(0, 0);
      }
      if (Keys.Enter || Keys.Space) {
       UI.status = UI.Status.mapLoadPass0;
-      Sounds.UI.play(1, 0);
+      UI.sound.play(1, 0);
      }
     }
     UI.gameFPS = U.refreshRate * .5;
@@ -420,19 +437,19 @@ public enum Map {
   if (Keys.Space || Keys.Enter || Tournament.stage > 0) {
    UI.status = UI.Status.play;
    if (Tournament.stage < 1) {
-    Sounds.UI.play(1, 0);
+    UI.sound.play(1, 0);
    }
    Camera.view = Camera.View.flow;
    Keys.Space = Keys.Enter = false;
   } else if (Keys.Right || Keys.Left) {
    if (Keys.Left) {
-    UI.map = --UI.map < 0 ? UI.maps.size() - 1 : UI.map;
+    map = --map < 0 ? maps.size() - 1 : map;
    }
    if (Keys.Right) {
-    UI.map = ++UI.map >= UI.maps.size() ? 0 : UI.map;
+    map = ++map >= maps.size() ? 0 : map;
    }
    UI.status = UI.Status.mapJump;
-   Sounds.UI.play(0, 0);
+   UI.sound.play(0, 0);
    for (Vehicle vehicle : I.vehicles) {
     vehicle.closeSounds();
    }
@@ -462,19 +479,19 @@ public enum Map {
   if (Keys.Space || Keys.Enter) {
    UI.status = UI.Status.mapLoadPass0;
    Keys.Space = Keys.Enter = false;
-   Sounds.UI.play(1, 0);
+   UI.sound.play(1, 0);
   }
   if (Keys.Right) {
-   UI.map = ++UI.map >= UI.maps.size() ? 0 : UI.map;
+   map = ++map >= maps.size() ? 0 : map;
    UI.status = UI.Status.mapJump;
    Keys.Right = false;
-   Sounds.UI.play(0, 0);
+   UI.sound.play(0, 0);
   }
   if (Keys.Left) {
-   UI.map = --UI.map < 0 ? UI.maps.size() - 1 : UI.map;
+   map = --map < 0 ? maps.size() - 1 : map;
    UI.status = UI.Status.mapJump;
    Keys.Left = false;
-   Sounds.UI.play(0, 0);
+   UI.sound.play(0, 0);
   }
   UI.gameFPS = U.refreshRate * .25;
   if (Keys.Escape) {

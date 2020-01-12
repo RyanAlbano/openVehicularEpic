@@ -21,11 +21,11 @@ class Flame extends MeshView {
   flameMesh.getFaces().setAll(0, 0, 1, 0, 2, 0);
   setMesh(flameMesh);
   PhongMaterial PM = new PhongMaterial();
-  U.Phong.setDiffuseRGB(PM, 0);
-  U.Phong.setSpecularRGB(PM, 0);
+  Phong.setDiffuseRGB(PM, 0);
+  Phong.setSpecularRGB(PM, 0);
   U.setMaterialSecurely(this, PM);
   setCullFace(CullFace.NONE);
-  U.Nodes.add(this);
+  Nodes.add(this);
  }
 
  void run(Vehicle vehicle) {

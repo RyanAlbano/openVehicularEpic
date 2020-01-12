@@ -7,7 +7,6 @@ import javafx.scene.shape.Sphere;
 import ve.effects.Effects;
 import ve.instances.CoreAdvanced;
 import ve.ui.Match;
-import ve.ui.UI;
 import ve.utilities.*;
 import ve.vehicles.Vehicle;
 import ve.vehicles.VehiclePart;
@@ -38,12 +37,12 @@ public enum Meteor {
    double vehicleMeteorDistance = U.distance(V, MP);
    if (vehicleMeteorDistance < (V.collisionRadius + MP.S.getRadius()) * 4) {
     V.addDamage(V.durability * .5);
-    V.P.speedX += U.randomPlusMinus(globalSpeed * .5);
-    V.P.speedZ += U.randomPlusMinus(globalSpeed * .5);
+    V.speedX += U.randomPlusMinus(globalSpeed * .5);
+    V.speedZ += U.randomPlusMinus(globalSpeed * .5);
     if (vehicleMeteorDistance < V.collisionRadius + MP.S.getRadius() * 2) {
      V.setDamage(V.damageCeiling());
-     V.P.speedX += U.randomPlusMinus(globalSpeed * .5);
-     V.P.speedZ += U.randomPlusMinus(globalSpeed * .5);
+     V.speedX += U.randomPlusMinus(globalSpeed * .5);
+     V.speedZ += U.randomPlusMinus(globalSpeed * .5);
     }
     V.deformParts();
     for (VehiclePart part : V.parts) {
@@ -74,7 +73,7 @@ public enum Meteor {
     speedY *= -1;
    }
    parts.get(0).X = Camera.X + U.randomPlusMinus(500000.);
-   parts.get(0).Y = Camera.Y - ((125000 - U.random(250000.)) * (speedY > 0 ? 1 : -1));
+   parts.get(0).Y = Camera.Y - ((125000 + U.random(250000.)) * (speedY > 0 ? 1 : -1));
    parts.get(0).Z = Camera.Z + U.randomPlusMinus(500000.);
    double speedsXZ = U.random(2.) * globalSpeed;
    speedX = U.random() < .5 ? speedsXZ : -speedsXZ;
@@ -84,7 +83,7 @@ public enum Meteor {
     meteorPart.rotation[0] = U.randomPlusMinus(45.);
     meteorPart.rotation[1] = U.randomPlusMinus(45.);
    }
-   parts.get(parts.size() - 1).Y = parts.get(0).Y;
+   parts.get(parts.size() - 1).Y = parts.get(0).Y;//<-Why was this done?
    speedX = parts.get(0).X > Camera.X ? -Math.abs(speedX) : parts.get(0).X < Camera.X ? Math.abs(speedX) : 0;
    speedZ = parts.get(0).Z > Camera.Z ? -Math.abs(speedZ) : parts.get(0).Z < Camera.Z ? Math.abs(speedZ) : 0;
   }
@@ -92,9 +91,9 @@ public enum Meteor {
   private void run(boolean update) {
    parts.get(0).onFire = U.random() < .1;
    if (update) {
-    parts.get(0).X += speedX * UI.tick;
-    parts.get(0).Y += speedY * UI.tick;
-    parts.get(0).Z += speedZ * UI.tick;
+    parts.get(0).X += speedX * U.tick;
+    parts.get(0).Y += speedY * U.tick;
+    parts.get(0).Z += speedZ * U.tick;
     if (parts.get(parts.size() - 1).Y >= Ground.level ||
     Math.abs(parts.get(0).Y - Camera.Y) > 375000 || Math.abs(parts.get(0).X - Camera.X) > 500000 || Math.abs(parts.get(0).Z - Camera.Z) > 500000) {
      deploy();
@@ -127,21 +126,21 @@ public enum Meteor {
    Part(double radius) {
     S = new Sphere(radius, 1);
     U.setMaterialSecurely(S, new PhongMaterial());
-    U.Nodes.add(S);
+    Nodes.add(S);
    }
 
    void run() {
-    XZ += rotation[0] * UI.tick;
-    YZ += rotation[1] * UI.tick;
-    if (U.render(this, -S.getRadius())) {
+    XZ += rotation[0] * U.tick;
+    YZ += rotation[1] * U.tick;
+    if (U.render(this, -S.getRadius(), false, false)) {
      if (onFire) {
-      U.Phong.setDiffuseRGB((PhongMaterial) S.getMaterial(), 0);
-      U.Phong.setSpecularRGB((PhongMaterial) S.getMaterial(), 0);
+      Phong.setDiffuseRGB((PhongMaterial) S.getMaterial(), 0);
+      Phong.setSpecularRGB((PhongMaterial) S.getMaterial(), 0);
       ((PhongMaterial) S.getMaterial()).setDiffuseMap(null);
       ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
      } else {
-      U.Phong.setDiffuseRGB((PhongMaterial) S.getMaterial(), 1);
-      U.Phong.setSpecularRGB((PhongMaterial) S.getMaterial(), 1);
+      Phong.setDiffuseRGB((PhongMaterial) S.getMaterial(), 1);
+      Phong.setSpecularRGB((PhongMaterial) S.getMaterial(), 1);
       ((PhongMaterial) S.getMaterial()).setDiffuseMap(Images.get(SL.rock));
       ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(null);
      }

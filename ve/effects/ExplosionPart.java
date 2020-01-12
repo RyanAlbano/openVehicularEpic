@@ -3,17 +3,21 @@ package ve.effects;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 
+import ve.instances.Core;
 import ve.instances.CoreAdvanced;
-import ve.ui.UI;
 import ve.utilities.Images;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
 import ve.utilities.U;
+import ve.vehicles.explosions.Explosion;
 
-class ExplosionPart extends CoreAdvanced {
+public class ExplosionPart extends CoreAdvanced {
 
  private final MeshView MV;
  private double stage, speed;
+ final Core positionSet = new Core();
 
- ExplosionPart(Explosion explosion) {
+ public ExplosionPart(Explosion explosion) {
   TriangleMesh TM = new TriangleMesh();
   absoluteRadius = explosion.absoluteRadius * .25;
   TM.getPoints().setAll(
@@ -30,15 +34,15 @@ class ExplosionPart extends CoreAdvanced {
   MV = new MeshView(TM);
   MV.setCullFace(CullFace.NONE);
   PhongMaterial PM = new PhongMaterial();
-  U.Phong.setDiffuseRGB(PM, 0);
-  U.Phong.setSpecularRGB(PM, 0);
+  Phong.setDiffuseRGB(PM, 0);
+  Phong.setSpecularRGB(PM, 0);
   PM.setSelfIlluminationMap(Images.white);
   U.setMaterialSecurely(MV, PM);
-  U.Nodes.add(MV);
+  Nodes.add(MV);
   MV.setVisible(false);
  }
 
- void deploy() {
+ public void deploy() {
   X = Y = Z = 0;
   XZ = U.random(360.);
   YZ = U.random(360.);
@@ -48,27 +52,26 @@ class ExplosionPart extends CoreAdvanced {
 
  public void run(Explosion explosion, boolean gamePlay) {
   if (stage > 0) {
-   if ((stage += gamePlay ? U.random(UI.tick) : 0) > 5) {
+   if ((stage += gamePlay ? U.random(U.tick) : 0) > 5) {
     stage = 0;
     MV.setVisible(false);
    } else {
     if (gamePlay) {
-     X -= speed * (U.sin(XZ) * U.cos(YZ)) * UI.tick;
-     Z += speed * (U.cos(XZ) * U.cos(YZ)) * UI.tick;
-     Y -= speed * U.sin(YZ) * UI.tick;
+     X -= speed * (U.sin(XZ) * U.cos(YZ)) * U.tick;
+     Z += speed * (U.cos(XZ) * U.cos(YZ)) * U.tick;
+     Y -= speed * U.sin(YZ) * U.tick;
     }
-    double setX, setY, setZ;
     if (explosion.focusVehicle != null) {
-     setX = X + explosion.focusVehicle.X;
-     setY = Y + explosion.focusVehicle.Y;
-     setZ = Z + explosion.focusVehicle.Z;
+     positionSet.X = X + explosion.focusVehicle.X;
+     positionSet.Y = Y + explosion.focusVehicle.Y;
+     positionSet.Z = Z + explosion.focusVehicle.Z;
     } else {
-     setX = X + explosion.inX;
-     setY = Y + explosion.inY;
-     setZ = Z + explosion.inZ;
+     positionSet.X = X + explosion.inX;
+     positionSet.Y = Y + explosion.inY;
+     positionSet.Z = Z + explosion.inZ;
     }
-    if (U.render(setX, setY, setZ, -absoluteRadius)) {
-     U.setTranslate(MV, setX, setY, setZ);
+    if (U.render(positionSet, -absoluteRadius, false, false)) {
+     U.setTranslate(MV, positionSet);
      U.randomRotate(MV);
      MV.setVisible(true);
     } else {

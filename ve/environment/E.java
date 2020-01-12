@@ -12,7 +12,7 @@ import ve.instances.I;
 import ve.trackElements.TE;
 import ve.trackElements.trackParts.TrackPart;
 import ve.trackElements.trackParts.TrackPlane;
-import ve.ui.Map;
+import ve.ui.Maps;
 import ve.ui.Match;
 import ve.ui.UI;
 import ve.utilities.*;
@@ -25,12 +25,12 @@ public enum E {//<-Static content for V.E.'s Environment
  ;
 
  public static Canvas canvas;
- public static GraphicsContext graphicsContext;
+ public static GraphicsContext GC;
  public static final Group lights = new Group();
  public static long lightsAdded;
  public static final AmbientLight ambientLight = new AmbientLight();
  public static final PointLight mapViewerLight = new PointLight();
- public static final PhongMaterial phantomPM = new PhongMaterial(), repairSpherePM = new PhongMaterial();
+ public static final PhongMaterial phantomPM = new PhongMaterial();
  public static double renderLevel;
  public static RenderType renderType = RenderType.standard;
  public static double viewableMapDistance = Double.POSITIVE_INFINITY;
@@ -39,15 +39,14 @@ public enum E {//<-Static content for V.E.'s Environment
  public static Color skyRGB = U.getColor(1);//<-Keep bright for first vehicle select
  public static final double[] lavaSelfIllumination = {1, .5, 0};//<-Not explicitly a Pool property, so leave here
  public static double soundMultiple;
- public static final float[] textureCoordinateBase0 = {0, 1, 1, 1, 1, 0, 0, 0}, textureCoordinateBase1 = {0, 0, 1, 0, 1, 1, 0, 1};
+ public static final Sun sun = new Sun();
  public static final Pool pool = new Pool();
 
  static {
-  U.Nodes.Light.setRGB(ambientLight, .5, .5, .5);
-  U.Phong.setDiffuseRGB(phantomPM, 1, 1, 1, .1);
-  U.Phong.setSpecularRGB(phantomPM, 0);
-  U.Phong.setDiffuseRGB(repairSpherePM, 1, 1, 1, .25);
-  U.Nodes.Light.setRGB(mapViewerLight, 1, 1, 1);
+  Nodes.setRGB(ambientLight, .5, .5, .5);
+  Phong.setDiffuseRGB(phantomPM, 1, 1, 1, .1);
+  Phong.setSpecularRGB(phantomPM, 0);
+  Nodes.setRGB(mapViewerLight, 1, 1, 1);
  }
 
  public enum RenderType {standard, fullDistance, ALL}
@@ -79,7 +78,7 @@ public enum E {//<-Static content for V.E.'s Environment
      b *= 1.001;
     }
    }
-   U.Nodes.Light.setRGB(Sun.light, r, g, b);
+   Nodes.setRGB(Sun.light, r, g, b);
   }
  }
 
@@ -98,8 +97,8 @@ public enum E {//<-Static content for V.E.'s Environment
  public static void run(boolean gamePlay) {
   List<Node> theChildren = UI.group.getChildren();
   boolean mapViewer = UI.status == UI.Status.mapViewer, updateIfMatchBegan = mapViewer || (gamePlay && Match.started);
-  double sunlightAngle = Sun.X != 0 || Sun.Z != 0 ? (((Sun.X / (Sun.Y * 50)) * U.sin(Camera.XZ)) + ((Sun.Z / (Sun.Y * 50)) * U.cos(Camera.XZ))) * U.cos(Camera.YZ) : 0;
-  if (Map.name.equals(SL.Maps.theSun)) {
+  double sunlightAngle = sun.X != 0 || sun.Z != 0 ? (((sun.X / (sun.Y * 50)) * U.sin(Camera.XZ)) + ((sun.Z / (sun.Y * 50)) * U.cos(Camera.XZ))) * U.cos(Camera.YZ) : 0;
+  if (Maps.name.equals(SL.Maps.theSun)) {
    Sun.RGBVariance *= U.random() < .5 ? 81 / 80. : 80 / 81.;
    Sun.RGBVariance = U.clamp(.2, Sun.RGBVariance, 1);
    UI.scene3D.setFill(Color.color(Sun.RGBVariance, Sun.RGBVariance * .5, 0));
@@ -109,8 +108,8 @@ public enum E {//<-Static content for V.E.'s Environment
   if (lights.getChildren().contains(Sun.light)) {
    U.setTranslate(Sun.light, Sun.lightX, Sun.lightY, Sun.lightZ);
    if (theChildren.contains(Sun.S)) {
-    if (U.render(Sun.X, Sun.Y, Sun.Z, -Sun.S.getRadius())) {
-     U.setTranslate(Sun.S, Sun.X, Sun.Y, Sun.Z);
+    if (U.render(sun, -Sun.S.getRadius(), false, false)) {
+     U.setTranslate(Sun.S, sun);
      Sun.S.setVisible(true);
     } else {
      Sun.S.setVisible(false);
@@ -138,7 +137,7 @@ public enum E {//<-Static content for V.E.'s Environment
    TE.Paved.universal.setSpecularMap(TE.Paved.lowResolution[0]);
    TE.Paved.universal.setBumpMap(TE.Paved.lowResolution[1]);
   } else if (U.maxedFPS(true)) {//Don't create any 'new' images while setting the universals--or RAM will be killed!
-   if (!Terrain.terrain.equals(SL.Thick(SL.ground))) {//<-'ground' string will crash if checked in getter, thus skipped
+   if (!Terrain.terrain.equals(SL.thick(SL.ground))) {//<-'ground' string will crash if checked in getter, thus skipped
     Terrain.universal.setDiffuseMap(Images.get(Terrain.terrain.trim()));
     Terrain.universal.setSpecularMap(Images.get(Terrain.terrain.trim()));
     Terrain.universal.setBumpMap(Images.getNormalMap(Terrain.terrain.trim()));
@@ -165,10 +164,9 @@ public enum E {//<-Static content for V.E.'s Environment
     Pool.C[0].setVisible(false);
    }
    if (Pool.type == Pool.Type.lava) {
-    U.Phong.setDiffuseRGB(Pool.PM, 1, .25 + U.random(.5), 0);
+    Phong.setDiffuseRGB(Pool.PM, 1, .25 + U.random(.5), 0);
    }
   }
-  int n;
   Tornado.run(gamePlay || mapViewer);
   Snowball.run();
   Tsunami.run(gamePlay || mapViewer, updateIfMatchBegan);
@@ -181,8 +179,8 @@ public enum E {//<-Static content for V.E.'s Environment
   //Draw order is windstorm, poolVision, screenFlashes
   for (Vehicle vehicle : I.vehicles) {
    if (vehicle.screenFlash > 0) {
-    U.fillRGB(graphicsContext, 1, 1, 1, vehicle.screenFlash);
-    U.fillRectangle(graphicsContext, .5, .5, 1, 1);
+    U.fillRGB(GC, 1, 1, 1, vehicle.screenFlash);
+    U.fillRectangle(GC, .5, .5, 1, 1);
    }
   }
  }
@@ -200,7 +198,7 @@ public enum E {//<-Static content for V.E.'s Environment
       double trackX = trackPlane.X + trackPart.X, trackZ = trackPlane.Z + trackPart.Z;
       if (Math.abs(C.X - trackX) <= trackPlane.radiusX && Math.abs(C.Z - trackZ) <= trackPlane.radiusZ) {
        double trackY = trackPlane.Y + trackPart.Y;
-       if (trackPlane.type.contains(SL.Thick(SL.tree))) {
+       if (trackPlane.type.contains(SL.thick(SL.tree))) {
         C.Y = trackY - trackPlane.radiusY;
        } else if (trackPlane.wall == TrackPlane.Wall.none) {
         if (trackPlane.YZ == 0 && trackPlane.XY == 0) {
@@ -241,8 +239,8 @@ public enum E {//<-Static content for V.E.'s Environment
 
  public static void wrap(Core C) {
   boolean setSlope = false;
-  if (Math.abs(C.X) < E.centerShiftOffAt) {
-   C.X += U.random() < .5 ? E.centerShiftOffAt : -E.centerShiftOffAt;
+  if (Math.abs(C.X) < centerShiftOffAt) {
+   C.X += centerShiftOffAt * (U.random() < .5 ? 1 : -1);
    setSlope = true;
   }
   if (Math.abs(C.X - Camera.X) > TE.wrapDistance) {
@@ -256,13 +254,13 @@ public enum E {//<-Static content for V.E.'s Environment
    setSlope = true;
   }
   if (setSlope) {
-   E.setTerrainSit(C, false);
+   setTerrainSit(C, false);
   }
  }
 
  public static void reset() {
-  U.Nodes.remove(Sun.S, Ground.C);
-  U.Nodes.Light.remove(Sun.light);
+  Nodes.remove(Sun.S, Ground.C);
+  Nodes.removePointLight(Sun.light);
   Fog.spheres.clear();
   GroundPlate.instances.clear();
   Cloud.instances.clear();
@@ -277,9 +275,9 @@ public enum E {//<-Static content for V.E.'s Environment
   Boulder.instances.clear();
   Volcano.rocks.clear();
   Meteor.instances.clear();
-  Terrain.terrain = SL.Thick(SL.ground);
+  Terrain.terrain = SL.thick(SL.ground);
   skyRGB = Ground.RGB = U.getColor(0);
-  Sun.X = Sun.Y = Sun.Z
+  sun.X = sun.Y = sun.Z
   = Wind.maxPotency = Wind.speedX = Wind.speedZ
   = Ground.level = Pool.depth = Volcano.cameraShake = 0;
   Terrain.RGB = U.getColor(0);
@@ -290,10 +288,10 @@ public enum E {//<-Static content for V.E.'s Environment
   soundMultiple = 1;
   Terrain.reset();
   Pool.type = Pool.Type.water;
-  U.Nodes.Light.setRGB(Sun.light, 1, 1, 1);
-  U.Nodes.Light.setRGB(ambientLight, 0, 0, 0);
-  U.Phong.setDiffuseRGB((PhongMaterial) Ground.C.getMaterial(), 0);
+  Nodes.setRGB(Sun.light, 1, 1, 1);
+  Nodes.setRGB(ambientLight, 0, 0, 0);
+  Phong.setDiffuseRGB((PhongMaterial) Ground.C.getMaterial(), 0);
   ((PhongMaterial) Ground.C.getMaterial()).setSpecularMap(null);
-  centerShiftOffAt = Map.name.equals(SL.Maps.speedway2000000) ? 2000 : Map.name.equals(SL.Maps.volcanicProphecy) ? 1000 : Double.NEGATIVE_INFINITY;
+  centerShiftOffAt = Maps.name.equals(SL.Maps.speedway2000000) ? 2000 : Maps.name.equals(SL.Maps.volcanicProphecy) ? 1000 : Double.NEGATIVE_INFINITY;
  }
 }

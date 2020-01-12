@@ -18,8 +18,8 @@ public enum Credits {
   U.fillRGB(0);
   U.fillRectangle(.5, .5, 1, 1);
   if (UI.page == 1) {
-   UI.graphicsContext.drawImage(Images.RA, UI.width * .2 - (Images.RA.getWidth() * .5), UI.height * .5 - (Images.RA.getHeight() * .5));
-   UI.graphicsContext.drawImage(Images.RA, UI.width * .8 - (Images.RA.getWidth() * .5), UI.height * .5 - (Images.RA.getHeight() * .5));
+   UI.GC.drawImage(Images.RA, UI.width * .2 - (Images.RA.getWidth() * .5), UI.height * .5 - (Images.RA.getHeight() * .5));
+   UI.GC.drawImage(Images.RA, UI.width * .8 - (Images.RA.getWidth() * .5), UI.height * .5 - (Images.RA.getHeight() * .5));
    quantity = Math.round(quantity);
    quantity += direction ? -1 : 1;
    direction = !(quantity < 2) && (quantity > 12 || direction);
@@ -111,7 +111,7 @@ public enum Credits {
     clusterY[n] = (UI.height * .5) + StrictMath.pow(U.random(60000000000.), .25) - StrictMath.pow(U.random(60000000000.), .25);
    }
    U.fillRGB(1);
-   UI.graphicsContext.fillPolygon(clusterX, clusterY, (int) quantity);
+   UI.GC.fillPolygon(clusterX, clusterY, (int) quantity);
    U.font(.05);
    U.fillRGB(0);
    U.text("VEHICULAR", .45);
@@ -123,27 +123,27 @@ public enum Credits {
      UI.page = 0;
      UI.status = UI.Status.mainMenu;
     }
-    Sounds.UI.play(0, 0);
+    UI.sound.play(0, 0);
    }
    if (Keys.Right) {
     if (++UI.page > 2) {
      UI.page = 0;
      UI.status = UI.Status.mainMenu;
     }
-    Sounds.UI.play(0, 0);
+    UI.sound.play(0, 0);
    }
    if (Keys.Enter || Keys.Space) {
     UI.page = 0;
     UI.status = UI.Status.mainMenu;
     Keys.Enter = Keys.Space = false;
-    Sounds.UI.play(1, 0);
+    UI.sound.play(1, 0);
    }
   }
   if (Keys.Escape) {
    UI.page = 0;
    UI.status = UI.Status.mainMenu;
    Keys.Escape = false;
-   Sounds.UI.play(1, 0);
+   UI.sound.play(1, 0);
   }
   U.fillRGB(1);
   U.font(.03);
