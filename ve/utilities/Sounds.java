@@ -1,6 +1,8 @@
 package ve.utilities;
 
 import ve.environment.*;
+import ve.environment.storm.Lightning;
+import ve.environment.storm.Rain;
 import ve.instances.I;
 import ve.vehicles.Vehicle;
 
@@ -26,7 +28,7 @@ public enum Sounds {
   for (Meteor.Instance meteor : Meteor.instances) {
    meteor.sound.close();
   }
-  if (Storm.thunder != null) Storm.thunder.close();
+  if (Lightning.thunder != null) Lightning.thunder.close();
   if (Wind.storm != null) Wind.storm.close();
  }
 }

@@ -88,7 +88,7 @@ public enum Boulder {
     S.setVisible(false);
    }
    if (!Match.muteSound && update) {
-    sound.loop(Math.sqrt(U.distance(this)) * Sound.standardDistance(1));
+    sound.loop(Math.sqrt(U.distance(this)) * Sound.standardGain(1));
    } else {
     sound.stop();
    }

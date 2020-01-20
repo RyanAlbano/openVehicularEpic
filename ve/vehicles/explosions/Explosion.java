@@ -6,7 +6,6 @@ import javafx.scene.shape.*;
 import java.util.*;
 
 import ve.effects.Effects;
-import ve.effects.ExplosionPart;
 import ve.instances.Core;
 import ve.instances.I;
 import ve.ui.Match;
@@ -99,7 +98,7 @@ public class Explosion extends Core {
    }
   }
   for (ExplosionPart explosionPart : explosionParts) {
-   explosionPart.run(this, gamePlay);
+   explosionPart.run(gamePlay);
   }
  }
 

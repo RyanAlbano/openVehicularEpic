@@ -2,7 +2,6 @@ package ve.utilities;
 
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.transform.Rotate;
-import ve.environment.E;
 import ve.environment.Ground;
 import ve.environment.Pool;
 import ve.environment.Volcano;
@@ -62,12 +61,12 @@ public enum Camera {//<-Don't extend Core!
   camera.setTranslateX(0);
   camera.setTranslateY(0);
   camera.setTranslateZ(0);
+  UI.scene3D.setCamera(camera);
   PerspectiveCamera camera2 = new PerspectiveCamera(true);
   camera2.setFieldOfView(defaultFOV);
   camera2.setTranslateX(0);
   camera2.setTranslateY(0);
   camera2.setTranslateZ(0);
-  UI.scene3D.setCamera(camera);
   Arrow.scene.setCamera(camera2);
  }
 
@@ -144,7 +143,7 @@ public enum Camera {//<-Don't extend Core!
     while (Math.abs(playerV.X - X) > 10000) X += playerV.X > X ? 20000 : -20000;
     while (Math.abs(playerV.Z - Z) > 10000) Z += playerV.Z > Z ? 20000 : -20000;
     while (Math.abs(playerV.Y - Y) > 10000) Y += playerV.Y > Y ? 20000 : -20000;
-    Y = Math.min(Y, Ground.level - playerV.collisionRadius + (Pool.exists && U.distanceXZ(E.pool) < Pool.C[0].getRadius() ? Pool.depth : 0));
+    Y = Math.min(Y, Ground.level - playerV.collisionRadius + (Pool.exists && U.distanceXZ(Pool.pool) < Pool.C[0].getRadius() ? Pool.depth : 0));
    }
    double vehicleCameraDistanceX = playerV.X - X, vehicleCameraDistanceZ = playerV.Z - Z, vehicleCameraDistanceY = playerV.Y - Y;
    XZ = -((90 + (vehicleCameraDistanceX >= 0 ? 180 : 0)) + U.arcTan(vehicleCameraDistanceZ / vehicleCameraDistanceX));

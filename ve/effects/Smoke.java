@@ -11,18 +11,18 @@ import ve.vehicles.*;
 public class Smoke extends CoreAdvanced {
 
  public final Cylinder C;
- private double stage;
+ protected double stage;
  public static final long defaultQuantity = 50;
 
- public Smoke(VehiclePart VP) {
+ public Smoke(double size) {
   C = new Cylinder(1, 1);
   PhongMaterial PM = new PhongMaterial();
   Phong.setDiffuseRGB(PM, 0, 0, 0, .25);
   Phong.setSpecularRGB(PM, 0);
   U.setMaterialSecurely(C, PM);
-  absoluteRadius = .02 * VP.absoluteRadius;
+  absoluteRadius = size;
   U.setScale(C, absoluteRadius);
-  //U.add(this);<-Not added here because the add-order matters
+  //(Added with transparent Nodes)
  }
 
  public void deploy(VehiclePart VP) {

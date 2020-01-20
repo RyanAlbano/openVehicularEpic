@@ -9,12 +9,17 @@ import ve.utilities.Phong;
 import ve.utilities.U;
 
 public class Sun extends Core {
+ public static final Sun sun = new Sun();
  public static final Sphere S = new Sphere(200000000);
  public static final PointLight light = new PointLight();
  static double lightX;
  static double lightY;
  static double lightZ;
  static double RGBVariance = .5;
+
+ enum Type {none, sun, crescent}
+
+ static Type type = Type.none;
 
  static {
   Nodes.setRGB(light, 1, 1, 1);
@@ -25,6 +30,7 @@ public class Sun extends Core {
 
  public void load(String s) {
   if (s.startsWith("sun(")) {
+   type = Type.sun;
    lightX = U.getValue(s, 0);
    lightY = U.getValue(s, 2);
    lightZ = U.getValue(s, 1);
@@ -40,5 +46,18 @@ public class Sun extends Core {
    U.setMaterialSecurely(S, PM);
    Nodes.add(S);
   }
+ }
+
+ public static void enforceCrescent() {
+  Nodes.remove(S);
+  type = Type.crescent;
+ }
+
+ static void reset() {
+  sun.X = sun.Y = sun.Z = 0;
+  Nodes.remove(S);
+  type = Type.none;
+  Nodes.removePointLight(light);
+  Nodes.setRGB(light, 1, 1, 1);
  }
 }

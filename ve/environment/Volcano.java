@@ -174,7 +174,7 @@ public enum Volcano {
      }
      eruptionStage = 1;
      setCameraShake(Camera.shakePresets.volcano);
-     sound.play(Math.sqrt(U.distance(Camera.X, X, Camera.Y, -height, Camera.Z, Z)) * Sound.standardDistance(.25));
+     sound.play(Math.sqrt(U.distance(Camera.X, X, Camera.Y, -height, Camera.Z, Z)) * Sound.standardGain(Sound.gainMultiples.volcano));
     }
     for (Volcano.Rock volcanoRock : rocks) {
      volcanoRock.run();
@@ -257,5 +257,11 @@ public enum Volcano {
     S.setVisible(false);
    }
   }
+ }
+
+ static void reset() {
+  rocks.clear();
+  cameraShake = 0;
+  exists = false;
  }
 }

@@ -41,4 +41,9 @@ public enum Wind {
    }
   }
  }
+
+ static void reset() {
+  maxPotency = speedX = speedZ = 0;
+  stormExists = false;
+ }
 }

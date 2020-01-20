@@ -2,8 +2,8 @@ package ve.ui;
 
 import javafx.scene.paint.PhongMaterial;
 import ve.environment.Ground;
-import ve.environment.Rain;
 import ve.environment.Snowball;
+import ve.environment.storm.Rain;
 import ve.instances.I;
 import ve.ui.converter.MainFrame;
 import ve.utilities.*;
@@ -155,8 +155,8 @@ public enum VS {//VehicleSelect
    runDrawProperties(V);
    U.font(.01);
    if (UI.selectionReady()) {
-    if (Keys.Up || Keys.Down) {
-     if (Keys.Down) {
+    if (Keys.up || Keys.down) {
+     if (Keys.down) {
       UI.selected = ++UI.selected > (singleSelection ? 1 : 2) ? 0 : UI.selected;
      } else {
       UI.selected = --UI.selected < 0 ? (singleSelection ? 1 : 2) : UI.selected;
@@ -164,7 +164,7 @@ public enum VS {//VehicleSelect
      UI.sound.play(0, 0);
      Keys.inUse = true;
     }
-    if (Keys.Right) {
+    if (Keys.right) {
      I.removeVehicleModel();
      if (++chosen[index] >= I.vehicleModels.size()) {
       chosen[index] = 0;
@@ -175,7 +175,7 @@ public enum VS {//VehicleSelect
      I.addVehicleModel(chosen[index], showModel);
      UI.sound.play(0, 0);
     }
-    if (Keys.Left) {
+    if (Keys.left) {
      I.removeVehicleModel();
      if (--chosen[index] < 0) {
       chosen[index] = I.vehicleModels.size() - 1;
@@ -186,7 +186,7 @@ public enum VS {//VehicleSelect
      I.addVehicleModel(chosen[index], showModel);
      UI.sound.play(0, 0);
     }
-    if (Keys.Space || Keys.Enter) {
+    if (Keys.space || Keys.enter) {
      if (Viewer.inUse && UI.selected == 2) {
       new MainFrame().setVisible(true);
      } else {
@@ -221,11 +221,11 @@ public enum VS {//VehicleSelect
       }
      }
      UI.sound.play(1, 0);
-     Keys.Space = Keys.Enter = false;
+     Keys.space = Keys.enter = false;
     }
    }
   }
-  if (Keys.Escape) {
+  if (Keys.escape) {
    UI.escapeToLast(true);
   }
   if (!Keys.inUse) {

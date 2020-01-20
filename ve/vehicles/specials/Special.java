@@ -11,7 +11,7 @@ import java.util.*;
 
 public class Special {
 
- private final Vehicle V;
+ final Vehicle V;
  public EnergyBolt EB;
  public final Type type;
  private int currentShot;
@@ -44,11 +44,6 @@ public class Special {
 
  public enum AimType {normal, ofVehicleTurret, auto}
 
- boolean hasShots() {
-  return type != Type.bumpIgnore && type != Type.spinner && type != Type.phantom && type != Type.teleport && type != Type.energy &&
-  !type.name().contains(SL.particle);
- }
-
  public Special(Vehicle vehicle, String s) {
   V = vehicle;
   type = Special.Type.valueOf(U.getString(s, 0));
@@ -68,7 +63,13 @@ public class Special {
   aimType = s.contains(SL.autoAim) ? Special.AimType.auto : s.contains("ofVehicleTurret") ? Special.AimType.ofVehicleTurret : AimType.normal;
  }
 
+ boolean hasShots() {
+  return type != Type.bumpIgnore && type != Type.spinner && type != Type.phantom && type != Type.teleport && type != Type.energy &&
+  !type.name().contains(SL.particle);
+ }
+
  public void load() {
+  boolean smokeyWeapon = false;
   if (type == Type.gun) {
    speed = 3000;
    diameter = 25;
@@ -76,7 +77,7 @@ public class Special {
    pushPower = 2;
    width = 4;
    length = width * 3;
-   ricochets = useSmallHits = V.hasShooting = true;
+   ricochets = useSmallHits = V.hasShooting = smokeyWeapon = true;
   } else if (type == Type.machinegun) {
    speed = 3000;
    diameter = 25;
@@ -84,7 +85,7 @@ public class Special {
    pushPower = 1;
    width = 4;
    length = width * 3;
-   ricochets = useSmallHits = V.hasShooting = true;
+   ricochets = useSmallHits = V.hasShooting = smokeyWeapon = true;
   } else if (type == Type.minigun) {
    speed = 3000;
    diameter = 10;
@@ -92,7 +93,7 @@ public class Special {
    pushPower = 0;
    width = 2;
    length = width * 4;
-   ricochets = useSmallHits = V.hasShooting = true;
+   ricochets = useSmallHits = V.hasShooting = smokeyWeapon = true;
   } else if (type == Type.heavymachinegun) {
    speed = 3000;
    diameter = 50;
@@ -100,7 +101,7 @@ public class Special {
    pushPower = 50;
    width = 5;
    length = width * 3;
-   ricochets = useSmallHits = V.hasShooting = true;
+   ricochets = useSmallHits = V.hasShooting = smokeyWeapon = true;
   } else if (type == Type.shotgun) {
    speed = 3000;
    diameter = 25;
@@ -108,7 +109,7 @@ public class Special {
    pushPower = 1;
    width = 6;
    length = width * 2;
-   ricochets = useSmallHits = true;
+   ricochets = useSmallHits = smokeyWeapon = true;
   } else if (type == Type.raygun) {
    speed = 15000;
    diameter = 10;
@@ -126,7 +127,7 @@ public class Special {
    length = width * 2;
    V.explosionType = Vehicle.ExplosionType.normal;
    AIAimPrecision = 10;
-   hasThrust = V.hasShooting = true;
+   hasThrust = V.hasShooting = smokeyWeapon = true;
   } else if (type == Type.powershell) {
    speed = 3000;
    diameter = 200;
@@ -136,7 +137,7 @@ public class Special {
    length = width * 2;
    V.explosionType = Vehicle.ExplosionType.normal;
    AIAimPrecision = 10;
-   hasThrust = V.hasShooting = true;
+   hasThrust = V.hasShooting = smokeyWeapon = true;
   } else if (type == Type.bomb) {
    speed = 0;
    diameter = 100;
@@ -153,7 +154,7 @@ public class Special {
    width = 10;
    length = width * 3;
    AIAimPrecision = 5;
-   V.hasShooting = true;
+   V.hasShooting = smokeyWeapon = true;
   } else if (type == Type.missile) {
    speed = 500;
    diameter = 100;
@@ -163,7 +164,7 @@ public class Special {
    length = width * 4;
    V.explosionType = Vehicle.ExplosionType.normal;
    AIAimPrecision = 10;
-   hasThrust = V.hasShooting = true;
+   hasThrust = V.hasShooting = smokeyWeapon = true;
   } else if (type == Type.blaster) {
    speed = 1500;
    diameter = 20;
@@ -217,7 +218,12 @@ public class Special {
    }
    if (!type.name().contains(Type.blaster.name()) && type != Type.raygun && type != Type.forcefield && type != Type.mine && type != Type.thewrath) {
     for (Port port : ports) {
-     port.spit = new Spit(this);
+     port.spit = new Spit(this, port);
+    }
+   }
+   if (smokeyWeapon) {
+    for (Port port : ports) {
+     port.addSmokes(this);
     }
    }
   }
@@ -233,15 +239,13 @@ public class Special {
   }
  }
 
- public void run(boolean gamePlay) {
-  if (type == Type.energy) {
-   EB.run(gamePlay);
-  } else if (!type.name().contains(SL.particle) && type != Type.spinner && type != Type.phantom && type != Type.teleport) {
+ public void run(boolean gamePlay, double V_sinXZ, double V_cosXZ, double V_sinYZ, double V_cosYZ, double V_sinXY, double V_cosXY) {
+  if (type != Type.energy && !type.name().contains(SL.particle) && type != Type.spinner && type != Type.phantom && type != Type.teleport) {
    if (gamePlay) {
     if (timer <= 0) {
      if (fire && !V.destroyed) {
       time();
-      fire();//<-Comes before engaging wrath so that wrath sound gets played ONCE
+      fire(V_sinXZ, V_cosXZ, V_sinYZ, V_cosYZ, V_sinXY, V_cosXY);//<-Comes before engaging wrath so that wrath sound gets played ONCE
       V.P.wrathEngaged = type == Type.thewrath;
       if (V.P.wrathEngaged) {
        for (int n = I.vehiclesInMatch; --n >= 0; ) {
@@ -250,10 +254,10 @@ public class Special {
       }
      }
     } else {
-     timer -= U.tick * (type != Type.thewrath || !V.P.wrathEngaged ? V.energyMultiple : 1);//<-Don't shorten wrath duration if energized
+     timer -= U.tick * (type != Type.thewrath || !V.P.wrathEngaged ? V.energyMultiple : 1);//<-While running wrath, don't shorten duration if energized
     }
     if (V.P.wrathEngaged) {
-     fire();
+     fire(V_sinXZ, V_cosXZ, V_sinYZ, V_cosYZ, V_sinXY, V_cosXY);
      V.thrusting = true;
      V.P.speed = Math.min(V.P.speed + ((U.random() < .5 ? V.accelerationStages[0] : V.accelerationStages[1]) * 4 * U.tick), V.topSpeeds[2]);
      V.setDamage(Math.min(V.getDamage(false), V.durability));
@@ -263,7 +267,7 @@ public class Special {
    }
    if (!V.destroyed && type == Type.flamethrower) {
     for (Port port : ports) {
-     port.spit.deploy(V, this, port);
+     port.spit.deploy(V_sinXY, V_cosXY);
     }
    }
    for (Shot shot : shots) {
@@ -271,24 +275,40 @@ public class Special {
    }
    for (Port port : ports) {
     if (port.spit != null) {
-     port.spit.run(V, this, port, gamePlay);
+     port.spit.runLogic(gamePlay, V_sinXZ, V_cosXZ, V_sinYZ, V_cosYZ, V_sinXY, V_cosXY);
+    }
+    if (port.smokes != null) {
+     for (PortSmoke smoke : port.smokes) {
+      smoke.runLogic();
+     }
     }
    }
   }
  }
 
- private void fire() {
+ private void fire(double V_sinXZ, double V_cosXZ, double V_sinYZ, double V_cosYZ, double V_sinXY, double V_cosXY) {
   for (Port port : ports) {
-   double[] shotX = {port.X}, shotY = {port.Y}, shotZ = {port.Z};
-   U.rotate(shotX, shotY, V.XY);
-   U.rotate(shotY, shotZ, V.YZ);
-   U.rotate(shotX, shotZ, V.XZ);
-   shots.get(currentShot).deploy(port);
+   shots.get(currentShot).deploy(port, V_sinXZ, V_cosXZ, V_sinYZ, V_cosYZ, V_sinXY, V_cosXY);
    currentShot = ++currentShot >= Shot.defaultQuantity ? 0 : currentShot;
-   //}
-   //for (Port port : ports) {
    if (port.spit != null) {
-    port.spit.deploy(V, this, port);
+    port.spit.deploy(V_sinXY, V_cosXY);
+   }
+   if (port.smokes != null) {
+    double[] smokeX = {port.X}, smokeY = {port.Y}, smokeZ = {port.Z};
+    if (aimType != Special.AimType.normal) {
+     U.rotateWithPivot(smokeZ, smokeY, V.VT.pivotY, V.VT.pivotZ, V.VT.YZ);
+     U.rotateWithPivot(smokeX, smokeZ, 0, V.VT.pivotZ, V.VT.XZ);
+    }
+    U.rotate(smokeX, smokeY, V_sinXY, V_cosXY);
+    U.rotate(smokeY, smokeZ, V_sinYZ, V_cosYZ);
+    U.rotate(smokeX, smokeZ, V_sinXZ, V_cosXZ);
+    smokeX[0] += V.X;
+    smokeY[0] += V.Y;
+    smokeZ[0] += V.Z;
+    for (long n = PortSmoke.emitQuantity(this); --n >= 0; ) {
+     port.smokes.get(port.currentSmoke).deploy(smokeX[0], smokeY[0], smokeZ[0], V_sinXY, V_cosXY);
+     port.currentSmoke = ++port.currentSmoke >= Port.defaultSmokeQuantity ? 0 : port.currentSmoke;
+    }
    }
   }
   if (type == Type.bumpIgnore) {
@@ -315,5 +335,9 @@ public class Special {
   type == Type.forcefield ? 20 :
   type == Type.thewrath ? 1000 :
   0;
+ }
+
+ public boolean isThrough() {
+  return type == Type.raygun || type == Type.flamethrower || type == Type.thewrath || type.name().contains(Type.blaster.name());
  }
 }

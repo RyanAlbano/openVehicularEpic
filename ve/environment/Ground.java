@@ -11,6 +11,7 @@ import ve.utilities.U;
 
 public enum Ground {
  ;
+ static boolean exists;
  static double X;
  static double Z;
  public static double level;
@@ -32,7 +33,17 @@ public enum Ground {
    Terrain.RGB = U.getColor(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
    if (!Maps.name.equals(SL.Maps.crystalCavern)) {
     Nodes.add(C);
+    exists = true;
    }
   }
+ }
+
+ static void reset() {
+  Nodes.remove(C);
+  exists = false;
+  RGB = U.getColor(0);
+  level = 0;
+  Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), 0);
+  ((PhongMaterial) C.getMaterial()).setSpecularMap(null);
  }
 }

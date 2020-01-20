@@ -42,6 +42,8 @@ public enum Terrain {
  }
 
  static void reset() {
+  terrain = SL.thick(SL.ground);
+  RGB = U.getColor(0);
   universal.setDiffuseMap(null);
   universal.setSpecularMap(null);
   universal.setBumpMap(null);

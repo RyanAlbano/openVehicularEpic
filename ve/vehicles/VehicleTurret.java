@@ -25,9 +25,14 @@ public class VehicleTurret {
   } catch (Exception E) {
    pitchRatio = 1;
   }
+  long audioChoice = 0;
+  try {
+   audioChoice = Math.round(U.getValue(s, 5));
+  } catch (Exception ignored) {
+  }
   if (V.VA.turret == null) {
    V.VA.turret = new Sound();
-   V.VA.turret.addClip(SL.turret, pitchRatio);
+   V.VA.turret.addClip(SL.turret + (audioChoice > 0 ? audioChoice : ""), pitchRatio);
   }
   hasAutoAim = s.contains(SL.autoAim);
   driverInside = s.contains("driverViewInside");

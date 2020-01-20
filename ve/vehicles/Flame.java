@@ -28,8 +28,8 @@ class Flame extends MeshView {
   Nodes.add(this);
  }
 
- void run(Vehicle vehicle) {
-  if (!vehicle.onFire) {
+ void run() {
+  if (!VP.V.onFire) {
    setVisible(false);
   } else if (U.random() < .5 && VP.MV.isVisible()) {
    U.setTranslate(this, VP);

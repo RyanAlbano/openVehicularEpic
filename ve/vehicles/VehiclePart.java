@@ -23,7 +23,7 @@ import java.util.List;
 public class VehiclePart extends InstancePart {
 
  private final Quaternion steerXY = new Quaternion(), steerYZ = new Quaternion(), steerXZ = new Quaternion();
- private final Vehicle V;
+ final Vehicle V;
  Chip chip;
  Flame flame;
  public final PointLight pointLight;
@@ -126,7 +126,7 @@ public class VehiclePart extends InstancePart {
   if (type.contains(" smokePoint ")) {
    smokes = new ArrayList<>();
    for (long n = Smoke.defaultQuantity; --n >= 0; ) {
-    smokes.add(new Smoke(this));
+    smokes.add(new Smoke(.02 * absoluteRadius));
    }
   }
   if (type.contains(" thrustTrailPoint ")) {
@@ -184,12 +184,14 @@ public class VehiclePart extends InstancePart {
   MV.setCullFace(CullFace.BACK);
   PM = new PhongMaterial();
   RGB = type.contains(SL.thick(SL.theRandomColor)) ? V.theRandomColor : i_RGB;
-  Color storeRGB = RGB;
-  if (type.contains(SL.thick(SL.reflect))) {
+  if (light) {
+   if (Maps.defaultVehicleLightBrightness <= 0 && type.contains(SL.thick(SL.reflect))) {
+    RGB = U.getColor(E.skyRGB);
+   } else if (type.contains(SL.thick(SL.reflect)) || (RGB.getRed() == RGB.getGreen() && RGB.getGreen() == RGB.getBlue())) {
+    RGB = U.getColor(1);
+   }
+  } else if (type.contains(SL.thick(SL.reflect))) {
    RGB = U.getColor(E.skyRGB);
-  }
-  if (light && (type.contains(SL.thick(SL.reflect)) || (storeRGB.getRed() == storeRGB.getGreen() && storeRGB.getGreen() == storeRGB.getBlue()))) {
-   RGB = U.getColor(1);
   }
   if (blink || thrust != null) {
    RGB = U.getColor(0);
@@ -240,7 +242,7 @@ public class VehiclePart extends InstancePart {
   }
  }
 
- void setPosition(boolean nullPhysics) {
+ void runSetPosition(boolean nullPhysics, double sinXZ, double cosXZ, double sinYZ, double cosYZ, double sinXY, double cosXY) {
   double[] placementX = {displaceX + (controller ? V.driverViewX * Options.driverSeat : 0)}, placementY = {displaceY}, placementZ = {displaceZ};
   if (!V.isIntegral()) {
    if (explodeStage == ExplodeStage.intact) {
@@ -264,7 +266,7 @@ public class VehiclePart extends InstancePart {
    placementY[0] += V.absoluteRadius * U.randomPlusMinus(.001);
    placementZ[0] += V.absoluteRadius * U.randomPlusMinus(.001);
   }
-  if (nullPhysics || !V.P.inWrath) {//<-'nullPhysics' is only called to prevent nullPointer from null Physics
+  if (nullPhysics || !V.P.inWrath) {//<-'nullPhysics' is only called to prevent nullPointer due to null Physics
    if (!nullPhysics && (pivotZ != 0 || pivotX != 0 || (!controller && V.VT != null))) {//<-May need to be further amended later so things don't rotate unintentionally
     if (steer.contains(SL.thick(SL.YZ)) || vehicleTurretBarrel) {
      U.rotateWithPivot(placementZ, placementY,
@@ -278,19 +280,19 @@ public class VehiclePart extends InstancePart {
     }
    }
    if (V.XY != 0) {
-    U.rotate(placementX, placementY, V.XY);
+    U.rotate(placementX, placementY, sinXY, cosXY);
    }
    if (V.YZ != 0) {
-    U.rotate(placementY, placementZ, V.YZ);
+    U.rotate(placementY, placementZ, sinYZ, cosYZ);
    }
-   U.rotate(placementX, placementZ, V.XZ);
+   U.rotate(placementX, placementZ, sinXZ, cosXZ);
    X = V.X + placementX[0];
    Y = V.Y + placementY[0] + (wheelShockAbsorbAssign >= 0 ? V.wheels.get(wheelShockAbsorbAssign).vibrateY : 0);
    Z = V.Z + placementZ[0];
   }
  }
 
- void render(boolean nullPhysics, double distanceCameraVehicle, boolean renderALL) {
+ void runRender(boolean nullPhysics, double distanceCameraVehicle, boolean renderALL) {
   if (renderALL || ((E.renderType == E.RenderType.fullDistance || (size * E.renderLevel >= distanceCameraVehicle * Camera.FOV)) &&
   (!(exterior && V.inDriverView) && !(flickPolarity == 1 && V.flicker) && !(flickPolarity == 2 && !V.flicker) &&
   !(landingGear && !nullPhysics && V.P.mode == Physics.Mode.fly) &&
@@ -354,7 +356,7 @@ public class VehiclePart extends InstancePart {
       }
      }
     }
-    if (U.render(this, -renderRadius, false, false)) {//<-Not checking LOD or map distance because they've already been checked before reaching here
+    if (U.render(this, -renderRadius, false, false)) {//<-Not checking LOD or mapDistance because they've already been checked before reaching here
      if (thrust != null) {
       PM.setSelfIlluminationMap(thrust == Thrust.white ? Images.white :
       thrust == Thrust.blue ? Effects.blueJet() :
@@ -378,7 +380,7 @@ public class VehiclePart extends InstancePart {
 
  public void throwChip(double power) {
   if (chip != null) {
-   chip.deploy(V, power);
+   chip.deploy(power);
   }
  }
 

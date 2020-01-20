@@ -1,7 +1,8 @@
-package ve.environment;
+package ve.environment.storm;
 
 import javafx.scene.shape.Cylinder;
 
+import ve.environment.Wind;
 import ve.instances.Core;
 import ve.ui.Match;
 import ve.utilities.*;
@@ -28,7 +29,7 @@ public class Rain extends Core {
     raindrop.run();
    }
    if (!Match.muteSound && update) {
-    sound.loop(Math.sqrt(U.distance(0, 0, Camera.Y, 0, 0, 0)) * Sound.standardDistance(1));
+    sound.loop(Math.sqrt(U.distance(0, 0, Camera.Y, 0, 0, 0)) * Sound.standardGain(1));
    } else {
     sound.stop();
    }
@@ -54,7 +55,7 @@ public class Rain extends Core {
     Y = Camera.Y + U.randomPlusMinus(wrapDistance);
     Z = Camera.Z + U.randomPlusMinus(wrapDistance);
    }
-   if (Y > Storm.stormCloudY && U.render(this, 200, false, false)) {
+   if (Y > Storm.cloudY && U.render(this, 200, false, false)) {
     U.setTranslate(C, this);
     C.setVisible(true);
    } else {

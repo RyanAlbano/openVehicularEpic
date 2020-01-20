@@ -14,7 +14,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 
-public class Bonus extends Core {
+public class Bonus extends Core {//todo--function should be applied that moves bonus above any clutter on the map that's blocking access to it
  ;
  public static int holder = -1;
  public static final Sphere big = new Sphere(500);

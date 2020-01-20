@@ -48,7 +48,9 @@ public enum Nodes {
  public static void removePointLight(Node N) {
   if (N != null) {
    enforcePointLight(N);
+   //if (E.lights.getChildren().contains(N)) {//<-Doesn't seem to help with performance
    E.lights.getChildren().remove(N);
+   //}
   }
  }
 

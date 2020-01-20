@@ -7,21 +7,19 @@ import ve.instances.Core;
 import ve.utilities.Nodes;
 import ve.utilities.Phong;
 import ve.utilities.U;
-import ve.vehicles.Vehicle;
 
 public class Spit extends Core {
-
+ final Special S;
+ final Port P;
  private final MeshView MV;
  private double stage;
+ static final long scale = 4;
 
- Spit(Special special) {
+ Spit(Special special, Port port) {
+  S = special;
+  P = port;
   TriangleMesh TM = new TriangleMesh();
-  long scale = 4;
-  TM.getPoints().setAll(
-  0, 0, (float) (scale * -special.length),
-  (float) U.randomPlusMinus(scale * special.width), (float) U.randomPlusMinus(scale * special.width), 0,
-  (float) U.randomPlusMinus(scale * special.width), (float) U.randomPlusMinus(scale * special.width), 0,
-  0, 0, (float) (scale * special.length));
+  setMesh(TM);
   TM.getTexCoords().setAll(0, 0);
   TM.getFaces().setAll(0, 0, 1, 0, 2, 0, 2, 0, 3, 0, 0, 0);
   MV = new MeshView(TM);
@@ -34,42 +32,49 @@ public class Spit extends Core {
   MV.setVisible(false);
  }
 
- void deploy(Vehicle vehicle, Special special, Port port) {
-  boolean complex = special.aimType != Special.AimType.normal;
+ void deploy(double V_sinXY, double V_cosXY) {
+  boolean complex = S.aimType != Special.AimType.normal;
   U.rotate(MV,
-  -(vehicle.YZ - (complex ? vehicle.VT.YZ : 0) + (port.YZ * U.cos(vehicle.XY)) + (port.XZ * U.sin(vehicle.XY))),
-  vehicle.XZ + (complex ? vehicle.VT.XZ : 0) + (port.XZ * U.cos(vehicle.XY)) + (port.YZ * U.sin(vehicle.XY)) * vehicle.P.polarity);
+  -(S.V.YZ - (complex ? S.V.VT.YZ : 0) + (P.YZ * V_cosXY) + (P.XZ * V_sinXY)),
+  S.V.XZ + (complex ? S.V.VT.XZ : 0) + (P.XZ * V_cosXY) + (P.YZ * V_sinXY) * S.V.P.polarity);
   stage = Double.MIN_VALUE;
  }
 
- public void run(Vehicle vehicle, Special special, Port port, boolean gamePlay) {
+ long duration() {
+  return S.type.name().contains(Special.Type.shell.name()) || S.type == Special.Type.shotgun || S.type == Special.Type.missile ? 3 : 2;
+ }
+
+ public void runLogic(boolean gamePlay, double V_sinXZ, double V_cosXZ, double V_sinYZ, double V_cosYZ, double V_sinXY, double V_cosXY) {
   if (stage > 0) {
-   boolean longerSpitDuration = special.type.name().contains(Special.Type.shell.name()) || special.type == Special.Type.shotgun || special.type == Special.Type.missile;
-   if ((stage += gamePlay ? U.tick : 0) > (longerSpitDuration ? 3 : 2)) {
+   if ((stage += gamePlay ? U.tick : 0) > duration()) {
     stage = 0;
    } else {
-    double[] spitX = {port.X}, spitY = {port.Y}, spitZ = {port.Z};
-    if (special.aimType != Special.AimType.normal) {
-     U.rotateWithPivot(spitZ, spitY, vehicle.VT.pivotY, vehicle.VT.pivotZ, vehicle.VT.YZ);
-     U.rotateWithPivot(spitX, spitZ, 0, vehicle.VT.pivotZ, vehicle.VT.XZ);
+    double[] spitX = {P.X}, spitY = {P.Y}, spitZ = {P.Z};
+    if (S.aimType != Special.AimType.normal) {
+     U.rotateWithPivot(spitZ, spitY, S.V.VT.pivotY, S.V.VT.pivotZ, S.V.VT.YZ);
+     U.rotateWithPivot(spitX, spitZ, 0, S.V.VT.pivotZ, S.V.VT.XZ);
     }
-    U.rotate(spitX, spitY, vehicle.XY);
-    U.rotate(spitY, spitZ, vehicle.YZ);
-    U.rotate(spitX, spitZ, vehicle.XZ);
-    X = vehicle.X + spitX[0];
-    Y = vehicle.Y + spitY[0];
-    Z = vehicle.Z + spitZ[0];
-    long scale = 4;
-    ((TriangleMesh) MV.getMesh()).getPoints().setAll(
-    0, 0, (float) (scale * -special.length),
-    (float) U.randomPlusMinus(scale * special.width), (float) U.randomPlusMinus(scale * special.width), 0,
-    (float) U.randomPlusMinus(scale * special.width), (float) U.randomPlusMinus(scale * special.width), 0,
-    0, 0, (float) (scale * special.length));
+    U.rotate(spitX, spitY, V_sinXY, V_cosXY);
+    U.rotate(spitY, spitZ, V_sinYZ, V_cosYZ);
+    U.rotate(spitX, spitZ, V_sinXZ, V_cosXZ);
+    //^fixme--these rotations only work correctly on gun ports that shoot directly forward
+    X = S.V.X + spitX[0];
+    Y = S.V.Y + spitY[0];
+    Z = S.V.Z + spitZ[0];
+    setMesh((TriangleMesh) MV.getMesh());
    }
   }
  }
 
- public void render() {
+ void setMesh(TriangleMesh TM) {
+  TM.getPoints().setAll(
+  0, 0, (float) (scale * -S.length),
+  (float) U.randomPlusMinus(scale * S.width), (float) U.randomPlusMinus(scale * S.width), 0,
+  (float) U.randomPlusMinus(scale * S.width), (float) U.randomPlusMinus(scale * S.width), 0,
+  0, 0, (float) (scale * S.length));
+ }
+
+ public void runRender() {
   if (stage > 0 && U.render(this, false, true)) {
    U.setTranslate(MV, this);
    ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(Effects.fireLight());

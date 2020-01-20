@@ -1,4 +1,4 @@
-package ve.effects;
+package ve.vehicles.explosions;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
@@ -9,17 +9,18 @@ import ve.utilities.Images;
 import ve.utilities.Nodes;
 import ve.utilities.Phong;
 import ve.utilities.U;
-import ve.vehicles.explosions.Explosion;
 
 public class ExplosionPart extends CoreAdvanced {
 
+ final Explosion E;
  private final MeshView MV;
  private double stage, speed;
  final Core positionSet = new Core();
 
  public ExplosionPart(Explosion explosion) {
+  E = explosion;
   TriangleMesh TM = new TriangleMesh();
-  absoluteRadius = explosion.absoluteRadius * .25;
+  absoluteRadius = E.absoluteRadius * .25;
   TM.getPoints().setAll(
   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
   (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius), (float) U.randomPlusMinus(absoluteRadius),
@@ -50,25 +51,26 @@ public class ExplosionPart extends CoreAdvanced {
   stage = Double.MIN_VALUE;
  }
 
- public void run(Explosion explosion, boolean gamePlay) {
+ public void run(boolean gamePlay) {
   if (stage > 0) {
    if ((stage += gamePlay ? U.random(U.tick) : 0) > 5) {
     stage = 0;
     MV.setVisible(false);
    } else {
     if (gamePlay) {
-     X -= speed * (U.sin(XZ) * U.cos(YZ)) * U.tick;
-     Z += speed * (U.cos(XZ) * U.cos(YZ)) * U.tick;
+     double cosYZ = U.cos(YZ);
+     X -= speed * (U.sin(XZ) * cosYZ) * U.tick;
+     Z += speed * (U.cos(XZ) * cosYZ) * U.tick;
      Y -= speed * U.sin(YZ) * U.tick;
     }
-    if (explosion.focusVehicle != null) {
-     positionSet.X = X + explosion.focusVehicle.X;
-     positionSet.Y = Y + explosion.focusVehicle.Y;
-     positionSet.Z = Z + explosion.focusVehicle.Z;
+    if (E.focusVehicle != null) {
+     positionSet.X = X + E.focusVehicle.X;
+     positionSet.Y = Y + E.focusVehicle.Y;
+     positionSet.Z = Z + E.focusVehicle.Z;
     } else {
-     positionSet.X = X + explosion.inX;
-     positionSet.Y = Y + explosion.inY;
-     positionSet.Z = Z + explosion.inZ;
+     positionSet.X = X + E.inX;
+     positionSet.Y = Y + E.inY;
+     positionSet.Z = Z + E.inZ;
     }
     if (U.render(positionSet, -absoluteRadius, false, false)) {
      U.setTranslate(MV, positionSet);

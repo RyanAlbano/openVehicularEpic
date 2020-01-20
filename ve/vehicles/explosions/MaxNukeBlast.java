@@ -68,7 +68,7 @@ public class MaxNukeBlast extends Core {//there's still a slight delay in the sp
    }
   }
   if (!V.isIntegral() && gamePlay) {
-   V.VA.nuke.loop(1, Math.sqrt(Math.abs(U.distance(this) - sphereSize)) * Sound.standardDistance(.5));
+   V.VA.nuke.loop(1, Math.sqrt(Math.abs(U.distance(this) - sphereSize)) * Sound.standardGain(Sound.gainMultiples.nuke));
   } else {
    V.VA.nuke.stop(1);
   }
@@ -105,7 +105,7 @@ public class MaxNukeBlast extends Core {//there's still a slight delay in the sp
     if (vehicle.getsLifted >= 0) {
      vehicle.speedY += blastSpeed * Double.compare(vehicle.Y, Y) * (1 + U.random(.5));
     }
-    double soundDistance = Math.sqrt(U.distance(vehicle)) * Sound.standardDistance(1);
+    double soundDistance = Math.sqrt(U.distance(vehicle)) * Sound.standardGain(1);
     vehicle.VA.crashDestroy.play(Double.NaN, soundDistance);
     vehicle.VA.crashDestroy.play(Double.NaN, soundDistance);
     vehicle.VA.crashDestroy.play(Double.NaN, soundDistance);
@@ -117,7 +117,7 @@ public class MaxNukeBlast extends Core {//there's still a slight delay in the sp
  class BlastPart extends CoreAdvanced {
 
   private final Sphere S;
-  double sinXZ, sinYZ, cosXZ, cosYZ;//<-Performance optimization
+  double sinXZ, cosXZ, sinYZ, cosYZ;//<-Performance optimization
 
   BlastPart(PhongMaterial PM) {
    S = new Sphere(10000, 1);

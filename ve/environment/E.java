@@ -2,11 +2,11 @@ package ve.environment;
 
 import javafx.scene.AmbientLight;
 import javafx.scene.Group;
-import javafx.scene.Node;
 import javafx.scene.PointLight;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.*;
+import ve.environment.storm.Storm;
 import ve.instances.Core;
 import ve.instances.I;
 import ve.trackElements.TE;
@@ -18,7 +18,6 @@ import ve.ui.UI;
 import ve.utilities.*;
 import ve.vehicles.Vehicle;
 
-import java.util.List;
 import java.util.Random;
 
 public enum E {//<-Static content for V.E.'s Environment
@@ -39,8 +38,6 @@ public enum E {//<-Static content for V.E.'s Environment
  public static Color skyRGB = U.getColor(1);//<-Keep bright for first vehicle select
  public static final double[] lavaSelfIllumination = {1, .5, 0};//<-Not explicitly a Pool property, so leave here
  public static double soundMultiple;
- public static final Sun sun = new Sun();
- public static final Pool pool = new Pool();
 
  static {
   Nodes.setRGB(ambientLight, .5, .5, .5);
@@ -95,9 +92,8 @@ public enum E {//<-Static content for V.E.'s Environment
  }
 
  public static void run(boolean gamePlay) {
-  List<Node> theChildren = UI.group.getChildren();
   boolean mapViewer = UI.status == UI.Status.mapViewer, updateIfMatchBegan = mapViewer || (gamePlay && Match.started);
-  double sunlightAngle = sun.X != 0 || sun.Z != 0 ? (((sun.X / (sun.Y * 50)) * U.sin(Camera.XZ)) + ((sun.Z / (sun.Y * 50)) * U.cos(Camera.XZ))) * U.cos(Camera.YZ) : 0;
+  double sunlightAngle = Sun.sun.X != 0 || Sun.sun.Z != 0 ? (((Sun.sun.X / (Sun.sun.Y * 50)) * U.sin(Camera.XZ)) + ((Sun.sun.Z / (Sun.sun.Y * 50)) * U.cos(Camera.XZ))) * U.cos(Camera.YZ) : 0;
   if (Maps.name.equals(SL.Maps.theSun)) {
    Sun.RGBVariance *= U.random() < .5 ? 81 / 80. : 80 / 81.;
    Sun.RGBVariance = U.clamp(.2, Sun.RGBVariance, 1);
@@ -107,17 +103,17 @@ public enum E {//<-Static content for V.E.'s Environment
   }
   if (lights.getChildren().contains(Sun.light)) {
    U.setTranslate(Sun.light, Sun.lightX, Sun.lightY, Sun.lightZ);
-   if (theChildren.contains(Sun.S)) {
-    if (U.render(sun, -Sun.S.getRadius(), false, false)) {
-     U.setTranslate(Sun.S, sun);
-     Sun.S.setVisible(true);
-    } else {
-     Sun.S.setVisible(false);
-    }
+  }
+  if (Sun.type == Sun.Type.sun) {
+   if (U.render(Sun.sun, -Sun.S.getRadius(), false, false)) {
+    U.setTranslate(Sun.S, Sun.sun);
+    Sun.S.setVisible(true);
+   } else {
+    Sun.S.setVisible(false);
    }
   }
-  if (theChildren.contains(Ground.C) && Ground.level <= 0) {
-   double groundY = Pool.exists && U.distanceXZ(pool) < Pool.C[0].getRadius() && Camera.Y > 0 ? Pool.depth : Math.max(0, -Camera.Y * .01);
+  if (Ground.exists && Ground.level <= 0) {
+   double groundY = Pool.exists && U.distanceXZ(Pool.pool) < Pool.C[0].getRadius() && Camera.Y > 0 ? Pool.depth : Math.max(0, -Camera.Y * .01);
    while (Math.abs(Ground.X - Camera.X) > 100000) Ground.X += Ground.X > Camera.X ? -200000 : 200000;
    while (Math.abs(Ground.Z - Camera.Z) > 100000) Ground.Z += Ground.Z > Camera.Z ? -200000 : 200000;
    if (Camera.Y < groundY) {
@@ -152,14 +148,14 @@ public enum E {//<-Static content for V.E.'s Environment
   Cloud.run();
   GroundPlate.run();
   Crystal.run();
-  Storm.run(theChildren, gamePlay || mapViewer);
+  Storm.run(gamePlay || mapViewer);
   if (Pool.exists) {
    if (Camera.Y < 0) {
-    U.setTranslate(Pool.C[0], pool.X, 0, pool.Z);
+    U.setTranslate(Pool.C[0], Pool.pool.X, 0, Pool.pool.Z);
     Pool.C[0].setVisible(true);
     Pool.C[1].setVisible(false);
    } else {
-    U.setTranslate(Pool.C[1], pool.X, Pool.depth * .5, pool.Z);
+    U.setTranslate(Pool.C[1], Pool.pool.X, Pool.depth * .5, Pool.pool.Z);
     Pool.C[1].setVisible(true);
     Pool.C[0].setVisible(false);
    }
@@ -175,7 +171,7 @@ public enum E {//<-Static content for V.E.'s Environment
   Volcano.run(updateIfMatchBegan);
   Meteor.run(gamePlay || mapViewer);
   Wind.runStorm(gamePlay || mapViewer);
-  pool.runVision();
+  Pool.pool.runVision();
   //Draw order is windstorm, poolVision, screenFlashes
   for (Vehicle vehicle : I.vehicles) {
    if (vehicle.screenFlash > 0) {
@@ -186,13 +182,13 @@ public enum E {//<-Static content for V.E.'s Environment
  }
 
  public static void setTerrainSit(Core C, boolean vehicle) {
-  C.Y = U.distanceXZ(C, pool) < Pool.C[0].getRadius() ? Pool.depth : 0;
+  C.Y = U.distanceXZ(C, Pool.pool) < Pool.C[0].getRadius() ? Pool.depth : 0;
   if (Volcano.exists) {
    double volcanoDistance = U.distance(C.X, Volcano.X, C.Z, Volcano.Z);
    C.Y = volcanoDistance < Volcano.radiusBottom && volcanoDistance > Volcano.radiusTop && C.Y > -Volcano.radiusBottom + volcanoDistance ? Math.min(C.Y, -Volcano.radiusBottom + volcanoDistance) : C.Y;
   }
   for (TrackPart trackPart : TE.trackParts) {
-   if (!trackPart.wraps || vehicle) {
+   if ((!trackPart.wraps || vehicle) && !trackPart.trackPlanes.isEmpty() && U.distanceXZ(C, trackPart) < trackPart.renderRadius + C.absoluteRadius) {//<-Not sure how much this section helps optimize in actuality
     for (TrackPlane trackPlane : trackPart.trackPlanes) {
      if (!trackPlane.type.contains(SL.gate)) {
       double trackX = trackPlane.X + trackPart.X, trackZ = trackPlane.Z + trackPart.Z;
@@ -221,17 +217,16 @@ public enum E {//<-Static content for V.E.'s Environment
   }
  }
 
- private static void setMoundSit(Core I, FrustumMound FM, boolean vehicle) {
+ private static void setMoundSit(Core core, FrustumMound FM, boolean vehicle) {
   if (!FM.wraps || vehicle) {
-   double distance = U.distance(I.X, FM.X, I.Z, FM.Z),
-   radiusTop = FM.mound.getMinorRadius(), moundHeight = FM.mound.getHeight();
-   if (distance < radiusTop) {
-    I.Y = Math.min(I.Y, FM.Y - moundHeight);
-   } else {
-    double radiusBottom = FM.mound.getMajorRadius();
-    if (distance < radiusBottom && Math.abs(I.Y - (FM.Y - (moundHeight * .5))) <= moundHeight * .5) {
+   double distance = U.distanceXZ(core, FM), radiusBottom = FM.mound.getMajorRadius();
+   if (distance < radiusBottom) {
+    double radiusTop = FM.mound.getMinorRadius(), moundHeight = FM.mound.getHeight();
+    if (distance < radiusTop) {
+     core.Y = Math.min(core.Y, FM.Y - moundHeight);
+    } else if (Math.abs(core.Y - (FM.Y - (moundHeight * .5))) <= moundHeight * .5) {
      double slope = moundHeight / Math.abs(radiusBottom - radiusTop);
-     I.Y = Math.min(I.Y, FM.Y - (radiusBottom - distance) * slope);
+     core.Y = Math.min(core.Y, FM.Y - (radiusBottom - distance) * slope);
     }
    }
   }
@@ -259,39 +254,30 @@ public enum E {//<-Static content for V.E.'s Environment
  }
 
  public static void reset() {
-  Nodes.remove(Sun.S, Ground.C);
-  Nodes.removePointLight(Sun.light);
-  Fog.spheres.clear();
+  Sun.reset();
+  Ground.reset();
   GroundPlate.instances.clear();
   Cloud.instances.clear();
   Star.instances.clear();
   Crystal.instances.clear();
-  Rain.raindrops.clear();
-  Storm.Lightning.groundBursts.clear();
   Snowball.instances.clear();
-  Tornado.parts.clear();
-  Tsunami.parts.clear();
   Fire.instances.clear();
   Boulder.instances.clear();
-  Volcano.rocks.clear();
+  Volcano.reset();
   Meteor.instances.clear();
-  Terrain.terrain = SL.thick(SL.ground);
-  skyRGB = Ground.RGB = U.getColor(0);
-  sun.X = sun.Y = sun.Z
-  = Wind.maxPotency = Wind.speedX = Wind.speedZ
-  = Ground.level = Pool.depth = Volcano.cameraShake = 0;
-  Terrain.RGB = U.getColor(0);
-  Fog.exists = Storm.Lightning.exists = Volcano.exists = Tsunami.exists = Wind.stormExists = MapBounds.slowVehicles = Pool.exists = Tornado.movesRepairPoints = false;
-  MapBounds.left = MapBounds.backward = MapBounds.Y = Double.NEGATIVE_INFINITY;
-  MapBounds.right = MapBounds.forward = viewableMapDistance = Double.POSITIVE_INFINITY;
+  skyRGB = U.getColor(0);
+  Wind.reset();
+  Pool.reset();
+  Storm.reset();
+  Fog.reset();
+  Tornado.reset();
+  Tsunami.reset();
+  MapBounds.reset();
+  viewableMapDistance = Double.POSITIVE_INFINITY;
   gravity = 7;
   soundMultiple = 1;
   Terrain.reset();
-  Pool.type = Pool.Type.water;
-  Nodes.setRGB(Sun.light, 1, 1, 1);
   Nodes.setRGB(ambientLight, 0, 0, 0);
-  Phong.setDiffuseRGB((PhongMaterial) Ground.C.getMaterial(), 0);
-  ((PhongMaterial) Ground.C.getMaterial()).setSpecularMap(null);
   centerShiftOffAt = Maps.name.equals(SL.Maps.speedway2000000) ? 2000 : Maps.name.equals(SL.Maps.volcanicProphecy) ? 1000 : Double.NEGATIVE_INFINITY;
  }
 }

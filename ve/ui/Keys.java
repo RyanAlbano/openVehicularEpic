@@ -8,11 +8,11 @@ import ve.utilities.Camera;
 
 public enum Keys {
  ;
- public static boolean Up, Down, Left, Right, Space, W, S, A, D;
- public static final boolean[] Special = new boolean[2];
- public static boolean keyBoost, PassBonus, Amphibious = true;//<-Vehicle's 'amphibious' syncs to this, so defaulting true is desired
- public static boolean Enter;
- public static boolean Escape;
+ public static boolean up, down, left, right, space, W, S, A, D;
+ public static final boolean[] special = new boolean[2];
+ public static boolean boost, passBonus, amphibious = true;//<-Vehicle's 'amphibious' syncs to this, so defaulting true is desired
+ public static boolean enter;
+ public static boolean escape;
  public static boolean inUse;
 
  static {
@@ -20,17 +20,17 @@ public enum Keys {
    KeyCode KC = keyEvent.getCode();
    if (KC == KeyCode.UP || KC == KeyCode.LEFT || KC == KeyCode.RIGHT || KC == KeyCode.DOWN || KC == KeyCode.SPACE) {
     if (Match.cursorDriving) {
-     Up = Down = Left = Right = Space = Match.cursorDriving = false;
+     up = down = left = right = space = Match.cursorDriving = false;
     }
-    Up = KC == KeyCode.UP || Up;
-    Down = KC == KeyCode.DOWN || Down;
-    Left = KC == KeyCode.LEFT || Left;
-    Right = KC == KeyCode.RIGHT || Right;
-    Space = KC == KeyCode.SPACE || Space;
+    up = KC == KeyCode.UP || up;
+    down = KC == KeyCode.DOWN || down;
+    left = KC == KeyCode.LEFT || left;
+    right = KC == KeyCode.RIGHT || right;
+    space = KC == KeyCode.SPACE || space;
    } else if (KC == KeyCode.ENTER) {
-    Enter = true;
+    enter = true;
    } else if (KC == KeyCode.ESCAPE) {
-    Escape = true;
+    escape = true;
    } else if (KC == KeyCode.Z) {
     Camera.lookAround = 1;
     Camera.lookForward[1] = true;
@@ -65,11 +65,11 @@ public enum Keys {
     Camera.view = Camera.View.watch;
     Camera.lastView = Camera.view;
    } else if (KC == KeyCode.V) {
-    Special[0] = true;
+    special[0] = true;
    } else if (KC == KeyCode.F) {
-    Special[1] = true;
+    special[1] = true;
    } else if (KC == KeyCode.B) {
-    keyBoost = true;
+    boost = true;
    } else if (KC == KeyCode.W) {
     W = true;
    } else if (KC == KeyCode.S) {
@@ -95,7 +95,7 @@ public enum Keys {
    } else if (KC == KeyCode.L) {
     DestructionLog.inUse = !DestructionLog.inUse;
    } else if (KC == KeyCode.P) {
-    PassBonus = true;
+    passBonus = true;
    } else if (KC == KeyCode.SHIFT) {
     Camera.adjustFOV = .98;
     Camera.restoreZoom[1] = true;
@@ -113,20 +113,20 @@ public enum Keys {
    } else if (KC == KeyCode.MINUS) {
     Match.vehicleLightBrightnessChange = -.01;
    } else if (KC == KeyCode.Q) {
-    Amphibious = !Amphibious;
+    amphibious = !amphibious;
    } else if (KC == KeyCode.I) {
     Options.showAppInfo = !Options.showAppInfo;
    }
   });
   UI.scene.setOnKeyReleased((KeyEvent keyEvent) -> {
    KeyCode KC = keyEvent.getCode();
-   Up = KC != KeyCode.UP && Up;
-   Down = KC != KeyCode.DOWN && Down;
-   Left = KC != KeyCode.LEFT && Left;
-   Right = KC != KeyCode.RIGHT && Right;
-   Space = KC != KeyCode.SPACE && Space;
-   Enter = KC != KeyCode.ENTER && Enter;
-   Escape = KC != KeyCode.ESCAPE && Escape;
+   up = KC != KeyCode.UP && up;
+   down = KC != KeyCode.DOWN && down;
+   left = KC != KeyCode.LEFT && left;
+   right = KC != KeyCode.RIGHT && right;
+   space = KC != KeyCode.SPACE && space;
+   enter = KC != KeyCode.ENTER && enter;
+   escape = KC != KeyCode.ESCAPE && escape;
    W = KC != KeyCode.W && W;
    S = KC != KeyCode.S && S;
    A = KC != KeyCode.A && A;
@@ -135,13 +135,13 @@ public enum Keys {
     Camera.lookAround = 0;
     Camera.lookForward[0] = Camera.lookForward[1] = false;
    } else if (KC == KeyCode.V) {
-    Special[0] = false;
+    special[0] = false;
    } else if (KC == KeyCode.F) {
-    Special[1] = false;
+    special[1] = false;
    } else if (KC == KeyCode.B) {
-    keyBoost = false;
+    boost = false;
    } else if (KC == KeyCode.P) {
-    PassBonus = false;
+    passBonus = false;
    } else if (KC == KeyCode.COMMA || KC == KeyCode.PERIOD) {
     Camera.toUserPerspective[0] = Camera.toUserPerspective[1] = false;
    } else if (KC == KeyCode.SHIFT || KC == KeyCode.CONTROL) {
@@ -161,8 +161,8 @@ public enum Keys {
  }
 
  public static void falsify() {
-  Up = Down = Left = Right = Space =
+  up = down = left = right = space =
   W = S = A = D =
-  Enter = Special[0] = Special[1] = keyBoost = Escape = false;
+  enter = special[0] = special[1] = boost = escape = false;
  }
 }

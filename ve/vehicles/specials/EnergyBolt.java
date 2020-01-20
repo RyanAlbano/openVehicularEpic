@@ -39,7 +39,7 @@ public class EnergyBolt extends MeshView {
   Nodes.add(this);
  }
 
- void run(boolean gamePlay) {
+ public void run(boolean gamePlay) {
   if (V.destroyed) {
    render = 0;
    S.sound.stop();

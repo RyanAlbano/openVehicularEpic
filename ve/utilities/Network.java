@@ -303,18 +303,18 @@ public enum Network {
  public static void matchDataOut() {
   Vehicle V = I.vehicles.get(I.userPlayerIndex);
   long specialsQuantity = V.specials.size();
-  V.drive = Keys.Up;
-  V.reverse = Keys.Down;
-  V.turnL = Keys.Left;
-  V.turnR = Keys.Right;
-  V.handbrake = Keys.Space;
+  V.drive = Keys.up;
+  V.reverse = Keys.down;
+  V.turnL = Keys.left;
+  V.turnR = Keys.right;
+  V.handbrake = Keys.space;
   if (specialsQuantity > 0) {
-   V.specials.get(0).fire = Keys.Special[0];
+   V.specials.get(0).fire = Keys.special[0];
   }
   if (specialsQuantity > 1) {
-   V.specials.get(1).fire = Keys.Special[1];
+   V.specials.get(1).fire = Keys.special[1];
   }
-  V.boost = Keys.keyBoost;
+  V.boost = Keys.boost;
   String s;
   if (UI.status == UI.Status.play) {
    s = "(" + V.X + "," + V.Y + "," + V.Z + "," + V.XZ + "," + V.YZ + "," + V.XY + "," + V.P.speed + "," + V.getDamage(false) + "," + V.checkpointsPassed + "," + V.lightBrightness + ")";

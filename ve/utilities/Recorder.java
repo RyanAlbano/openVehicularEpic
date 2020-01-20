@@ -1,6 +1,5 @@
 package ve.utilities;
 
-import ve.environment.Storm;
 import ve.instances.I;
 import ve.trackElements.Bonus;
 import ve.trackElements.TE;
@@ -72,23 +71,23 @@ public enum Recorder {
    Tsunami.tsunamiZ[gameFrame] = ve.environment.Tsunami.Z;
    Tsunami.direction[gameFrame] = ve.environment.Tsunami.direction;
   }
-  if (Storm.Lightning.exists) {
-   Lightning.X[gameFrame] = Storm.Lightning.X;
-   Lightning.Z[gameFrame] = Storm.Lightning.Z;
-   Lightning.strikeStage[gameFrame] = Storm.Lightning.strikeStage;
+  if (ve.environment.storm.Lightning.exists) {
+   Lightning.X[gameFrame] = ve.environment.storm.Lightning.X;
+   Lightning.Z[gameFrame] = ve.environment.storm.Lightning.Z;
+   Lightning.strikeStage[gameFrame] = ve.environment.storm.Lightning.strikeStage;
   }
  }
 
  public static void playBack() {
   if (UI.status == UI.Status.replay) {
-   if (++recordingsCount >= recorded || Keys.Enter || Keys.Space || Keys.Escape) {
+   if (++recordingsCount >= recorded || Keys.enter || Keys.space || Keys.escape) {
     UI.status = UI.Status.paused;
     recordFrame = gameFrame - 1;
     while (recordFrame < 0) recordFrame += totalFrames;
-    if (Keys.Enter || Keys.Space || Keys.Escape) {
+    if (Keys.enter || Keys.space || Keys.escape) {
      UI.sound.play(1, 0);
     }
-    Keys.Up = Keys.Down = Keys.Enter = Keys.Space = Keys.Escape = false;
+    Keys.up = Keys.down = Keys.enter = Keys.space = Keys.escape = false;
    }
    Bonus.holder = bonusHolder[recordFrame];
    TE.bonus.X = bonusX[recordFrame];
@@ -99,10 +98,10 @@ public enum Recorder {
     ve.environment.Tsunami.Z = Tsunami.tsunamiZ[recordFrame];
     ve.environment.Tsunami.direction = Tsunami.direction[recordFrame];
    }
-   if (Storm.Lightning.exists) {
-    Storm.Lightning.X = Lightning.X[recordFrame];
-    Storm.Lightning.Z = Lightning.Z[recordFrame];
-    Storm.Lightning.strikeStage = Lightning.strikeStage[recordFrame];
+   if (ve.environment.storm.Lightning.exists) {
+    ve.environment.storm.Lightning.X = Lightning.X[recordFrame];
+    ve.environment.storm.Lightning.Z = Lightning.Z[recordFrame];
+    ve.environment.storm.Lightning.strikeStage = Lightning.strikeStage[recordFrame];
    }
    for (int n = I.vehiclesInMatch; --n >= 0; ) {
     vehicles.get(n).playBack();

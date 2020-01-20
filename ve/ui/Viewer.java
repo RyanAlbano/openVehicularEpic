@@ -65,10 +65,10 @@ public enum Viewer {
     }
     UI.page = 1;
    }
-   XZ += Keys.Left ? 5 : 0;
-   XZ -= Keys.Right ? 5 : 0;
-   YZ -= Keys.Up ? 5 : 0;
-   YZ += Keys.Down ? 5 : 0;
+   XZ += Keys.left ? 5 : 0;
+   XZ -= Keys.right ? 5 : 0;
+   YZ -= Keys.up ? 5 : 0;
+   YZ += Keys.down ? 5 : 0;
    Y += heightChange * U.tick;
    Z += depthChange * U.tick;
    if (I.vehicles.get(0) != null) {
@@ -103,18 +103,18 @@ public enum Viewer {
    U.text("Collision Bounds [" + (showCollisionBounds ? "SHOW" : UI.HIDE) + "]", .9 + UI.textOffset);
    U.text(UI.BACK_TO_MAIN_MENU, .925 + UI.textOffset);
    if (UI.selectionReady()) {
-    if (Keys.Up) {
+    if (Keys.up) {
      UI.selected = --UI.selected < 0 ? 4 : UI.selected;
      Keys.inUse = true;
      UI.sound.play(0, 0);
     }
-    if (Keys.Down) {
+    if (Keys.down) {
      UI.selected = ++UI.selected > 4 ? 0 : UI.selected;
      Keys.inUse = true;
      UI.sound.play(0, 0);
     }
    }
-   if (Keys.Space || Keys.Enter) {
+   if (Keys.space || Keys.enter) {
     if (UI.selected == 0) {
      loadModel = true;
     } else if (UI.selected == 1) {
@@ -139,13 +139,13 @@ public enum Viewer {
      I.removeVehicleModel();
     }
     UI.sound.play(1, 0);
-    Keys.Space = Keys.Enter = false;
+    Keys.space = Keys.enter = false;
    }
-   if (Keys.Escape) {
+   if (Keys.escape) {
     UI.status = UI.Status.mainMenu;
     I.removeVehicleModel();
     UI.sound.play(1, 0);
-    Keys.Escape = false;
+    Keys.escape = false;
    }
    if (loadModel) {
     I.removeVehicleModel();
@@ -175,10 +175,10 @@ public enum Viewer {
    Y = -5000;
    UI.page = 1;
   }
-  Camera.XZ -= Keys.Left ? 5 : 0;
-  Camera.XZ += Keys.Right ? 5 : 0;
-  Camera.YZ += Keys.Up ? 5 : 0;
-  Camera.YZ -= Keys.Down ? 5 : 0;
+  Camera.XZ -= Keys.left ? 5 : 0;
+  Camera.XZ += Keys.right ? 5 : 0;
+  Camera.YZ += Keys.up ? 5 : 0;
+  Camera.YZ -= Keys.down ? 5 : 0;
   Y += heightChange * UI.movementSpeedMultiple * U.tick;
   Camera.Y = Y;
   Camera.Z += depthChange * U.cos(Camera.XZ) * UI.movementSpeedMultiple * U.tick;
@@ -208,21 +208,21 @@ public enum Viewer {
   U.text("RE-LOAD MAP FILE", .85 + UI.textOffset);
   U.text(UI.BACK_TO_MAIN_MENU, .875 + UI.textOffset);
   U.text("Move Camera with the T, G, U, and J Keys. Rotate with the Arrow Keys", .9 + UI.textOffset);
-  if (UI.selectionReady() && (Keys.Up || Keys.Down)) {
+  if (UI.selectionReady() && (Keys.up || Keys.down)) {
    UI.selected = UI.selected < 1 ? 1 : 0;
    Keys.inUse = true;
    UI.sound.play(0, 0);
   }
-  if (Keys.Space || Keys.Enter) {
+  if (Keys.space || Keys.enter) {
    UI.status = UI.selected == 0 ? UI.Status.mapLoadPass0 : UI.Status.mainMenu;
    UI.sound.play(1, 0);
-   Keys.Space = Keys.Enter = false;
+   Keys.space = Keys.enter = false;
    Sounds.clear();
   }
-  if (Keys.Escape) {
+  if (Keys.escape) {
    UI.status = UI.Status.mainMenu;
    UI.sound.play(1, 0);
-   Keys.Escape = false;
+   Keys.escape = false;
    Sounds.clear();
   }
   TE.bonus.run();

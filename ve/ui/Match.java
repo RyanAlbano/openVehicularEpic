@@ -27,15 +27,15 @@ public enum Match {
  public static final long[] scoreCheckpoint = new long[2];
  public static final long[] scoreLap = new long[2];
  public static final long[] scoreStunt = new long[2];
- public static final double[] scoreDamage = new double[2];
+ public static final double[] scoreDamage = new double[2];//<-fixme--was assigned NaN in Crystal Cavern once
  public static final long[] scoreKill = new long[2];
  private static final double[] finalScore = new double[2];
 
  public static void run(boolean gamePlay) {
   timeLeft -= timeLeft > 0 && UI.status == UI.Status.play && started ? U.tick : 0;
   Tournament.finished = Tournament.stage > 0 && ((Tournament.stage > 4 && Math.abs(Tournament.wins[0] - Tournament.wins[1]) > 0) || (Tournament.stage > 2 && Math.abs(Tournament.wins[0] - Tournament.wins[1]) > 1));
-  if (started && (Keys.Enter || Keys.Escape) && gamePlay) {
-   Keys.Up = Keys.Down = Keys.Enter = Keys.Escape = false;
+  if (started && (Keys.enter || Keys.escape) && gamePlay) {
+   Keys.up = Keys.down = Keys.enter = Keys.escape = false;
    UI.selected = 0;
    UI.sound.play(1, 0);
    UI.status = UI.Status.paused;

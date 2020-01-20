@@ -54,7 +54,7 @@ public class Splash extends CoreAdvanced {
     Y += speedY * U.tick;
     Z += speedZ * U.tick;
     speedY += E.gravity * U.tick;
-    if (U.getDepth(this) > 0) {
+    if (U.render(this, true, true)) {
      U.randomRotate(C);
      double splashRGB = U.random(2.), r = .5 * splashRGB, g = splashRGB, b = 1;
      if (Pool.type == Pool.Type.lava) {

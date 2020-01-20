@@ -45,7 +45,7 @@ public class VehicleAudio {
  private Sound splash;
  private Sound splashOverSurface;
  public Sound tsunamiSplash;
- Sound mineExplosion;
+ public Sound mineExplosion;
  private Sound engine;
  private Sound turbineThrust;
  Sound death, deathExplode;
@@ -113,7 +113,7 @@ public class VehicleAudio {
  void setDistance() {
   distanceVehicleToCamera =
   V.index == I.vehiclePerspective && Camera.view == Camera.View.driver ? 0 :
-  Math.sqrt(U.distance(V)) * Sound.standardDistance(1);
+  Math.sqrt(U.distance(V)) * Sound.standardGain(1);
  }
 
  void skid() {
@@ -170,9 +170,6 @@ public class VehicleAudio {
    }
    scrape = new Sound("scrape", Double.POSITIVE_INFINITY);
    force = new Sound("force", 5);
-  }
-  if (V.type == Vehicle.Type.turret) {//<-Vehicle turrets loaded with specials
-   turret = new Sound(SL.turret);
   }
   death = new Sound("death");
   deathExplode = V.explosionsWhenDestroyed > 0 && !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) ? new Sound("deathExplode", Double.POSITIVE_INFINITY) : null;
@@ -305,7 +302,7 @@ public class VehicleAudio {
     boost.stop();
    }
   }
-  if (turret != null) {
+  if (turret != null && V.isFixed()) {//<-Checking null is not sufficient because vehicles with turrets borrow the turret field
    if (gamePlay && !V.destroyed && (V.turnL || V.turnR || V.drive || V.reverse || V.steerByMouse)) {
     turret.loop(distanceVehicleToCamera);
    } else {

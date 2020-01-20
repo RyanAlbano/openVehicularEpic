@@ -90,7 +90,7 @@ public enum Tsunami {
     for (Tsunami.Part tsunamiPart : parts) {
      soundDistance = Math.min(soundDistance, U.distance(tsunamiPart));
     }
-    sound.loop(Math.sqrt(soundDistance) * Sound.standardDistance(.5));
+    sound.loop(Math.sqrt(soundDistance) * Sound.standardGain(Sound.gainMultiples.tsunami));
    } else {
     sound.stop();
    }
@@ -155,5 +155,10 @@ public enum Tsunami {
     C.setVisible(false);
    }
   }
+ }
+
+ static void reset(){
+  parts.clear();
+  exists =false;
  }
 }

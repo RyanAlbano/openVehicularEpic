@@ -20,4 +20,10 @@ public enum MapBounds {//todo--Bots don't recognize that map bounds be treated a
    }
   }
  }
+
+ static void reset() {
+  left = backward = Y = Double.NEGATIVE_INFINITY;
+  right = forward = Double.POSITIVE_INFINITY;
+  slowVehicles = false;
+ }
 }

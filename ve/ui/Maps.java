@@ -3,6 +3,7 @@ package ve.ui;
 import javafx.scene.Cursor;
 import javafx.scene.paint.PhongMaterial;
 import ve.environment.*;
+import ve.environment.storm.Storm;
 import ve.instances.I;
 import ve.trackElements.*;
 import ve.trackElements.trackParts.TrackPart;
@@ -64,7 +65,7 @@ public enum Maps {
       E.soundMultiple = U.getValue(s, 0);
      }
      E.gravity = s.startsWith("gravity(") ? U.getValue(s, 0) : E.gravity;
-     E.sun.load(s);
+     Sun.sun.load(s);
      defaultVehicleLightBrightness = s.startsWith("defaultBrightness(") ? U.getValue(s, 0) : defaultVehicleLightBrightness;
      randomVehicleStartAngle = s.startsWith("randomStartAngle") || randomVehicleStartAngle;
      MapBounds.left = s.startsWith("xLimitLeft(") ? U.getValue(s, 0) : MapBounds.left;
@@ -92,7 +93,7 @@ public enum Maps {
      Storm.load(s);
      Tornado.load(s);
      E.loadFrustumMountains(s);
-     E.pool.load(s);
+     Pool.pool.load(s);
      if (s.startsWith("trees(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
        TE.trackParts.add(
@@ -386,15 +387,15 @@ public enum Maps {
     U.font(.01);
     U.text(UI.notifyUserOfArrowKeyNavigation, .95);
     if (UI.selectionReady()) {
-     if (Keys.Right) {
+     if (Keys.right) {
       map = ++map >= maps.size() ? 0 : map;
       UI.sound.play(0, 0);
      }
-     if (Keys.Left) {
+     if (Keys.left) {
       map = --map < 0 ? maps.size() - 1 : map;
       UI.sound.play(0, 0);
      }
-     if (Keys.Enter || Keys.Space) {
+     if (Keys.enter || Keys.space) {
       UI.status = UI.Status.mapLoadPass0;
       UI.sound.play(1, 0);
      }
@@ -403,7 +404,7 @@ public enum Maps {
    }
   }
   Network.preMatchCommunication(gamePlay);
-  if (Keys.Escape) {
+  if (Keys.escape) {
    UI.escapeToLast(true);
   }
  }
@@ -434,18 +435,18 @@ public enum Maps {
   U.font(.02);
   U.text("| " + name + " |", .15);
   Network.preMatchCommunication(gamePlay);
-  if (Keys.Space || Keys.Enter || Tournament.stage > 0) {
+  if (Keys.space || Keys.enter || Tournament.stage > 0) {
    UI.status = UI.Status.play;
    if (Tournament.stage < 1) {
     UI.sound.play(1, 0);
    }
    Camera.view = Camera.View.flow;
-   Keys.Space = Keys.Enter = false;
-  } else if (Keys.Right || Keys.Left) {
-   if (Keys.Left) {
+   Keys.space = Keys.enter = false;
+  } else if (Keys.right || Keys.left) {
+   if (Keys.left) {
     map = --map < 0 ? maps.size() - 1 : map;
    }
-   if (Keys.Right) {
+   if (Keys.right) {
     map = ++map >= maps.size() ? 0 : map;
    }
    UI.status = UI.Status.mapJump;
@@ -454,7 +455,7 @@ public enum Maps {
     vehicle.closeSounds();
    }
   }
-  if (Keys.Escape) {
+  if (Keys.escape) {
    UI.escapeToLast(true);
   }
   TE.bonus.run();
@@ -476,25 +477,25 @@ public enum Maps {
   U.text("Hit Continue or Enter to try again", .525);
   U.font(.01);
   U.text(UI.notifyUserOfArrowKeyNavigation, .95);
-  if (Keys.Space || Keys.Enter) {
+  if (Keys.space || Keys.enter) {
    UI.status = UI.Status.mapLoadPass0;
-   Keys.Space = Keys.Enter = false;
+   Keys.space = Keys.enter = false;
    UI.sound.play(1, 0);
   }
-  if (Keys.Right) {
+  if (Keys.right) {
    map = ++map >= maps.size() ? 0 : map;
    UI.status = UI.Status.mapJump;
-   Keys.Right = false;
+   Keys.right = false;
    UI.sound.play(0, 0);
   }
-  if (Keys.Left) {
+  if (Keys.left) {
    map = --map < 0 ? maps.size() - 1 : map;
    UI.status = UI.Status.mapJump;
-   Keys.Left = false;
+   Keys.left = false;
    UI.sound.play(0, 0);
   }
   UI.gameFPS = U.refreshRate * .25;
-  if (Keys.Escape) {
+  if (Keys.escape) {
    UI.escapeToLast(true);
   }
  }

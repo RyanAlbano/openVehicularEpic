@@ -258,6 +258,14 @@ public class Vehicle extends Instance {
     if (s.startsWith("type(")) {
      type = Type.valueOf(U.getString(s, 0));
      floats = s.contains("floats") || floats;
+     if (type == Type.turret) {
+      long turretAudioChoice = 0;
+      try {
+       turretAudioChoice = Math.round(U.getValue(s, 1));
+      } catch (Exception ignored) {
+      }
+      VA.turret = new Sound(SL.turret + (turretAudioChoice > 0 ? turretAudioChoice : ""));
+     }
     } else if (s.startsWith("acceleration(")) {
      accelerationStages[0] = U.getValue(s, 0);
      accelerationStages[1] = U.getValue(s, 1);
@@ -427,34 +435,7 @@ public class Vehicle extends Instance {
   for (VehiclePart part : parts) {
    Nodes.add(part.MV);
   }
-  if (realVehicle) {
-   P = new Physics(this);
-   if (Pool.exists || Tsunami.exists) {
-    for (n = Splash.defaultQuantity; --n >= 0; ) {
-     splashes.add(new Splash(this));
-    }
-   }
-   for (Wheel wheel : wheels) {
-    for (n = 50; --n >= 0; ) {
-     wheel.sparks.add(new Spark());
-    }
-   }
-   for (VehiclePart part : parts) {
-    if (part.thrustTrails != null) {
-     for (ThrustTrail trail : part.thrustTrails) {
-      Nodes.add(trail.B);
-     }
-    }
-   }
-   if (Maps.defaultVehicleLightBrightness > 0) {
-    burnLight = new PointLight();
-   }
-   if (explosionType == ExplosionType.maxnuclear) {
-    MNB = new MaxNukeBlast(this);
-   }
-   TE.setVehicleMatchStartPlacement(this);
-   load();
-  }
+  loadRealVehicleContent();
   Quaternion
   baseXZ = new Quaternion(0, U.sin(XZ * .5), 0, U.cos(XZ * .5)),
   baseYZ = new Quaternion(-U.sin(YZ * .5), 0, 0, U.cos(YZ * .5)),
@@ -550,6 +531,13 @@ public class Vehicle extends Instance {
     for (Shot shot : special.shots) {
      Nodes.add(shot.MV);
     }
+    for (Port port : special.ports) {
+     if (port.smokes != null) {
+      for (PortSmoke smoke : port.smokes) {
+       Nodes.add(smoke.C);
+      }
+     }
+    }
    }
    for (VehiclePart part : parts) {
     if (part.smokes != null) {
@@ -561,40 +549,68 @@ public class Vehicle extends Instance {
   }
  }
 
- private void load() {
-  P.cameraXZ = XZ;
-  for (Wheel wheel : wheels) {
-   wheel.X = X;
-   wheel.Y = Y;
-   wheel.Z = Z;
-  }
-  if (!wheels.isEmpty()) {
-   P.wheelGapFrontToBack = Math.max(Math.abs(wheels.get(0).pointZ - wheels.get(2).pointZ), Math.abs(wheels.get(1).pointZ - wheels.get(3).pointZ));
-   P.wheelGapLeftToRight = Math.max(Math.abs(wheels.get(0).pointX - wheels.get(1).pointX), Math.abs(wheels.get(2).pointX - wheels.get(3).pointX));
-  }
-  for (Special special : specials) {
-   special.time();
-   special.load();
-  }
-  if (!explosionType.name().contains(ExplosionType.nuclear.name())) {
-   P.explosionDiameter = 500;
-   P.explosionDamage = 250;
-  }
-  P.explosionPush = 500;
-  if (explosionType != ExplosionType.none) {
-   for (long n = Explosion.defaultQuantity; --n >= 0; ) {
-    explosions.add(new Explosion(this));
+ void loadRealVehicleContent() {
+  if (realVehicle) {
+   long n;
+   P = new Physics(this);
+   if (Pool.exists || Tsunami.exists) {
+    for (n = Splash.defaultQuantity; --n >= 0; ) {
+     splashes.add(new Splash(this));
+    }
    }
+   for (Wheel wheel : wheels) {
+    for (n = 50; --n >= 0; ) {
+     wheel.sparks.add(new Spark());
+    }
+   }
+   for (VehiclePart part : parts) {
+    if (part.thrustTrails != null) {
+     for (ThrustTrail trail : part.thrustTrails) {
+      Nodes.add(trail.B);
+     }
+    }
+   }
+   if (Maps.defaultVehicleLightBrightness > 0) {
+    burnLight = new PointLight();
+   }
+   if (explosionType == ExplosionType.maxnuclear) {
+    MNB = new MaxNukeBlast(this);
+   }
+   TE.setVehicleMatchStartPlacement(this);
+   P.cameraXZ = XZ;
+   for (Wheel wheel : wheels) {
+    wheel.X = X;
+    wheel.Y = Y;
+    wheel.Z = Z;
+   }
+   if (!wheels.isEmpty()) {
+    P.wheelGapFrontToBack = Math.max(Math.abs(wheels.get(0).pointZ - wheels.get(2).pointZ), Math.abs(wheels.get(1).pointZ - wheels.get(3).pointZ));
+    P.wheelGapLeftToRight = Math.max(Math.abs(wheels.get(0).pointX - wheels.get(1).pointX), Math.abs(wheels.get(2).pointX - wheels.get(3).pointX));
+   }
+   for (Special special : specials) {
+    special.time();
+    special.load();
+   }
+   if (!explosionType.name().contains(ExplosionType.nuclear.name())) {
+    P.explosionDiameter = 500;
+    P.explosionDamage = 250;
+   }
+   P.explosionPush = 500;
+   if (explosionType != ExplosionType.none) {
+    for (n = Explosion.defaultQuantity; --n >= 0; ) {
+     explosions.add(new Explosion(this));
+    }
+   }
+   AI = new AI(this);
+   VA.load();
+   double volcanoDistance = U.distance(X, Volcano.X, Z, Volcano.Z);
+   P.onVolcano = Volcano.exists && volcanoDistance < Volcano.radiusBottom && volcanoDistance > Volcano.radiusTop && Y > -Volcano.radiusBottom + volcanoDistance;
+   Y = P.onVolcano ? Math.min(Y, -Volcano.radiusBottom + volcanoDistance) - (isFixed() ? turretBaseY : 0) : Y;
+   P.atPoolXZ = Pool.exists && U.distanceXZ(this, Pool.pool) < Pool.C[0].getRadius();
+   P.inPool = P.atPoolXZ && Y + clearanceY > 0;
+   P.resetLocalGround();
+   lightBrightness = Maps.defaultVehicleLightBrightness;
   }
-  AI = new AI(this);
-  VA.load();
-  double volcanoDistance = U.distance(X, Volcano.X, Z, Volcano.Z);
-  P.onVolcano = Volcano.exists && volcanoDistance < Volcano.radiusBottom && volcanoDistance > Volcano.radiusTop && Y > -Volcano.radiusBottom + volcanoDistance;
-  Y = P.onVolcano ? Math.min(Y, -Volcano.radiusBottom + volcanoDistance) - (isFixed() ? turretBaseY : 0) : Y;
-  P.atPoolXZ = Pool.exists && U.distanceXZ(this, E.pool) < Pool.C[0].getRadius();
-  P.inPool = P.atPoolXZ && Y + clearanceY > 0;
-  P.resetLocalGround();
-  lightBrightness = Maps.defaultVehicleLightBrightness;
  }
 
  public boolean isFixed() {
@@ -645,8 +661,9 @@ public class Vehicle extends Instance {
   while (XZ > 180) XZ -= 360;
   double distanceToCamera = U.distance(this);
   boolean nullPhysics = P == null;
+  double sinXZ = U.sin(XZ), cosXZ = U.cos(XZ), sinYZ = U.sin(YZ), cosYZ = U.cos(YZ), sinXY = U.sin(XY), cosXY = U.cos(XY);
   for (VehiclePart part : parts) {
-   part.setPosition(nullPhysics);
+   part.runSetPosition(nullPhysics, sinXZ, cosXZ, sinYZ, cosYZ, sinXY, cosXY);
   }
   boolean renderALL = E.renderType == E.RenderType.ALL;
   if (renderALL || E.renderType == E.RenderType.fullDistance || distanceToCamera < E.viewableMapDistance + collisionRadius) {
@@ -656,7 +673,7 @@ public class Vehicle extends Instance {
    rotation.multiply(-U.sin(YZ * .5), 0, 0, U.cos(YZ * .5));
    rotation.multiply(0, U.sin(XZ * .5), 0, U.cos(XZ * .5));
    for (VehiclePart part : parts) {
-    part.render(nullPhysics, distanceToCamera, renderALL);
+    part.runRender(nullPhysics, distanceToCamera, renderALL);
    }
   }
   double smokeEmitProbability = nullPhysics || destroyed ? 0 : (P.mode.name().contains(SL.drive) || P.mode == Physics.Mode.neutral) && (drive || reverse) ? 1 : .25;
@@ -678,10 +695,10 @@ public class Vehicle extends Instance {
    part.MV.setVisible(part.visible);
    part.visible = false;
    if (part.chip != null) {
-    part.chip.run(this, gamePlay);
+    part.chip.run(gamePlay);
    }
    if (part.flame != null) {
-    part.flame.run(this);
+    part.flame.run();
    }
   }
   for (Wheel wheel : wheels) {
@@ -733,15 +750,15 @@ public class Vehicle extends Instance {
 
  public void getPlayerInput() {
   if (index == I.userPlayerIndex && Network.mode == Network.Mode.OFF && UI.status != UI.Status.replay) {
-   drive = Keys.Up;
-   reverse = Keys.Down;
-   turnL = Keys.Left;
-   turnR = Keys.Right;
-   handbrake = Keys.Space;
-   boost = Keys.keyBoost;
-   passBonus = Keys.PassBonus;
+   drive = Keys.up;
+   reverse = Keys.down;
+   turnL = Keys.left;
+   turnR = Keys.right;
+   handbrake = Keys.space;
+   boost = Keys.boost;
+   passBonus = Keys.passBonus;
    if (amphibious != null) {
-    amphibious = Keys.Amphibious ? Amphibious.ON : Amphibious.OFF;
+    amphibious = Keys.amphibious ? Amphibious.ON : Amphibious.OFF;
    }
    boolean turretExists = VT != null, get2ndDrive = false;
    if (turretExists && !VT.hasAutoAim) {
@@ -756,7 +773,7 @@ public class Vehicle extends Instance {
    for (Special special : specials) {
     if (special.aimType != Special.AimType.auto) {
      boolean shootWithCanceledSteer = special.aimType != Special.AimType.normal && special.type != Special.Type.mine && turretExists && VT.turnL && VT.turnR;
-     special.fire = Keys.Special[specials.indexOf(special)] || shootWithCanceledSteer;
+     special.fire = Keys.special[specials.indexOf(special)] || shootWithCanceledSteer;
     }
    }
   }
@@ -823,7 +840,7 @@ public class Vehicle extends Instance {
     setCameraShake(Camera.shakePresets.vehicleDeath);
     if (explosionsWhenDestroyed > 0) {
      if (VA.deathExplode != null) {//<-Nukes don't have this
-      VA.deathExplode.play(Double.NaN, VA.distanceVehicleToCamera * .75);
+      VA.deathExplode.play(Double.NaN, VA.distanceVehicleToCamera * Sound.gainMultiples.deathExplode);
      }
      nukeDetonate();
     }
@@ -912,10 +929,10 @@ public class Vehicle extends Instance {
    if (explosionType == ExplosionType.maxnuclear) {
     MNB.setSingularity();
     setCameraShake(Camera.shakePresets.maxNuclear);
-    VA.nuke.play(VA.distanceVehicleToCamera * .25);
+    VA.nuke.play(VA.distanceVehicleToCamera * Sound.gainMultiples.nukeMax);
    } else {
     setCameraShake(Camera.shakePresets.normalNuclear);
-    VA.nuke.play(Double.NaN, VA.distanceVehicleToCamera * .5);
+    VA.nuke.play(Double.NaN, VA.distanceVehicleToCamera * Sound.gainMultiples.nuke);
    }
   }
  }
@@ -936,8 +953,8 @@ public class Vehicle extends Instance {
     }
     P.stuntXY = P.stuntYZ = P.stuntXZ = 0;
     flipCheck[0] = flipCheck[1] = rollCheck[0] = rollCheck[1] = spinCheck[0] = spinCheck[1] = offTheEdge = false;
-    AI.airRotationDirection[0] = U.random() < .5 ? 1 : -1;
-    AI.airRotationDirection[1] = U.random() < .5 ? 1 : -1;
+    AI.airRotationDirectionYZ = U.random() < .5 ? 1 : -1;
+    AI.airRotationDirectionXY = U.random() < .5 ? 1 : -1;
     gotStunt = true;
    }
    if (!P.flipped() || landStuntsBothSides) {

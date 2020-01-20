@@ -25,6 +25,7 @@ public class TrackPart extends Instance {
  final boolean vehicleModel;
  public boolean isRepairPoint;
  public boolean wraps;
+ public boolean sidewaysXZ;
  boolean tree;
  public boolean rainbow;
  boolean checkpointSignRotation;
@@ -357,6 +358,7 @@ public class TrackPart extends Instance {
      repairShocks.get(n).setVisible(false);
     }
    }
+   sidewaysXZ = Math.abs(U.cos(XZ)) < U.sin45;
    Quaternion baseXZ = new Quaternion(0, U.sin(XZ * .5), 0, U.cos(XZ * .5)),
    baseYZ = new Quaternion(-U.sin(YZ * .5), 0, 0, U.cos(YZ * .5)),
    baseXY = new Quaternion(0, 0, -U.sin(XY * .5), U.cos(XY * .5));
@@ -463,8 +465,7 @@ public class TrackPart extends Instance {
    boolean showFoliageSphere = false;
    if (U.getDepth(this) > -renderRadius) {
     if (checkpointNumber >= 0 && checkpointNumber == TE.currentCheckpoint) {
-     boolean sideways = TE.isSidewaysXZ(XZ);
-     checkpointSignRotation = sideways ? (XZ > 0 ? Camera.X < X : Camera.X > X) : Camera.Z > Z;//If checkpoint, XZ is never > Math.abs(90)
+     checkpointSignRotation = sidewaysXZ ? (XZ > 0 ? Camera.X < X : Camera.X > X) : Camera.Z > Z;//If checkpoint, XZ is never > Math.abs(90)
     }
     double distanceToCamera = U.distance(this);
     if (vehicleModel) {
@@ -498,10 +499,14 @@ public class TrackPart extends Instance {
  }
 
  private void runRepairShocks(double depth) {
-  double radius = repairTorus.getRadius();
+  double radius = repairTorus.getRadius(),
+  rotateXZ = sidewaysXZ ? 0 : 90,//<-Reversed for some reason
+  sinXZ = U.sin(rotateXZ), cosXZ = U.cos(rotateXZ);//This math is very optimized--probably not worth it
   for (Cylinder shock : repairShocks) {
    if (depth > -radius) {
-    U.rotate(shock, U.random(360.), TE.isSidewaysXZ(XZ) ? 0 : 90);//<-Reversed for some reason
+    double rotateYZ = U.random(360.),
+    sinYZ = U.sin(rotateYZ), cosYZ = U.cos(rotateYZ);
+    U.rotate(shock, sinYZ, cosYZ, sinXZ, cosXZ);
     U.setTranslate(shock, this);
     shock.setVisible(true);
    } else {

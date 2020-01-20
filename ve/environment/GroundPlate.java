@@ -62,12 +62,13 @@ enum GroundPlate {
 
   Instance(double radius) {
    C = new Cylinder(radius, 0, 6);
+   absoluteRadius = radius;//<-Don't forget!
   }
 
   void run(double radius) {
    clampXZ();
    Y = Math.max(0, -Camera.Y * .005);
-   if (Y > Camera.Y && (!Pool.exists || U.distanceXZ(this, E.pool) > radius) && U.render(this, -C.getRadius(), false, true)) {//todo--CHECK if useViewableMapDistance is safe
+   if (Y > Camera.Y && (!Pool.exists || U.distanceXZ(this, Pool.pool) > radius) && U.render(this, -absoluteRadius, false, true)) {
     U.setTranslate(C, this);
     C.setVisible(true);
    } else {

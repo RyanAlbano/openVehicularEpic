@@ -158,7 +158,7 @@ public enum U {//Utilities
  }
 
  public static void setMaterialSecurely(Shape3D shape3D, PhongMaterial PM) {
-  UI.crashOnExpensiveInGameCall();//It's not really that expensive, but there's no reason this void should ever be called in-game, regardless
+  UI.crashOnExpensiveInGameCall();//<-It's not really that expensive, but there's no reason this void should ever be called in-game, regardless
   if (PM == null) {
    throw new IllegalStateException("Blocked attempt at setting from a null PhongMaterial");
   } else {
@@ -257,26 +257,26 @@ public enum U {//Utilities
 
  public static double randomPlusMinus(double doubleIn) {
   //return doubleIn * (random() - random());//<-todo-has been changed to the system below--some areas trying to counter inaccuracies in the older system are no longer needed and should be removed
-  return doubleIn * random() * (random() < .5 ? 1 : -1);
+  return random(doubleIn) * (random() < .5 ? 1 : -1);
  }
 
- public static double sin(double in) {
+ public static double sin(double in) {//*
   while (in > 180) in -= 360;
   while (in < -180) in += 360;
   return StrictMath.sin(in * .01745329251994329576923690768489);
  }
 
- public static double cos(double in) {
+ public static double cos(double in) {//*
   while (in > 180) in -= 360;
   while (in < -180) in += 360;
   return StrictMath.cos(in * .01745329251994329576923690768489);
- }
+ }//*Value returned is for DEGREES and NOT radians
 
  public static double arcCos(double in) {
   return StrictMath.acos(in);
  }
 
- public static double arcTan(double in) {
+ public static double arcTan(double in) {//*
   return StrictMath.atan(in) * 57.295779513082320876798154814092;
  }
 
@@ -308,6 +308,13 @@ public enum U {//Utilities
   N.setRotate(Math.toDegrees(d));
  }
 
+ public static void rotate(Node N, double sinYZ, double cosYZ, double sinXZ, double cosXZ) {
+  double d = arcCos((cosXZ + cosYZ + (cosYZ * cosXZ) - 1.) * .5),
+  den = 1 / (2 * StrictMath.sin(d));
+  N.setRotationAxis(new Point3D(((-cosXZ * sinYZ) - sinYZ) * den, (-(cosYZ * sinXZ) - sinXZ) * den, -(sinYZ * sinXZ) * den));
+  N.setRotate(Math.toDegrees(d));
+ }
+
  public static void randomRotate(Node N) {
   N.setRotationAxis(new Point3D(random(), random(), random()));
   N.setRotate(random(360.));
@@ -315,6 +322,12 @@ public enum U {//Utilities
 
  public static void rotate(double[] a, double[] b, double axis) {
   double a1 = a[0], b1 = b[0], sinAxis = sin(axis), cosAxis = cos(axis);
+  a[0] = a1 * cosAxis - b1 * sinAxis;
+  b[0] = a1 * sinAxis + b1 * cosAxis;
+ }
+
+ public static void rotate(double[] a, double[] b, double sinAxis, double cosAxis) {
+  double a1 = a[0], b1 = b[0];
   a[0] = a1 * cosAxis - b1 * sinAxis;
   b[0] = a1 * sinAxis + b1 * cosAxis;
  }
@@ -363,10 +376,6 @@ public enum U {//Utilities
   return distance(C1.X, C2.X, C1.Y, C2.Y, C1.Z, C2.Z);
  }
 
- private static double distance(double x, double y, double z) {
-  return distance(x, Camera.X, y, Camera.Y, z, Camera.Z);
- }
-
  public static double distance(Core core) {
   return distance(core.X, Camera.X, core.Y, Camera.Y, core.Z, Camera.Z);
  }
@@ -404,7 +413,7 @@ public enum U {//Utilities
  }
 
  private static boolean outOfBounds(double x, double y, double z, double tolerance) {
-  double depth = Ground.level + (Pool.exists && distance(x, E.pool.X, z, E.pool.Z) < Pool.C[0].getRadius() ? Pool.depth : 0);
+  double depth = Ground.level + (Pool.exists && distance(x, Pool.pool.X, z, Pool.pool.Z) < Pool.C[0].getRadius() ? Pool.depth : 0);
   return y > depth || x > MapBounds.right + tolerance || x < MapBounds.left - tolerance || z > MapBounds.forward + tolerance || z < MapBounds.backward - tolerance || y < MapBounds.Y - tolerance;
  }
 
@@ -437,24 +446,20 @@ public enum U {//Utilities
  }
 
  public static boolean render(Core core, double depthTolerance, boolean useLOD, boolean useViewableMapDistance) {
-  return render(core.X, core.Y, core.Z, core.absoluteRadius, depthTolerance, useLOD, useViewableMapDistance);
- }
-
- public static boolean render(double X, double Y, double Z, double absoluteRadius, boolean useLOD, boolean useViewableMapDistance) {
-  return render(X, Y, Z, absoluteRadius, 0, useLOD, useViewableMapDistance);
- }
-
- private static boolean render(double X, double Y, double Z, double absoluteRadius, double depthTolerance, boolean useLOD, boolean useViewableMapDistance) {
   if (E.renderType == E.RenderType.ALL) {
    return true;
-  } else if (getDepth(X, Y, Z) < depthTolerance) {
+  } else if (getDepth(core) < depthTolerance) {
    return false;
   } else if (useLOD && useViewableMapDistance) {
-   double distance = distance(X, Y, Z);
-   return distance < E.viewableMapDistance && absoluteRadius * E.renderLevel >= distance * Camera.FOV;
+   double distance = distance(core);
+   return distance + depthTolerance < E.viewableMapDistance && core.absoluteRadius * E.renderLevel >= distance * Camera.FOV;
+  } else if (useLOD) {
+   return core.absoluteRadius * E.renderLevel >= distance(core) * Camera.FOV;
+  } else if (useViewableMapDistance) {
+   return distance(core) + depthTolerance < E.viewableMapDistance;
+   //'depthTolerance' is also being used to adjust the distance objects are render-cut from viewableMapDistance. Not to be confused with 'absoluteRadius' usage.
   }
-  return (!useLOD || absoluteRadius * E.renderLevel >= distance(X, Y, Z) * Camera.FOV) &&
-  (!useViewableMapDistance || distance(X, Y, Z) < E.viewableMapDistance);
+  return true;
  }
 
  public static void setFPS() {

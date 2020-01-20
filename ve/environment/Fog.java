@@ -65,4 +65,9 @@ public enum Fog {
    recalibrationTimer = 10;
   }
  }
+
+ static void reset() {
+  spheres.clear();
+  exists = false;
+ }
 }

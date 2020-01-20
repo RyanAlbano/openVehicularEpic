@@ -172,7 +172,7 @@ public enum TE {//TrackElements
   if (listNumber == getTrackPartIndex(Models.rainbow.name())) {
    trackParts.get(trackParts.size() - 1).rainbow = true;
   } else if (listNumber == getTrackPartIndex(Models.crescent.name())) {
-   Nodes.remove(Sun.S);
+   Sun.enforceCrescent();
   } else if (listNumber == getTrackPartIndex(Models.checkpoint.name())) {
    points.add(new Point());
    points.get(points.size() - 1).X = X[0];
@@ -423,8 +423,7 @@ public enum TE {//TrackElements
   if (repairPointsExist && V.repairSpheres.get(U.random(V.repairSpheres.size())).stage <= 0 && !V.phantomEngaged) {
    for (TrackPart part : trackParts) {
     if (part.isRepairPoint) {
-     boolean sideways = isSidewaysXZ(part.XZ);
-     if (U.distance(sideways ? V.Z : V.X, sideways ? part.Z : part.X, V.Y, part.Y) <= 500 && Math.abs(sideways ? V.X - part.X : V.Z - part.Z) <= 200 + Math.abs(sideways ? V.speedX : V.speedZ) * U.tick) {
+     if (U.distance(part.sidewaysXZ ? V.Z : V.X, part.sidewaysXZ ? part.Z : part.X, V.Y, part.Y) <= 500 && Math.abs(part.sidewaysXZ ? V.X - part.X : V.Z - part.Z) <= 200 + Math.abs(part.sidewaysXZ ? V.speedX : V.speedZ) * U.tick) {
       V.repair(gamePlay);
      }
     }

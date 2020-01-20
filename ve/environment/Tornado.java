@@ -58,7 +58,7 @@ public enum Tornado {
     tornadoPart.run();
    }
    if (!Match.muteSound && update) {
-    sound.loop(Math.sqrt(U.distance(parts.get(0))) * Sound.standardDistance(1));
+    sound.loop(Math.sqrt(U.distance(parts.get(0))) * Sound.standardGain(1));
    } else {
     sound.stop();
    }
@@ -132,5 +132,10 @@ public enum Tornado {
     groundDustC.setVisible(false);
    }
   }
+ }
+
+ static void reset() {
+  parts.clear();
+  movesRepairPoints = false;
  }
 }

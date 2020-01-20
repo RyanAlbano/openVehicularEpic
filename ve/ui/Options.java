@@ -35,14 +35,14 @@ public enum Options {
    U.text("# of Players [" + I.vehiclesInMatch + "]", .65 + UI.textOffset);
   }
   if (UI.selectionReady()) {
-   if (Keys.Up) {
+   if (Keys.up) {
     if (--UI.selected < 0) {
      UI.selected = fromMenu ? 8 : 4;
     }
     Keys.inUse = true;
     UI.sound.play(0, 0);
    }
-   if (Keys.Down) {
+   if (Keys.down) {
     UI.selected = ++UI.selected > 8 || (!fromMenu && UI.selected > 4) ? 0 : UI.selected;
     Keys.inUse = true;
     UI.sound.play(0, 0);
@@ -56,42 +56,42 @@ public enum Options {
    isAdjustFunction = true;
    U.text("Driver view location (for applicable vehicles)", .75);
    if (UI.selectionReady()) {
-    if (Keys.Left && driverSeat > -1) {
+    if (Keys.left && driverSeat > -1) {
      driverSeat--;
      UI.sound.play(0, 0);
     }
-    if (Keys.Right && driverSeat < 1) {
+    if (Keys.right && driverSeat < 1) {
      driverSeat++;
      UI.sound.play(0, 0);
     }
    }
   } else if (UI.selected == 2) {
    U.text("Switch between Metric, U.S., or the game's raw units (VEs)", .75);
-   if ((Keys.Enter || Keys.Space) && UI.selectionReady()) {
+   if ((Keys.enter || Keys.space) && UI.selectionReady()) {
     Units.cycle();
    }
   } else if (UI.selected == 3) {
    isAdjustFunction = true;
    if (UI.selectionReady()) {
-    if (Keys.Left && UI.userFPS > 1) {
+    if (Keys.left && UI.userFPS > 1) {
      UI.userFPS = UI.userFPS > U.refreshRate ? U.refreshRate - 1 : --UI.userFPS;
      UI.sound.play(0, 0);
     }
-    if (Keys.Right && UI.userFPS < Long.MAX_VALUE) {
+    if (Keys.right && UI.userFPS < Long.MAX_VALUE) {
      UI.userFPS = ++UI.userFPS >= U.refreshRate ? Long.MAX_VALUE : UI.userFPS;
      UI.sound.play(0, 0);
     }
    }
    U.text("Lower the FPS ceiling if your PC can't process V.E. well (i.e. overheating). Leave maxed otherwise.", .75);
   } else if (UI.selected == 4) {
-   if ((Keys.Enter || Keys.Space) && UI.selectionReady()) {
+   if ((Keys.enter || Keys.space) && UI.selectionReady()) {
     Camera.shake = !Camera.shake;
    }
    U.text("Shakes camera when vehicles explode, etc.", .75);
   } else if (UI.selected == 5) {
    if (fromMenu) {
     U.text("Use normal-mapping on textured surfaces", .75);
-    if ((Keys.Enter || Keys.Space) && UI.selectionReady()) {
+    if ((Keys.enter || Keys.space) && UI.selectionReady()) {
      normalMapping = !normalMapping;
     }
    } else {
@@ -101,11 +101,11 @@ public enum Options {
    if (fromMenu) {
     isAdjustFunction = true;
     if (UI.selectionReady()) {
-     if (Keys.Left && matchLength > 0) {
+     if (Keys.left && matchLength > 0) {
       matchLength = Math.max(0, matchLength - 10);
       UI.sound.play(0, 0);
      }
-     if (Keys.Right) {
+     if (Keys.right) {
       matchLength += 10;
       UI.sound.play(0, 0);
      }
@@ -117,7 +117,7 @@ public enum Options {
   } else if (UI.selected == 7) {
    if (fromMenu) {
     U.text("See the Documentation for more info on Game Modes", .75);
-    if ((Keys.Enter || Keys.Space) && UI.selectionReady()) {
+    if ((Keys.enter || Keys.space) && UI.selectionReady()) {
      Tournament.stage = Tournament.stage > 0 ? 0 : 1;
     }
    } else {
@@ -128,11 +128,11 @@ public enum Options {
     isAdjustFunction = true;
     if (UI.selectionReady()) {
      int playerFloor = Tournament.stage > 0 ? 2 : 1;
-     if (Keys.Left) {
+     if (Keys.left) {
       I.vehiclesInMatch = --I.vehiclesInMatch < playerFloor ? I.maxPlayers : I.vehiclesInMatch;
       UI.sound.play(0, 0);
      }
-     if (Keys.Right) {
+     if (Keys.right) {
       I.vehiclesInMatch = ++I.vehiclesInMatch > I.maxPlayers ? playerFloor : I.vehiclesInMatch;
       UI.sound.play(0, 0);
      }
@@ -144,15 +144,15 @@ public enum Options {
   }
   U.fillRGB(1);
   U.text(UI.selected > 0 ? isAdjustFunction ? "Use Left and Right arrow keys to Adjust" : "Click or hit Enter/Space to Change" : "", .8);
-  if ((Keys.Enter || Keys.Space) && UI.selectionReady()) {
+  if ((Keys.enter || Keys.space) && UI.selectionReady()) {
    UI.status = UI.selected == 0 ? fromMenu ? UI.Status.mainMenu : UI.Status.paused : UI.status;
    UI.sound.play(1, 0);
-   Keys.Enter = Keys.Space = false;
+   Keys.enter = Keys.space = false;
   }
-  if (Keys.Escape) {
+  if (Keys.escape) {
    UI.status = fromMenu ? UI.Status.mainMenu : UI.Status.paused;
    UI.sound.play(1, 0);
-   Keys.Escape = false;
+   Keys.escape = false;
   }
   if (Tournament.stage > 0) {
    I.vehiclesInMatch = Math.max(2, I.vehiclesInMatch);

@@ -27,7 +27,7 @@ public class AI {
  private double aimAheadTarget;
  private double nukeWait;
  public boolean skipStunts;
- private boolean runTrackBackwards;
+ private boolean driveTrackBackwards;
  private final boolean guardCheckpoint;
  private boolean squareAgainstWall;
  private boolean engagingOthers;//<-renamed from 'attacking', since some vehicles engage their teammates instead
@@ -35,7 +35,7 @@ public class AI {
  private boolean atGuardedCheckpoint;
  private final boolean supportInfrastructure;
  public static double speedLimit;
- final long[] airRotationDirection = new long[2];
+ long airRotationDirectionYZ = U.random() < .5 ? 1 : -1, airRotationDirectionXY = U.random() < .5 ? 1 : -1;
  private WallTurn wallTurn = WallTurn.none;
 
  public enum Behavior {adapt, race, engageOthers}
@@ -47,8 +47,6 @@ public class AI {
  AI(Vehicle vehicle) {
   V = vehicle;
   target = U.random(I.vehiclesInMatch);
-  airRotationDirection[0] = U.random() < .5 ? 1 : -1;
-  airRotationDirection[1] = U.random() < .5 ? 1 : -1;
   guardCheckpoint = Maps.guardCheckpointAI && !V.isFixed() && V.topSpeeds[1] < 200;
   nukeWait = V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) ? U.random(Options.matchLength) : nukeWait;
   waitPoint = U.random(TE.checkpoints.size());
@@ -63,17 +61,19 @@ public class AI {
  }
 
  public void run() {
-  if (V.index == I.userPlayerIndex) {
+  if (V.index == I.userPlayerIndex) {//*Should ensure that this is only called for auto-aiming turrets, though it's a messy approach
    if (V.VT != null && V.VT.hasAutoAim) {
     for (Special special : V.specials) {
-     if (special.aimType == Special.AimType.auto) {
+     if (special.aimType == Special.AimType.auto) {//*
       special.fire = false;
      }
     }
     runAutoAim();
     engagingOthers = true;
     for (Special special : V.specials) {
-     runAimAndShoot(special);
+     if (special.aimType == Special.AimType.auto) {//*
+      runAimAndShoot(special);
+     }
     }
    }
   } else {
@@ -88,7 +88,7 @@ public class AI {
    long scoreStunt0 = Math.round(Match.scoreStunt[0] * .0005), scoreStunt1 = Math.round(Match.scoreStunt[1] * .0005);
    skipStunts = !V.landStuntsBothSides && !TE.checkpoints.isEmpty() && !Maps.name.equals(SL.Maps.summitOfEpic) &&
    (V.index < I.vehiclesInMatch >> 1 ? scoreStunt0 > scoreStunt1 : scoreStunt1 > scoreStunt0);
-   if (runTrackBackwards) {
+   if (driveTrackBackwards) {
     int setPoint = point - 1;
     while (setPoint < 0) setPoint += TE.points.size();
     if (U.distanceXZ(V, TE.points.get(point)) < Math.max(500, V.absoluteRadius) || U.distanceXZ(V, TE.points.get(setPoint)) < U.distanceXZ(V, TE.points.get(point))) {
@@ -103,9 +103,9 @@ public class AI {
     precisionXZ = precisionYZ = 5;
     runRaceCheckpointSteeringOptimization();
    }
-   if (!runTrackBackwards && !V.isFixed() && !TE.points.isEmpty() && V.topSpeeds[1] < 200) {
+   if (!driveTrackBackwards && !V.isFixed() && !TE.points.isEmpty() && V.topSpeeds[1] < 200) {
     point = U.random(Math.max(1, TE.points.size() - 1));
-    runTrackBackwards = true;
+    driveTrackBackwards = true;
    }
    boolean racing = (V.behavior == Behavior.race || (V.behavior == Behavior.adapt && needRace)) &&
    (!TE.checkpoints.isEmpty() || (V.behavior == Behavior.race && !V.hasShooting)) && !V.P.wrathEngaged;
@@ -119,7 +119,7 @@ public class AI {
    if (I.vehicles.get(target).destroyed || racing) {
     engagingOthers = false;
    }
-   if (runTrackBackwards && !V.hasShooting) {
+   if (driveTrackBackwards && !V.hasShooting) {
     aimAheadTarget += U.random() < .05 ? U.randomPlusMinus(10.) : 0;
     aimAheadTarget = aimAheadTarget < 0 || aimAheadTarget > 10 ? U.random(10.) : aimAheadTarget;
    }
@@ -275,7 +275,7 @@ public class AI {
    if (target == V.index || targetV.destroyed || U.sameTeam(V.index, target) ||
    ((targetV.dealsMassiveDamage() || targetV.spinner != null) && !V.hasShooting && !V.dealsMassiveDamage() && !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.P.wrathEngaged) ||//<-Not worth attacking
    (E.viewableMapDistance < Double.POSITIVE_INFINITY && !V.isFixed() && U.distance(V, targetV) > E.viewableMapDistance) ||//<-Out of visible range
-   (runTrackBackwards && !guardCheckpoint && !V.hasShooting && U.distanceXZ(V, targetV) > Math.min(E.viewableMapDistance, 10000)) ||//<-Too far away when running track backwards
+   (driveTrackBackwards && !guardCheckpoint && !V.hasShooting && U.distanceXZ(V, targetV) > Math.min(E.viewableMapDistance, 10000)) ||//<-Too far away when running track backwards
    (targetV.explosionType == Vehicle.ExplosionType.maxnuclear && V.explosionType != Vehicle.ExplosionType.maxnuclear)) {//<-Don't attack max nukes unless bot's also a max nuke
     engagingOthers = false;
     target = U.random(I.vehiclesInMatch);
@@ -347,11 +347,11 @@ public class AI {
     V.handbrake = (!Maps.name.equals(SL.Maps.summitOfEpic) || V.Y < -1010500) || V.handbrake;
     if (V.P.mode == Physics.Mode.stunt) {
      V.handbrake = false;
-     airRotationDirection[0] = U.equals(Maps.name, SL.Maps.lapsOfGlory, SL.Maps.speedway2000000) ? 1 : airRotationDirection[0];
-     V.drive = airRotationDirection[0] > 0;
-     V.reverse = airRotationDirection[0] < 0;
-     V.turnR = airRotationDirection[1] > 0;
-     V.turnL = airRotationDirection[1] < 0;
+     airRotationDirectionYZ = U.equals(Maps.name, SL.Maps.lapsOfGlory, SL.Maps.speedway2000000) ? 1 : airRotationDirectionYZ;
+     V.drive = airRotationDirectionYZ > 0;
+     V.reverse = airRotationDirectionYZ < 0;
+     V.turnR = airRotationDirectionXY > 0;
+     V.turnL = airRotationDirectionXY < 0;
      if (vehicularFalls) {
       V.reverse = true;
       V.drive = V.turnL = V.turnR = false;
@@ -654,7 +654,8 @@ public class AI {
 
  private void runAimAndShoot(Special special) {
   if (engagingOthers && special.type != Special.Type.phantom && special.type != Special.Type.teleport) {
-   double accuracyRangeXZ = special.aimType == Special.AimType.auto ? Math.abs(V.VT.XZ - vehicleTurretDirectionXZ) : Math.abs(V.XZ - directionXZ),
+   double
+   accuracyRangeXZ = special.aimType == Special.AimType.auto ? Math.abs(V.VT.XZ - vehicleTurretDirectionXZ) : Math.abs(V.XZ - directionXZ),
    accuracyRangeYZ = special.aimType == Special.AimType.auto ? Math.abs(V.VT.YZ - vehicleTurretDirectionYZ) : 0;
    boolean shoot = false;
    if (accuracyRangeXZ < special.AIAimPrecision && accuracyRangeYZ < special.AIAimPrecision) {

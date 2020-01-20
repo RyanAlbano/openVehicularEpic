@@ -11,38 +11,18 @@ import javax.sound.sampled.*;
 public class Sound {
  private int currentIndex;
 
- public static double standardDistance(double in) {
-  return in * .08;
+ public enum gainMultiples {
+  ;//These are not calculated for real-time use, and still need to be enclosed within standardGain()
+  public static final double deathExplode = .75;
+  public static final double thunder = .5;
+  public static final double tsunami = .5;
+  public static final double nuke = .5;
+  public static final double nukeMax = .25;
+  public static final double volcano = .25;
  }
 
- static class ClipVE {
-
-  Clip clip;
-  FloatControl gain;
-  double lastGain;
-
-  ClipVE(String sound, double ratio) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
-   try (AudioInputStream AIS = AudioSystem.getAudioInputStream(new BufferedInputStream(new FileInputStream(new File(sound))))) {
-    AudioFormat AF = AIS.getFormat();
-    AudioInputStream AIS2 = AudioSystem.getAudioInputStream(new AudioFormat
-    (AF.getFrameRate(),
-    Math.min(AF.getSampleSizeInBits(), Options.degradedSoundEffects ? 8 : 16),
-    Math.min(AF.getChannels(), Options.degradedSoundEffects ? 1 : 2),
-    true,
-    AF.isBigEndian()),
-    AIS);
-    AudioFormat convertedAF = AIS2.getFormat();
-    AudioInputStream convertedAIS = new AudioInputStream(AIS2, new AudioFormat(
-    (float) (AF.getFrameRate() * ratio),
-    convertedAF.getSampleSizeInBits(),
-    convertedAF.getChannels(), true,
-    convertedAF.isBigEndian()),
-    AIS2.getFrameLength());
-    clip = (Clip) AudioSystem.getLine(new DataLine.Info(Clip.class, convertedAIS.getFormat()));
-    clip.open(convertedAIS);
-    gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-   }
-  }
+ public static double standardGain(double in) {
+  return in * .08;
  }
 
  public final List<ClipVE> clips = new ArrayList<>();
@@ -200,6 +180,36 @@ public class Sound {
  public void close() {
   for (ClipVE clip : clips) {
    clip.clip.close();
+  }
+ }
+
+ static class ClipVE {
+
+  Clip clip;
+  FloatControl gain;
+  double lastGain;
+
+  ClipVE(String sound, double ratio) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
+   try (AudioInputStream AIS = AudioSystem.getAudioInputStream(new BufferedInputStream(new FileInputStream(new File(sound))))) {
+    AudioFormat AF = AIS.getFormat();
+    AudioInputStream AIS2 = AudioSystem.getAudioInputStream(new AudioFormat
+    (AF.getFrameRate(),
+    Math.min(AF.getSampleSizeInBits(), Options.degradedSoundEffects ? 8 : 16),
+    Math.min(AF.getChannels(), Options.degradedSoundEffects ? 1 : 2),
+    true,
+    AF.isBigEndian()),
+    AIS);
+    AudioFormat convertedAF = AIS2.getFormat();
+    AudioInputStream convertedAIS = new AudioInputStream(AIS2, new AudioFormat(
+    (float) (AF.getFrameRate() * ratio),
+    convertedAF.getSampleSizeInBits(),
+    convertedAF.getChannels(), true,
+    convertedAF.isBigEndian()),
+    AIS2.getFrameLength());
+    clip = (Clip) AudioSystem.getLine(new DataLine.Info(Clip.class, convertedAIS.getFormat()));
+    clip.open(convertedAIS);
+    gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+   }
   }
  }
 }

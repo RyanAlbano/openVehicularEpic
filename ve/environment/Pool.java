@@ -7,7 +7,7 @@ import ve.ui.Maps;
 import ve.utilities.*;
 
 public class Pool extends Core {
-
+ public static final Pool pool = new Pool();
  public static boolean exists;
  static final PhongMaterial PM = new PhongMaterial();
  public static double depth;
@@ -62,5 +62,11 @@ public class Pool extends Core {
    }
    U.fillRectangle(E.GC, .5, .5, 1, 1);
   }
+ }
+
+ static void reset() {
+  depth = 0;
+  exists = false;
+  type = Type.water;
  }
 }

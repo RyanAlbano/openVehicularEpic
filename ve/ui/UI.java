@@ -10,6 +10,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import ve.environment.*;
+import ve.environment.storm.Rain;
 import ve.instances.I;
 import ve.trackElements.Arrow;
 import ve.trackElements.Bonus;
@@ -250,7 +251,7 @@ public class UI/*UserInterface*/ extends Application {
   if (wasUser) {
    sound.play(1, 0);
   }
-  Keys.Escape = Network.runLoadThread = false;
+  Keys.escape = Network.runLoadThread = false;
   for (Vehicle vehicle : I.vehicles) {
    vehicle.closeSounds();
   }
@@ -266,12 +267,12 @@ public class UI/*UserInterface*/ extends Application {
    Tournament.finished = Network.waiting = Viewer.inUse = false;
    Arrow.MV.setVisible(false);
    if (selectionReady()) {
-    if (Keys.Up) {
+    if (Keys.up) {
      selected = --selected < 0 ? 6 : selected;
      Keys.inUse = true;
      sound.play(0, 0);
     }
-    if (Keys.Down) {
+    if (Keys.down) {
      selected = ++selected > 6 ? 0 : selected;
      Keys.inUse = true;
      sound.play(0, 0);
@@ -292,7 +293,7 @@ public class UI/*UserInterface*/ extends Application {
    U.fillRectangle(.5, .85, .2, selectionHeight);
    U.fillRGB(selected == 6 && U.yinYang ? .5 : 0);
    U.fillRectangle(.5, .9, .2, selectionHeight);
-   if (Keys.Enter || Keys.Space) {
+   if (Keys.enter || Keys.space) {
     Keys.inUse = true;
     if (selected == 0) {
      status = UI.Status.vehicleSelect;
@@ -321,11 +322,11 @@ public class UI/*UserInterface*/ extends Application {
     }
     sound.play(1, 0);
     page = 0;
-    Keys.Enter = Keys.Space = false;
+    Keys.enter = Keys.space = false;
     error = "";
    }
   }
-  if (Keys.Escape) {
+  if (Keys.escape) {
    System.exit(0);
   }
   U.font(.075);
@@ -344,8 +345,8 @@ public class UI/*UserInterface*/ extends Application {
   U.font(.015);
   U.fillRGB(1);
   if (loaded) {
-   U.text("NEW GAME", .6 + textOffset);
-   U.text("MULTIPLAYER GAME", .65 + textOffset);
+   U.text("NEW MATCH", .6 + textOffset);
+   U.text("MULTIPLAYER MATCH", .65 + textOffset);
    U.text(HOW_TO_PLAY, .7 + textOffset);
    U.text("CREDITS", .75 + textOffset);
    U.text(SL.OPTIONS, .8 + textOffset);
@@ -375,19 +376,19 @@ public class UI/*UserInterface*/ extends Application {
 
  static void runPaused() {
   if (selectionReady()) {
-   if (Keys.Up) {
+   if (Keys.up) {
     selected = --selected < 0 ? 4 : selected;
     Keys.inUse = true;
     sound.play(0, 0);
    }
-   if (Keys.Down) {
+   if (Keys.down) {
     selected = ++selected > 4 ? 0 : selected;
     Keys.inUse = true;
     sound.play(0, 0);
    }
   }
   boolean ending = false;
-  if (Keys.Enter || Keys.Space) {
+  if (Keys.enter || Keys.space) {
    if (selected == 0) {
     status = UI.Status.play;
    } else if (selected == 1) {
@@ -404,12 +405,12 @@ public class UI/*UserInterface*/ extends Application {
     ending = true;
    }
    sound.play(1, 0);
-   Keys.Enter = Keys.Space = false;
+   Keys.enter = Keys.space = false;
   }
-  if (Keys.Escape) {
+  if (Keys.escape) {
    ending = true;
    sound.play(1, 0);
-   Keys.Escape = false;
+   Keys.escape = false;
   }
   if (ending) {
    if (Network.mode == Network.Mode.OFF) {
@@ -530,12 +531,12 @@ public class UI/*UserInterface*/ extends Application {
   } else {
    scene.setCursor(Cursor.CROSSHAIR);
    if (selectionReady()) {
-    if (Keys.Up) {
+    if (Keys.up) {
      selected = --selected < 0 ? 1 : selected;
      Keys.inUse = true;
      sound.play(0, 0);
     }
-    if (Keys.Down) {
+    if (Keys.down) {
      selected = ++selected > 1 ? 0 : selected;
      Keys.inUse = true;
      sound.play(0, 0);
@@ -568,7 +569,7 @@ public class UI/*UserInterface*/ extends Application {
      }
     }
    }
-   if ((Keys.Enter || Keys.Space) && !Network.waiting) {
+   if ((Keys.enter || Keys.space) && !Network.waiting) {
     if (selected == 0) {
      Network.mode = Network.Mode.HOST;
      Network.loadGameThread();
@@ -579,7 +580,7 @@ public class UI/*UserInterface*/ extends Application {
      Network.waiting = true;
     }
     sound.play(1, 0);
-    Keys.Enter = Keys.Space = false;
+    Keys.enter = Keys.space = false;
    }
    U.font(.075);
    U.fillRGB(1);
@@ -612,7 +613,7 @@ public class UI/*UserInterface*/ extends Application {
     U.font(.02);
     U.text(Network.joinError, .625);
    }
-   if (Keys.Escape) {
+   if (Keys.escape) {
     escapeToLast(true);
    }
    gameFPS = U.refreshRate;
@@ -759,39 +760,41 @@ public class UI/*UserInterface*/ extends Application {
    U.text("GOOD LUCK", .75);
   }
   if (selectionReady()) {
-   if (Keys.Right) {
+   if (Keys.right) {
     if (++page > 4) {
      page = 0;
      status = lastStatus;
     }
     sound.play(0, 0);
    }
-   if (Keys.Left) {
+   if (Keys.left) {
     if (--page < 1) {
      page = 0;
      status = lastStatus;
     }
     sound.play(0, 0);
    }
-   if (Keys.Enter) {
+   if (Keys.enter) {
     page = 0;
     status = lastStatus;
     sound.play(1, 0);
-    Keys.Enter = false;
+    Keys.enter = false;
    }
   }
-  if (Keys.Escape) {
+  if (Keys.escape) {
    page = 0;
    status = lastStatus;
    sound.play(1, 0);
-   Keys.Escape = false;
+   Keys.escape = false;
   }
   gameFPS = U.refreshRate * .25;
  }
 
  public static void crashOnExpensiveInGameCall() {
   if (status == Status.play || status == Status.replay) {
-   throw new IllegalStateException("For performance reasons--this call is not allowed during gameplay.");
+   IllegalStateException ISE = new IllegalStateException("For performance reasons--this call is not allowed during gameplay.");
+   ISE.printStackTrace();//<-Called here in case the app refuses to revert to menu and handle the exception
+   throw ISE;
   }
  }
 }

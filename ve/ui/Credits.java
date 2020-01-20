@@ -118,31 +118,31 @@ public enum Credits {
    U.text("EPIC", .55);
   }
   if (UI.selectionReady()) {
-   if (Keys.Left) {
+   if (Keys.left) {
     if (--UI.page < 1) {
      UI.page = 0;
      UI.status = UI.Status.mainMenu;
     }
     UI.sound.play(0, 0);
    }
-   if (Keys.Right) {
+   if (Keys.right) {
     if (++UI.page > 2) {
      UI.page = 0;
      UI.status = UI.Status.mainMenu;
     }
     UI.sound.play(0, 0);
    }
-   if (Keys.Enter || Keys.Space) {
+   if (Keys.enter || Keys.space) {
     UI.page = 0;
     UI.status = UI.Status.mainMenu;
-    Keys.Enter = Keys.Space = false;
+    Keys.enter = Keys.space = false;
     UI.sound.play(1, 0);
    }
   }
-  if (Keys.Escape) {
+  if (Keys.escape) {
    UI.page = 0;
    UI.status = UI.Status.mainMenu;
-   Keys.Escape = false;
+   Keys.escape = false;
    UI.sound.play(1, 0);
   }
   U.fillRGB(1);

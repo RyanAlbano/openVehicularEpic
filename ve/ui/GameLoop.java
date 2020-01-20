@@ -4,6 +4,7 @@ import javafx.animation.AnimationTimer;
 import javafx.stage.Stage;
 import ve.environment.E;
 import ve.environment.FrustumMound;
+import ve.environment.Pool;
 import ve.instances.I;
 import ve.trackElements.Arrow;
 import ve.trackElements.TE;
@@ -14,6 +15,7 @@ import ve.vehicles.Vehicle;
 import ve.vehicles.VehiclePart;
 import ve.vehicles.explosions.Explosion;
 import ve.vehicles.specials.Port;
+import ve.vehicles.specials.PortSmoke;
 import ve.vehicles.specials.Shot;
 import ve.vehicles.specials.Special;
 
@@ -43,17 +45,17 @@ class GameLoop extends AnimationTimer {
    }
    E.lightsAdded = 0;
    if (Mouse.click) {
-    Mouse.mouse = Keys.Left = Keys.Right = Keys.Enter = false;
+    Mouse.mouse = Keys.left = Keys.right = Keys.enter = false;
    }
    boolean gamePlay = UI.status == UI.Status.play || UI.status == UI.Status.replay,//<-All 'gamePlay' calls in the entire project are determined by this!
    renderALL = E.renderType == E.RenderType.ALL;
    if (Mouse.mouse && (!gamePlay || !Match.started)) {
     if (Mouse.X < .375) {
-     Keys.Left = true;
+     Keys.left = true;
     } else if (Mouse.X > .625) {
-     Keys.Right = true;
+     Keys.right = true;
     } else {
-     Keys.Enter = Mouse.click = true;
+     Keys.enter = Mouse.click = true;
     }
     Mouse.click = UI.status != UI.Status.vehicleSelect && UI.status != UI.Status.mapJump && !UI.status.name().contains("options") || Mouse.click;
    }
@@ -74,11 +76,11 @@ class GameLoop extends AnimationTimer {
     for (Vehicle vehicle : I.vehicles) {//*These are SPLIT so that energy towers can empower specials before the affected vehicles fire, and to make shots render correctly
      for (Special special : vehicle.specials) {
       if (special.type == Special.Type.energy) {
-       special.run(gamePlay);//*
+       special.EB.run(gamePlay);//*
       }
      }
     }
-    //Energization before runMiscellaneous is called
+    //Energization before runMiscellaneous() is called
     for (Vehicle vehicle : I.vehicles) {
      vehicle.runMiscellaneous(gamePlay);
     }
@@ -88,16 +90,16 @@ class GameLoop extends AnimationTimer {
       Mouse.steerY = 100 * (Mouse.Y - .5);
       if (I.vehicles.get(I.userPlayerIndex).P.mode != Physics.Mode.fly && !I.vehicles.get(I.userPlayerIndex).isFixed()) {
        if (Mouse.Y < .5) {
-        Keys.Down = false;
-        Keys.Up = true;
+        Keys.down = false;
+        Keys.up = true;
        } else if (Mouse.Y > .75) {
-        Keys.Up = false;
-        Keys.Down = true;
+        Keys.up = false;
+        Keys.down = true;
        } else {
-        Keys.Up = Keys.Down = false;
+        Keys.up = Keys.down = false;
        }
       }
-      Keys.Space = Mouse.mouse;
+      Keys.space = Mouse.mouse;
      }
      if (Network.mode != Network.Mode.OFF) {
       Network.matchDataOut();
@@ -115,10 +117,12 @@ class GameLoop extends AnimationTimer {
       for (Explosion explosion : vehicle.explosions) {
        explosion.run(gamePlay);
       }
+      double
+      sinXZ = U.sin(vehicle.XZ), cosXZ = U.cos(vehicle.XZ),
+      sinYZ = U.sin(vehicle.YZ), cosYZ = U.cos(vehicle.YZ),
+      sinXY = U.sin(vehicle.XY), cosXY = U.cos(vehicle.XY);
       for (Special special : vehicle.specials) {
-       if (special.type != Special.Type.energy) {
-        special.run(gamePlay);//*
-       }
+       special.run(gamePlay, sinXZ, cosXZ, sinYZ, cosYZ, sinXY, cosXY);//*
       }
      }
      if (gamePlay) {
@@ -174,7 +178,7 @@ class GameLoop extends AnimationTimer {
        Match.started = true;
        Network.waiting = false;
       }
-     } else if (Keys.Space) {
+     } else if (Keys.space) {
       UI.sound.play(1, 0);
       Camera.view = Camera.lastView;
       if (Network.mode == Network.Mode.OFF) {
@@ -191,26 +195,26 @@ class GameLoop extends AnimationTimer {
         Network.out.get(0).println(SL.Ready);
        }
       }
-      Keys.Space = false;
+      Keys.space = false;
      }
      if (!Network.waiting) {
       U.font(.02);
       U.fillRGB(U.yinYang ? 0 : 1);
       if (I.vehicles.get(I.vehiclePerspective).isFixed() && (I.vehiclesInMatch < 2 || I.vehiclePerspective < I.vehiclesInMatch >> 1)) {
        U.text("Use Arrow Keys and < and > to place your infrastructure, then", .2);
-       if (Keys.Up || Keys.Down || Keys.Left || Keys.Right) {
+       if (Keys.up || Keys.down || Keys.left || Keys.right) {
         UI.movementSpeedMultiple = Math.max(10, UI.movementSpeedMultiple * 1.05);
-        I.vehicles.get(I.vehiclePerspective).Z += Keys.Up ? UI.movementSpeedMultiple * U.tick : 0;
-        I.vehicles.get(I.vehiclePerspective).Z -= Keys.Down ? UI.movementSpeedMultiple * U.tick : 0;
-        I.vehicles.get(I.vehiclePerspective).X -= Keys.Left ? UI.movementSpeedMultiple * U.tick : 0;
-        I.vehicles.get(I.vehiclePerspective).X += Keys.Right ? UI.movementSpeedMultiple * U.tick : 0;
+        I.vehicles.get(I.vehiclePerspective).Z += Keys.up ? UI.movementSpeedMultiple * U.tick : 0;
+        I.vehicles.get(I.vehiclePerspective).Z -= Keys.down ? UI.movementSpeedMultiple * U.tick : 0;
+        I.vehicles.get(I.vehiclePerspective).X -= Keys.left ? UI.movementSpeedMultiple * U.tick : 0;
+        I.vehicles.get(I.vehiclePerspective).X += Keys.right ? UI.movementSpeedMultiple * U.tick : 0;
        } else {
         UI.movementSpeedMultiple = 0;
        }
       }
       U.text("Press SPACE to Begin" + (Tournament.stage > 0 ? " Round " + Tournament.stage : ""), .25);
      }
-     if (Keys.Escape) {
+     if (Keys.escape) {
       UI.escapeToLast(true);
      }
     }
@@ -225,7 +229,12 @@ class GameLoop extends AnimationTimer {
       }
       for (Port port : special.ports) {
        if (port.spit != null) {
-        port.spit.render();
+        port.spit.runRender();
+       }
+       if (port.smokes != null) {
+        for (PortSmoke smoke : port.smokes) {
+         smoke.runRender();
+        }
        }
       }
       if (special.EB != null) {
@@ -279,7 +288,7 @@ class GameLoop extends AnimationTimer {
     UI.gameFPS = Double.POSITIVE_INFINITY;
     E.renderType = E.RenderType.standard;
    } else {
-    E.pool.runVision();//<-Not called in-match HERE because it would draw over screenFlash
+    Pool.pool.runVision();//<-Not called in-match HERE because it would draw over screenFlash
    }
    if (UI.status == UI.Status.paused) {
     UI.runPaused();
@@ -319,7 +328,7 @@ class GameLoop extends AnimationTimer {
     }
    }
    UI.selectionTimer = (UI.selectionTimer > UI.selectionWait ? 0 : UI.selectionTimer) + 5 * U.tick;
-   if (Keys.Left || Keys.Right || Keys.Up || Keys.Down || Keys.Space || Keys.Enter) {
+   if (Keys.left || Keys.right || Keys.up || Keys.down || Keys.space || Keys.enter) {
     if (UI.selectionWait == -1) {
      UI.selectionWait = 30;
      UI.selectionTimer = 0;
@@ -350,7 +359,7 @@ class GameLoop extends AnimationTimer {
    long time = System.nanoTime();
    U.tick = Math.min((time - U.lastTime + 500000) * .00000002, 1);
    U.lastTime = time;
-  } catch (Exception E) {//<-It's for the entire game loop--a general exception is probably most surefire
+  } catch (Exception E) {//<-It's for the entire loop--a general exception is probably most surefire
    try (PrintWriter PW = new PrintWriter(new File("V.E. EXCEPTION"), U.standardChars)) {
     E.printStackTrace(PW);
    } catch (IOException ignored) {

@@ -10,6 +10,7 @@ import ve.environment.Terrain;
 import ve.instances.I;
 import ve.instances.InstancePart;
 import ve.trackElements.TE;
+import ve.ui.Maps;
 import ve.ui.Options;
 import ve.ui.UI;
 import ve.utilities.*;
@@ -106,12 +107,14 @@ public class TrackPartPart extends InstancePart {
      RGB = U.getColor(RGB.getRed() * 1.01, RGB.getGreen() * 1.01, RGB.getBlue() * 1.01);
     }
    }
-   Color storeRGB = RGB;
-   if (type.contains(SL.thick(SL.reflect))) {
+   if (light) {
+    if (Maps.defaultVehicleLightBrightness <= 0 && type.contains(SL.thick(SL.reflect))) {
+     RGB = U.getColor(E.skyRGB);
+    } else if (type.contains(SL.thick(SL.reflect)) || (RGB.getRed() == RGB.getGreen() && RGB.getGreen() == RGB.getBlue())) {
+     RGB = U.getColor(1);
+    }
+   } else if (type.contains(SL.thick(SL.reflect))) {
     RGB = U.getColor(E.skyRGB);
-   }
-   if (light && (type.contains(SL.thick(SL.reflect)) || (storeRGB.getRed() == storeRGB.getGreen() && storeRGB.getGreen() == storeRGB.getBlue()))) {
-    RGB = U.getColor(1);
    }
    RGB =
    TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.terrain ? U.getColor(Terrain.RGB) :

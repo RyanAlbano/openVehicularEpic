@@ -32,13 +32,13 @@ public enum Arrow {
  static {
   TriangleMesh TM = new TriangleMesh();
   TM.getTexCoords().setAll(0, 0);
-  float arrowWidth = .25f;
+  float width = .25f;
   TM.getPoints().setAll(
-  0, 0, arrowWidth * 3,
-  0, -arrowWidth, -arrowWidth * 3,
-  -arrowWidth, 0, -arrowWidth * 3,
-  arrowWidth, 0, -arrowWidth * 3,
-  0, arrowWidth, -arrowWidth * 3);
+  0, 0, width * 3,
+  0, -width, -width * 3,
+  -width, 0, -width * 3,
+  width, 0, -width * 3,
+  0, width, -width * 3);
   TM.getFaces().setAll(
   0, 0, 2, 0, 1, 0,
   0, 0, 1, 0, 3, 0,
