@@ -51,6 +51,7 @@ public enum SL {//StringLiterals--don't EVER change the texts!
   circleRaceXL = "Circle Race XL",
   volcanicProphecy = "Volcanic Prophecy",
   theMaze = "the Maze",
+  outerSpace1 = "Outer Space V1",
   XYLand = "XY Land";
  }
 }

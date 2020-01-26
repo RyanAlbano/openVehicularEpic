@@ -13,7 +13,7 @@ import java.util.Collection;
 public enum Snowball {
  ;
  public static final Collection<Instance> instances = new ArrayList<>();
- private static final double wrapDistance = 2000;
+ private static final long wrapDistance = 2000;
 
  public static void run() {
   for (Snowball.Instance snowball : instances) {
@@ -22,20 +22,16 @@ public enum Snowball {
  }
 
  public static class Instance extends CoreAdvanced {
-  public final Sphere round, lowResolution;
-  private double rotateAngle;
-  private final double[] rotation = new double[2];
+  public final Sphere S;
 
   public Instance() {
    X = U.randomPlusMinus(1000000.);
    Y = U.randomPlusMinus(1000000.);
    Z = U.randomPlusMinus(1000000.);
-   rotation[0] = U.randomPlusMinus(45.);
-   rotation[1] = U.randomPlusMinus(45.);
-   double radius = 1 + U.random(9.);
-   round = new Sphere(radius);
-   lowResolution = new Sphere(radius, 0);
-   Nodes.add(round, lowResolution);
+   absoluteRadius = 1 + U.random(9.);
+   S = new Sphere(absoluteRadius);
+   Nodes.add(S);
+   S.setVisible(false);
   }
 
   private void run() {
@@ -48,28 +44,20 @@ public enum Snowball {
    X += speedX * U.tick + (Wind.speedX * U.tick);
    Y += speedY * U.tick;
    Z += speedZ * U.tick + (Wind.speedZ * U.tick);
-   while (Math.abs(X - Camera.X) > wrapDistance) {
-    X += (X > Camera.X ? -wrapDistance : wrapDistance) * 2;
-    rotateAngle = 0;
+   while (Math.abs(X - Camera.C.X) > wrapDistance) {
+    X += (X > Camera.C.X ? -wrapDistance : wrapDistance) << 1;
    }
-   while (Math.abs(Y - Camera.Y) > wrapDistance) {
-    Y += (Y > Camera.Y ? -wrapDistance : wrapDistance) * 2;
-    rotateAngle = 0;
+   while (Math.abs(Y - Camera.C.Y) > wrapDistance) {
+    Y += (Y > Camera.C.Y ? -wrapDistance : wrapDistance) << 1;
    }
-   while (Math.abs(Z - Camera.Z) > wrapDistance) {
-    Z += (Z > Camera.Z ? -wrapDistance : wrapDistance) * 2;
-    rotateAngle = 0;
+   while (Math.abs(Z - Camera.C.Z) > wrapDistance) {
+    Z += (Z > Camera.C.Z ? -wrapDistance : wrapDistance) << 1;
    }
-   rotateAngle += U.tick;
-   round.setVisible(false);
-   lowResolution.setVisible(false);
-   if (U.getDepth(this) > 0) {
-    Sphere S = U.averageFPS < 30 ? lowResolution : round;
+   if (U.render(this, true, true)) {
     U.setTranslate(S, this);
-    if (S == lowResolution) {
-     U.rotate(S, rotation[0] * rotateAngle, rotation[1] * rotateAngle);
-    }
     S.setVisible(true);
+   } else {
+    S.setVisible(false);
    }
   }
  }

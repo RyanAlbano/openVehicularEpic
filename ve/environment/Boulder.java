@@ -7,6 +7,7 @@ import ve.instances.CoreAdvanced;
 import ve.ui.Match;
 import ve.utilities.*;
 import ve.effects.Dust;
+import ve.vehicles.Vehicle;
 
 import java.util.*;
 
@@ -27,6 +28,17 @@ public enum Boulder {
  static void run(boolean updateIfMatchBegan) {
   for (Boulder.Instance boulder : instances) {
    boulder.run(updateIfMatchBegan);
+  }
+ }
+
+ public static void vehicleInteract(Vehicle V) {
+  for (Instance boulder : instances) {
+   if (U.distanceXZ(V, boulder) < V.collisionRadius + boulder.S.getRadius() && V.Y > boulder.Y - V.collisionRadius - boulder.S.getRadius()) {//<-Will call incorrectly in the unlikely event a vehicle is underground and the boulder rolls directly overhead
+    V.setDamage(V.damageCeiling());
+    V.deformParts();
+    V.throwChips(boulder.speed, true);
+    V.VA.crashDestroy.play(Double.NaN, V.VA.distanceVehicleToCamera);
+   }
   }
  }
 

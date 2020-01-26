@@ -72,7 +72,7 @@ class Converter {
     double y = vertices.get(n2).Y * (invertY ? -1 : 1), z = vertices.get(n2).Z * (invertZ ? -1 : 1);
     s2.append("(").append(vertices.get(n2).X * (invertX ? -1 : 1)).append(",").append(axisSwap ? z : y).append(",").append(axisSwap ? y : z).append(U.lineSeparator);
     if (n1 >= 3) {
-     throw new IllegalStateException(triangulationError);
+     throw new IllegalStateException(triangulationError);//<-Not sure if sending this to UI will work properly
     }
    }
    SB.append(s2);

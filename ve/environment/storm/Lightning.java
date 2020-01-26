@@ -10,7 +10,6 @@ import ve.environment.E;
 import ve.ui.UI;
 import ve.utilities.*;
 import ve.vehicles.Vehicle;
-import ve.vehicles.VehiclePart;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +40,7 @@ public enum Lightning {
   U.setMaterialSecurely(MV, lightningPM);
   for (int n = light.length; --n >= 0; ) {
    light[n] = new PointLight();
-   Nodes.setRGB(light[n], 1, 1, 1);
+   Nodes.setLightRGB(light[n], 1, 1, 1);
   }
  }
 
@@ -72,7 +71,7 @@ public enum Lightning {
        currentBurst = ++currentBurst >= groundBursts.size() ? 0 : currentBurst;
       }
       if (update) {
-       thunder.play(Double.NaN, Math.sqrt(U.distance(Camera.X, X, Camera.Y, 0, Camera.Z, Z)) * Sound.standardGain(Sound.gainMultiples.thunder));
+       thunder.play(Double.NaN, Math.sqrt(U.distance(Camera.C.X, X, Camera.C.Y, 0, Camera.C.Z, Z)) * Sound.standardGain(Sound.gainMultiples.thunder));
       }
      }
     }
@@ -85,8 +84,8 @@ public enum Lightning {
     Nodes.removePointLight(light[1]);
    }
    if (UI.status != UI.Status.replay && ++strikeStage > U.random(13000.)) {//<-Progress strikeStage using tick?
-    X = Camera.X + U.randomPlusMinus(200000.);
-    Z = Camera.Z + U.randomPlusMinus(200000.);
+    X = Camera.C.X + U.randomPlusMinus(200000.);
+    Z = Camera.C.Z + U.randomPlusMinus(200000.);
     strikeStage = 0;
    }
    for (GroundBurst burst : groundBursts) {
@@ -101,9 +100,7 @@ public enum Lightning {
    if (V.Y >= Storm.cloudY && distance < V.collisionRadius * 6) {
     V.addDamage(V.durability * .5 + (distance < V.collisionRadius * 2 ? V.durability : 0));
     V.deformParts();
-    for (VehiclePart part : V.parts) {
-     part.throwChip(U.randomPlusMinus(500.));
-    }
+    V.throwChips(500, true);
     V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
     V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
     V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);

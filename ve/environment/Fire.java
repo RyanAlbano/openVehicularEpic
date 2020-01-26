@@ -13,6 +13,7 @@ import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.ui.Match;
 import ve.utilities.*;
+import ve.vehicles.Vehicle;
 
 public enum Fire {
  ;
@@ -27,6 +28,19 @@ public enum Fire {
  static void run(boolean update) {
   for (Fire.Instance fire : instances) {
    fire.run(update);
+  }
+ }
+
+ public static void vehicleInteract(Vehicle V) {
+  for (Instance fire : instances) {
+   double distance = U.distance(V, fire);
+   if (distance < V.collisionRadius + fire.absoluteRadius) {
+    V.addDamage(10 * U.tick);
+    if (distance * 2 < V.collisionRadius + fire.absoluteRadius) {
+     V.addDamage(10 * U.tick);
+    }
+    V.deformParts();
+   }
   }
  }
 
@@ -116,7 +130,7 @@ public enum Fire {
    double fireToCameraDistance = U.distance(this);
    if (PL != null) {
     if (fireToCameraDistance < E.viewableMapDistance) {
-     Nodes.setRGB(PL, 1, .5 + U.random(.4), U.random(.25));
+     Nodes.setLightRGB(PL, 1, .5 + U.random(.4), U.random(.25));
      U.setTranslate(PL, this);
      Nodes.addPointLight(PL);
     } else {

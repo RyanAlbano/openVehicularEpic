@@ -40,7 +40,7 @@ public enum Storm {
 
  public static void run(boolean update) {
   if (exists) {
-   cloud.setTranslateY(cloudY - Camera.Y);//<-Cloud's X and Z location is always synced to the camera
+   cloud.setTranslateY(cloudY - Camera.C.Y);//<-Cloud's X and Z location is always synced to the camera's
    Rain.run(update);
    Lightning.run(update);
   }

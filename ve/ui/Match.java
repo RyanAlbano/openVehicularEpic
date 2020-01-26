@@ -101,8 +101,8 @@ public enum Match {
   scoreStunt0 = 1 + Math.round(scoreStunt[0] * .0005),
   scoreStunt1 = 1 + Math.round(scoreStunt[1] * .0005);
   double
-  scoreDamage0 = 1 + scoreDamage[0] * .00125,
-  scoreDamage1 = 1 + scoreDamage[1] * .00125;
+  scoreDamage0 = 1 + scoreDamage[0] * .000125,//*
+  scoreDamage1 = 1 + scoreDamage[1] * .000125;//*Values for scoreDamage dealt should be small--gameplay is arguably better if the damage dealt carries less weight than say, stunts or kills
   double[] score = {
   scoreCheckpoint[0] * scoreLap[0] * scoreStunt0 * scoreDamage0 * scoreKill[0],
   scoreCheckpoint[1] * scoreLap[1] * scoreStunt1 * scoreDamage1 * scoreKill[1]};

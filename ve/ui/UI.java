@@ -1,7 +1,11 @@
 package ve.ui;
 
 import javafx.application.Application;
-import javafx.scene.*;
+import javafx.scene.Cursor;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.SceneAntialiasing;
+import javafx.scene.SubScene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
@@ -15,7 +19,6 @@ import ve.instances.I;
 import ve.trackElements.Arrow;
 import ve.trackElements.Bonus;
 import ve.utilities.*;
-import ve.utilities.Camera;
 import ve.vehicles.*;
 
 import java.io.*;
@@ -790,11 +793,18 @@ public class UI/*UserInterface*/ extends Application {
   gameFPS = U.refreshRate * .25;
  }
 
- public static void crashOnExpensiveInGameCall() {
+ public static void denyExpensiveInGameCall() {
   if (status == Status.play || status == Status.replay) {
-   IllegalStateException ISE = new IllegalStateException("For performance reasons--this call is not allowed during gameplay.");
-   ISE.printStackTrace();//<-Called here in case the app refuses to revert to menu and handle the exception
-   throw ISE;
+   crashGame("For performance reasons--this call is not allowed during gameplay.");
   }
+ }
+
+ /**
+  * Doesn't actually crash (permanently freeze) the application; reports an action in the code deemed illegal and should return to the main menu.
+  */
+ public static void crashGame(String message) {
+  IllegalStateException ISE = new IllegalStateException(message);
+  ISE.printStackTrace();//<-Called here in case the app refuses to return to menu and handle the exception--hopefully the stack will still show up in an IDE
+  throw ISE;
  }
 }

@@ -29,7 +29,7 @@ public class Rain extends Core {
     raindrop.run();
    }
    if (!Match.muteSound && update) {
-    sound.loop(Math.sqrt(U.distance(0, 0, Camera.Y, 0, 0, 0)) * Sound.standardGain(1));
+    sound.loop(Math.sqrt(U.distance(0, 0, Camera.C.Y, 0, 0, 0)) * Sound.standardGain(1));
    } else {
     sound.stop();
    }
@@ -50,10 +50,10 @@ public class Rain extends Core {
    X += Wind.speedX * U.tick;
    Z += Wind.speedZ * U.tick;
    Y += 200 * U.tick;
-   if (Y > 0 || Math.abs(X - Camera.X) > wrapDistance || Math.abs(Y - Camera.Y) > wrapDistance || Math.abs(Z - Camera.Z) > wrapDistance) {
-    X = Camera.X + U.randomPlusMinus(wrapDistance);
-    Y = Camera.Y + U.randomPlusMinus(wrapDistance);
-    Z = Camera.Z + U.randomPlusMinus(wrapDistance);
+   if (Y > 0 || Math.abs(X - Camera.C.X) > wrapDistance || Math.abs(Y - Camera.C.Y) > wrapDistance || Math.abs(Z - Camera.C.Z) > wrapDistance) {
+    X = Camera.C.X + U.randomPlusMinus(wrapDistance);
+    Y = Camera.C.Y + U.randomPlusMinus(wrapDistance);
+    Z = Camera.C.Z + U.randomPlusMinus(wrapDistance);
    }
    if (Y > Storm.cloudY && U.render(this, 200, false, false)) {
     U.setTranslate(C, this);

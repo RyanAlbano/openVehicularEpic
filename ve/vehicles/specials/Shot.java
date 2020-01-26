@@ -12,7 +12,6 @@ import ve.trackElements.TE;
 import ve.ui.Match;
 import ve.utilities.*;
 import ve.vehicles.Vehicle;
-import ve.vehicles.VehiclePart;
 import ve.vehicles.explosions.Explosion;
 
 public class Shot extends CoreAdvanced {
@@ -304,9 +303,7 @@ public class Shot extends CoreAdvanced {
      }
     }
     vehicle.deformParts();
-    for (VehiclePart part : vehicle.parts) {
-     part.throwChip(U.randomPlusMinus(speed));
-    }
+    vehicle.throwChips(speed, true);
     double shotToCameraSoundDistance = Math.sqrt(U.distance(this)) * Sound.standardGain(1);
     if (S.useSmallHits) {
      V.VA.hitShot.play(Double.NaN, shotToCameraSoundDistance);

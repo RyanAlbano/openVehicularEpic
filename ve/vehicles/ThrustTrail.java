@@ -9,12 +9,13 @@ import ve.utilities.Phong;
 import ve.utilities.U;
 
 class ThrustTrail extends CoreAdvanced {
-
+ final VehiclePart VP;
  final Box B;
  private double stage;
  static final long defaultQuantity = 48;
 
- ThrustTrail(VehiclePart VP) {
+ ThrustTrail(VehiclePart part) {
+  VP = part;
   B = new Box(1, 1, 1);
   PhongMaterial PM = new PhongMaterial();
   if (VP.thrust == VehiclePart.Thrust.blue) {
@@ -28,7 +29,7 @@ class ThrustTrail extends CoreAdvanced {
   B.setVisible(false);
  }
 
- void deploy(Vehicle V, VehiclePart VP, boolean isThrusted) {
+ void deploy(boolean isThrusted, double V_sinXZ, double V_cosXZ, double V_sinYZ) {
   X = VP.X + U.randomPlusMinus(absoluteRadius);
   Y = VP.Y + U.randomPlusMinus(absoluteRadius);
   Z = VP.Z + U.randomPlusMinus(absoluteRadius);
@@ -38,15 +39,15 @@ class ThrustTrail extends CoreAdvanced {
   speedY = U.randomPlusMinus(absoluteRadius * .5);
   speedZ = U.randomPlusMinus(absoluteRadius * .5);
   if (isThrusted) {
-   double amount = Math.min(V.topSpeeds[1], 300);
-   speedX += amount * U.sin(V.XZ) * V.P.polarity;
-   speedZ -= amount * U.cos(V.XZ) * V.P.polarity;
-   speedY += amount * U.sin(V.YZ);
+   double amount = Math.min(VP.V.topSpeeds[1], 300);
+   speedX += amount * V_sinXZ * VP.V.P.polarity;
+   speedZ -= amount * V_cosXZ * VP.V.P.polarity;
+   speedY += amount * V_sinYZ;
   }
   stage = Double.MIN_VALUE;
  }
 
- public void run(VehiclePart VP) {
+ public void run() {
   if (stage > 0) {
    if ((stage += U.tick) > 10) {
     stage = 0;

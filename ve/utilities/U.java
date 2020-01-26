@@ -9,13 +9,13 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
 import javafx.geometry.Point3D;
-import javafx.scene.*;
-import javafx.scene.canvas.*;
+import javafx.scene.Node;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Shape3D;
-import javafx.scene.text.*;
 import javafx.scene.text.Font;
+import javafx.scene.text.TextAlignment;
 import ve.environment.E;
 import ve.environment.Ground;
 import ve.environment.MapBounds;
@@ -158,9 +158,9 @@ public enum U {//Utilities
  }
 
  public static void setMaterialSecurely(Shape3D shape3D, PhongMaterial PM) {
-  UI.crashOnExpensiveInGameCall();//<-It's not really that expensive, but there's no reason this void should ever be called in-game, regardless
+  UI.denyExpensiveInGameCall();//<-It's not really that expensive, but there's no reason this void should ever be called in-game, regardless
   if (PM == null) {
-   throw new IllegalStateException("Blocked attempt at setting from a null PhongMaterial");
+   UI.crashGame("Blocked attempt at setting from a null PhongMaterial");
   } else {
    shape3D.setMaterial(PM);
   }
@@ -236,14 +236,14 @@ public enum U {//Utilities
  public static int random(int intIn) {
   return
   intIn > 0 ? ThreadLocalRandom.current().nextInt(intIn) :
-  intIn < 0 ? -ThreadLocalRandom.current().nextInt(-intIn) :
+  intIn < 0 ? -ThreadLocalRandom.current().nextInt(-intIn/*<-Negated in value will always be positive*/) :
   0;
  }
 
  public static long random(long longIn) {
   return
   longIn > 0 ? ThreadLocalRandom.current().nextLong(longIn) :
-  longIn < 0 ? ThreadLocalRandom.current().nextLong(-longIn) :
+  longIn < 0 ? -ThreadLocalRandom.current().nextLong(-longIn/*<-Negated in value will always be positive*/) :
   0;
  }
 
@@ -260,7 +260,7 @@ public enum U {//Utilities
   return random(doubleIn) * (random() < .5 ? 1 : -1);
  }
 
- public static double sin(double in) {//*
+ public static double sin(double in) {//*Value returned is for DEGREES and NOT radians
   while (in > 180) in -= 360;
   while (in < -180) in += 360;
   return StrictMath.sin(in * .01745329251994329576923690768489);
@@ -270,7 +270,7 @@ public enum U {//Utilities
   while (in > 180) in -= 360;
   while (in < -180) in += 360;
   return StrictMath.cos(in * .01745329251994329576923690768489);
- }//*Value returned is for DEGREES and NOT radians
+ }
 
  public static double arcCos(double in) {
   return StrictMath.acos(in);
@@ -377,7 +377,7 @@ public enum U {//Utilities
  }
 
  public static double distance(Core core) {
-  return distance(core.X, Camera.X, core.Y, Camera.Y, core.Z, Camera.Z);
+  return distance(core.X, Camera.C.X, core.Y, Camera.C.Y, core.Z, Camera.C.Z);
  }
 
  public static double distance(double X1, double X2, double Y1, double Y2, double Z1, double Z2) {
@@ -385,7 +385,7 @@ public enum U {//Utilities
  }
 
  public static double distanceXZ(Core core) {
-  return distance(core.X, Camera.X, core.Z, Camera.Z);
+  return distance(core.X, Camera.C.X, core.Z, Camera.C.Z);
  }
 
  public static double distanceXZ(Core C1, Core C2) {
@@ -422,9 +422,9 @@ public enum U {//Utilities
  }
 
  public static void setTranslate(Node N, double X, double Y, double Z) {
-  N.setTranslateX(X - Camera.X);
-  N.setTranslateY(Y - Camera.Y);
-  N.setTranslateZ(Z - Camera.Z);
+  N.setTranslateX(X - Camera.C.X);
+  N.setTranslateY(Y - Camera.C.Y);
+  N.setTranslateZ(Z - Camera.C.Z);
  }
 
  public static void setScale(Node N, double size) {
@@ -438,7 +438,7 @@ public enum U {//Utilities
  }
 
  public static double getDepth(double X, double Y, double Z) {
-  return (Y - Camera.Y) * Camera.sinYZ + ((X - Camera.X) * Camera.sinXZ + (Z - Camera.Z) * Camera.cosXZ) * Camera.cosYZ;
+  return (Y - Camera.C.Y) * Camera.sinYZ + ((X - Camera.C.X) * Camera.sinXZ + (Z - Camera.C.Z) * Camera.cosXZ) * Camera.cosYZ;
  }
 
  public static boolean render(Core core, boolean useLOD, boolean useViewableMapDistance) {

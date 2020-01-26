@@ -6,7 +6,6 @@ import ve.ui.UI;
 import ve.utilities.Camera;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
-import ve.vehicles.VehiclePart;
 import ve.vehicles.Wheel;
 
 public class Spinner {
@@ -75,9 +74,7 @@ public class Spinner {
       }
      }
      vehicle.deformParts();
-     for (VehiclePart part : vehicle.parts) {
-      part.throwChip(U.randomPlusMinus(V.renderRadius * absSpeed));
-     }
+     vehicle.throwChips(V.renderRadius * absSpeed, true);
     }
     if (vehicle.getsPushed >= 0) {
      vehicle.speedX += (U.random() < .5 ? 1 : -1) * V.renderRadius * absSpeed * speedReduction * 4;

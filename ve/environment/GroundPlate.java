@@ -67,8 +67,8 @@ enum GroundPlate {
 
   void run(double radius) {
    clampXZ();
-   Y = Math.max(0, -Camera.Y * .005);
-   if (Y > Camera.Y && (!Pool.exists || U.distanceXZ(this, Pool.pool) > radius) && U.render(this, -absoluteRadius, false, true)) {
+   Y = Math.max(0, -Camera.C.Y * .005);
+   if (Y > Camera.C.Y && (!Pool.exists || U.distanceXZ(this, Pool.pool) > radius) && U.render(this, -absoluteRadius, false, true)) {
     U.setTranslate(C, this);
     C.setVisible(true);
    } else {
@@ -77,11 +77,11 @@ enum GroundPlate {
   }
 
   void clampXZ() {
-   while (Math.abs(X - Camera.X) > 25980.762113533159402911695122588) {
-    X += X > Camera.X ? -51961.524227066318805823390245176 : 51961.524227066318805823390245176;
+   while (Math.abs(X - Camera.C.X) > 25980.762113533159402911695122588) {
+    X += X > Camera.C.X ? -51961.524227066318805823390245176 : 51961.524227066318805823390245176;
    }
-   while (Math.abs(Z - Camera.Z) > 30000) {
-    Z += Z > Camera.Z ? -60000 : 60000;
+   while (Math.abs(Z - Camera.C.Z) > 30000) {
+    Z += Z > Camera.C.Z ? -60000 : 60000;
    }
   }
 

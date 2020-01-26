@@ -40,10 +40,10 @@ public enum E {//<-Static content for V.E.'s Environment
  public static double soundMultiple;
 
  static {
-  Nodes.setRGB(ambientLight, .5, .5, .5);
+  Nodes.setLightRGB(ambientLight, .5, .5, .5);
   Phong.setDiffuseRGB(phantomPM, 1, 1, 1, .1);
   Phong.setSpecularRGB(phantomPM, 0);
-  Nodes.setRGB(mapViewerLight, 1, 1, 1);
+  Nodes.setLightRGB(mapViewerLight, 1, 1, 1);
  }
 
  public enum RenderType {standard, fullDistance, ALL}
@@ -75,14 +75,20 @@ public enum E {//<-Static content for V.E.'s Environment
      b *= 1.001;
     }
    }
-   Nodes.setRGB(Sun.light, r, g, b);
+   Nodes.setLightRGB(Sun.light, r, g, b);
   }
  }
 
  public static void loadFrustumMountains(String s) {
   if (s.startsWith("mountains(")) {
    double size = U.getValue(s, 0), spread = U.getValue(s, 1);
-   Random random = new Random(Math.round(U.getValue(s, 2)));//<-Will SecureRandom change established mountain positions on maps?
+   long key;
+   try {
+    key = Math.round(U.getValue(s, 2));
+   } catch (Exception E) {
+    key = U.random(Long.MAX_VALUE);
+   }
+   Random random = new Random(key);//<-Will SecureRandom change established mountain positions on maps?
    for (int n = 20; --n >= 0; ) {
     double[] rotatedX = {spread + spread * random.nextDouble()}, rotatedZ = {spread + spread * random.nextDouble()};
     U.rotate(rotatedX, rotatedZ, random.nextDouble() * 360);
@@ -93,7 +99,7 @@ public enum E {//<-Static content for V.E.'s Environment
 
  public static void run(boolean gamePlay) {
   boolean mapViewer = UI.status == UI.Status.mapViewer, updateIfMatchBegan = mapViewer || (gamePlay && Match.started);
-  double sunlightAngle = Sun.sun.X != 0 || Sun.sun.Z != 0 ? (((Sun.sun.X / (Sun.sun.Y * 50)) * U.sin(Camera.XZ)) + ((Sun.sun.Z / (Sun.sun.Y * 50)) * U.cos(Camera.XZ))) * U.cos(Camera.YZ) : 0;
+  double sunlightAngle = Sun.C.X != 0 || Sun.C.Z != 0 ? (((Sun.C.X / (Sun.C.Y * 50)) * Camera.sinXZ) + ((Sun.C.Z / (Sun.C.Y * 50)) * Camera.cosXZ)) * Camera.cosYZ : 0;//<-Camera needs the angleTable set for these sin's to be correct!
   if (Maps.name.equals(SL.Maps.theSun)) {
    Sun.RGBVariance *= U.random() < .5 ? 81 / 80. : 80 / 81.;
    Sun.RGBVariance = U.clamp(.2, Sun.RGBVariance, 1);
@@ -105,18 +111,18 @@ public enum E {//<-Static content for V.E.'s Environment
    U.setTranslate(Sun.light, Sun.lightX, Sun.lightY, Sun.lightZ);
   }
   if (Sun.type == Sun.Type.sun) {
-   if (U.render(Sun.sun, -Sun.S.getRadius(), false, false)) {
-    U.setTranslate(Sun.S, Sun.sun);
+   if (U.render(Sun.C, -Sun.S.getRadius(), false, false)) {
+    U.setTranslate(Sun.S, Sun.C);
     Sun.S.setVisible(true);
    } else {
     Sun.S.setVisible(false);
    }
   }
   if (Ground.exists && Ground.level <= 0) {
-   double groundY = Pool.exists && U.distanceXZ(Pool.pool) < Pool.C[0].getRadius() && Camera.Y > 0 ? Pool.depth : Math.max(0, -Camera.Y * .01);
-   while (Math.abs(Ground.X - Camera.X) > 100000) Ground.X += Ground.X > Camera.X ? -200000 : 200000;
-   while (Math.abs(Ground.Z - Camera.Z) > 100000) Ground.Z += Ground.Z > Camera.Z ? -200000 : 200000;
-   if (Camera.Y < groundY) {
+   double groundY = Pool.exists && U.distanceXZ(Pool.pool) < Pool.C[0].getRadius() && Camera.C.Y > 0 ? Pool.depth : Math.max(0, -Camera.C.Y * .01);
+   while (Math.abs(Ground.X - Camera.C.X) > 100000) Ground.X += Ground.X > Camera.C.X ? -200000 : 200000;
+   while (Math.abs(Ground.Z - Camera.C.Z) > 100000) Ground.Z += Ground.Z > Camera.C.Z ? -200000 : 200000;
+   if (Camera.C.Y < groundY) {
     U.setTranslate(Ground.C, Ground.X, groundY, Ground.Z);
     Ground.C.setVisible(true);
    } else {
@@ -150,7 +156,7 @@ public enum E {//<-Static content for V.E.'s Environment
   Crystal.run();
   Storm.run(gamePlay || mapViewer);
   if (Pool.exists) {
-   if (Camera.Y < 0) {
+   if (Camera.C.Y < 0) {
     U.setTranslate(Pool.C[0], Pool.pool.X, 0, Pool.pool.Z);
     Pool.C[0].setVisible(true);
     Pool.C[1].setVisible(false);
@@ -171,7 +177,7 @@ public enum E {//<-Static content for V.E.'s Environment
   Volcano.run(updateIfMatchBegan);
   Meteor.run(gamePlay || mapViewer);
   Wind.runStorm(gamePlay || mapViewer);
-  Pool.pool.runVision();
+  Pool.runVision();
   //Draw order is windstorm, poolVision, screenFlashes
   for (Vehicle vehicle : I.vehicles) {
    if (vehicle.screenFlash > 0) {
@@ -181,29 +187,29 @@ public enum E {//<-Static content for V.E.'s Environment
   }
  }
 
- public static void setTerrainSit(Core C, boolean vehicle) {
-  C.Y = U.distanceXZ(C, Pool.pool) < Pool.C[0].getRadius() ? Pool.depth : 0;
+ public static void setTerrainSit(Core core, boolean vehicle) {
+  core.Y = U.distanceXZ(core, Pool.pool) < Pool.C[0].getRadius() ? Pool.depth : 0;
   if (Volcano.exists) {
-   double volcanoDistance = U.distance(C.X, Volcano.X, C.Z, Volcano.Z);
-   C.Y = volcanoDistance < Volcano.radiusBottom && volcanoDistance > Volcano.radiusTop && C.Y > -Volcano.radiusBottom + volcanoDistance ? Math.min(C.Y, -Volcano.radiusBottom + volcanoDistance) : C.Y;
+   double volcanoDistance = U.distanceXZ(core, Volcano.C);
+   core.Y = volcanoDistance < Volcano.radiusBottom && volcanoDistance > Volcano.radiusTop && core.Y > -Volcano.radiusBottom + volcanoDistance ? Math.min(core.Y, -Volcano.radiusBottom + volcanoDistance) : core.Y;
   }
   for (TrackPart trackPart : TE.trackParts) {
-   if ((!trackPart.wraps || vehicle) && !trackPart.trackPlanes.isEmpty() && U.distanceXZ(C, trackPart) < trackPart.renderRadius + C.absoluteRadius) {//<-Not sure how much this section helps optimize in actuality
+   if ((!trackPart.wraps || vehicle) && !trackPart.trackPlanes.isEmpty() && U.distanceXZ(core, trackPart) < trackPart.renderRadius + core.absoluteRadius) {//<-Not sure how much this section helps optimize in actuality
     for (TrackPlane trackPlane : trackPart.trackPlanes) {
      if (!trackPlane.type.contains(SL.gate)) {
       double trackX = trackPlane.X + trackPart.X, trackZ = trackPlane.Z + trackPart.Z;
-      if (Math.abs(C.X - trackX) <= trackPlane.radiusX && Math.abs(C.Z - trackZ) <= trackPlane.radiusZ) {
+      if (Math.abs(core.X - trackX) <= trackPlane.radiusX && Math.abs(core.Z - trackZ) <= trackPlane.radiusZ) {
        double trackY = trackPlane.Y + trackPart.Y;
        if (trackPlane.type.contains(SL.thick(SL.tree))) {
-        C.Y = trackY - trackPlane.radiusY;
+        core.Y = trackY - trackPlane.radiusY;
        } else if (trackPlane.wall == TrackPlane.Wall.none) {
         if (trackPlane.YZ == 0 && trackPlane.XY == 0) {
-         C.Y = Math.min(C.Y, trackY);
+         core.Y = Math.min(core.Y, trackY);
         } else {
          if (trackPlane.YZ != 0) {
-          C.Y = Math.min(trackY + (C.Z - trackZ) * (trackPlane.radiusY / trackPlane.radiusZ) * (trackPlane.YZ > 0 ? 1 : trackPlane.YZ < 0 ? -1 : 0), C.Y);
+          core.Y = Math.min(trackY + (core.Z - trackZ) * (trackPlane.radiusY / trackPlane.radiusZ) * (trackPlane.YZ > 0 ? 1 : trackPlane.YZ < 0 ? -1 : 0), core.Y);
          } else if (trackPlane.XY != 0) {
-          C.Y = Math.min(trackY + (C.X - trackX) * (trackPlane.radiusY / trackPlane.radiusX) * (trackPlane.XY > 0 ? 1 : trackPlane.XY < 0 ? -1 : 0), C.Y);
+          core.Y = Math.min(trackY + (core.X - trackX) * (trackPlane.radiusY / trackPlane.radiusX) * (trackPlane.XY > 0 ? 1 : trackPlane.XY < 0 ? -1 : 0), core.Y);
          }
         }
        }
@@ -212,43 +218,45 @@ public enum E {//<-Static content for V.E.'s Environment
     }
    }
   }
-  for (FrustumMound mound : TE.mounds) {
-   setMoundSit(C, mound, vehicle);
-  }
+  setMoundSit(core, vehicle);
  }
 
- private static void setMoundSit(Core core, FrustumMound FM, boolean vehicle) {
-  if (!FM.wraps || vehicle) {
-   double distance = U.distanceXZ(core, FM), radiusBottom = FM.mound.getMajorRadius();
-   if (distance < radiusBottom) {
-    double radiusTop = FM.mound.getMinorRadius(), moundHeight = FM.mound.getHeight();
-    if (distance < radiusTop) {
-     core.Y = Math.min(core.Y, FM.Y - moundHeight);
-    } else if (Math.abs(core.Y - (FM.Y - (moundHeight * .5))) <= moundHeight * .5) {
-     double slope = moundHeight / Math.abs(radiusBottom - radiusTop);
-     core.Y = Math.min(core.Y, FM.Y - (radiusBottom - distance) * slope);
+ public static void setMoundSit(Core core, boolean vehicle) {
+  for (FrustumMound FM : TE.mounds) {
+   if (!FM.wraps || vehicle) {
+    double distance = U.distanceXZ(core, FM), radiusBottom = FM.mound.getMajorRadius();
+    if (distance < radiusBottom) {
+     double radiusTop = FM.mound.getMinorRadius(), moundHeight = FM.mound.getHeight();
+     if (distance < radiusTop) {
+      if (core.Y <= FM.Y) {//<-Prevents lifting objects with a Y below mound's Y
+       core.Y = Math.min(core.Y, FM.Y - moundHeight);
+      }
+     } else if (Math.abs(core.Y - (FM.Y - (moundHeight * .5))) <= moundHeight * .5) {
+      double slope = moundHeight / Math.abs(radiusBottom - radiusTop);
+      core.Y = Math.min(core.Y, FM.Y - (radiusBottom - distance) * slope);
+     }
     }
    }
   }
  }
 
  public static void wrap(Core C) {
-  boolean setSlope = false;
+  boolean setSit = false;
   if (Math.abs(C.X) < centerShiftOffAt) {
    C.X += centerShiftOffAt * (U.random() < .5 ? 1 : -1);
-   setSlope = true;
+   setSit = true;
   }
-  if (Math.abs(C.X - Camera.X) > TE.wrapDistance) {
-   while (C.X > Camera.X + TE.wrapDistance) C.X -= TE.wrapDistance << 1;
-   while (C.X < Camera.X - TE.wrapDistance) C.X += TE.wrapDistance << 1;
-   setSlope = true;
+  if (Math.abs(C.X - Camera.C.X) > TE.wrapDistance) {
+   while (C.X > Camera.C.X + TE.wrapDistance) C.X -= TE.wrapDistance << 1;
+   while (C.X < Camera.C.X - TE.wrapDistance) C.X += TE.wrapDistance << 1;
+   setSit = true;
   }
-  if (Math.abs(C.Z - Camera.Z) > TE.wrapDistance) {
-   while (C.Z > Camera.Z + TE.wrapDistance) C.Z -= TE.wrapDistance << 1;
-   while (C.Z < Camera.Z - TE.wrapDistance) C.Z += TE.wrapDistance << 1;
-   setSlope = true;
+  if (Math.abs(C.Z - Camera.C.Z) > TE.wrapDistance) {
+   while (C.Z > Camera.C.Z + TE.wrapDistance) C.Z -= TE.wrapDistance << 1;
+   while (C.Z < Camera.C.Z - TE.wrapDistance) C.Z += TE.wrapDistance << 1;
+   setSit = true;
   }
-  if (setSlope) {
+  if (setSit) {
    setTerrainSit(C, false);
   }
  }
@@ -277,7 +285,7 @@ public enum E {//<-Static content for V.E.'s Environment
   gravity = 7;
   soundMultiple = 1;
   Terrain.reset();
-  Nodes.setRGB(ambientLight, 0, 0, 0);
+  Nodes.setLightRGB(ambientLight, 0, 0, 0);
   centerShiftOffAt = Maps.name.equals(SL.Maps.speedway2000000) ? 2000 : Maps.name.equals(SL.Maps.volcanicProphecy) ? 1000 : Double.NEGATIVE_INFINITY;
  }
 }

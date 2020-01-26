@@ -28,13 +28,19 @@ public class FrustumMound extends Core {//NOTE: Small mounds follow the vehicles
   U.rotate(mound, 0, U.random(360.));//<-For visual variation
  }
 
+ public void setInitialSit() {
+  if (wraps) {
+   E.setTerrainSit(this, false);
+  }
+ }
+
  public void runGraphics() {
   if (wraps) {
    E.wrap(this);
   }
   double moundY = Y - (mound.getHeight() * .5), depth = U.getDepth(X, moundY, Z);
   if (depth > -absoluteRadius && (renderAlways || absoluteRadius * E.renderLevel >= U.distance(this) * Camera.FOV)) {
-   mound.setCullFace(objectInside(Camera.X, Camera.Y, Camera.Z) ? CullFace.NONE : CullFace.BACK);
+   mound.setCullFace(objectInside(Camera.C) ? CullFace.NONE : CullFace.BACK);
    U.setTranslate(mound, X, moundY, Z);
    mound.setVisible(true);
   } else {

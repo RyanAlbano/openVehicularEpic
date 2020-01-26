@@ -81,8 +81,8 @@ public enum VS {//VehicleSelect
     Nodes.reset();
     I.vehicles.clear();
     UI.scene3D.setFill(U.getColor(0));
-    Camera.X = Camera.Z = Camera.YZ = Camera.XY = 0;
-    Camera.Y = -250;
+    Camera.C.X = Camera.C.Z = Camera.YZ = Camera.XY = 0;
+    Camera.C.Y = -250;
     Camera.XZ = 180;
     Camera.rotateXY.setAngle(0);
     Camera.setAngleTable();
@@ -92,7 +92,7 @@ public enum VS {//VehicleSelect
      Nodes.add(raindrop.C);
     }
     for (Snowball.Instance snowball : Snowball.instances) {
-     Nodes.add(snowball.round, snowball.lowResolution);
+     Nodes.add(snowball.S);
     }
     I.addVehicleModel(chosen[index], showModel);
     allSame = false;
@@ -235,7 +235,7 @@ public enum VS {//VehicleSelect
    Math.abs(.9 - Mouse.Y) < UI.clickRangeY ? 2 :
    UI.selected;
   }
-  U.rotate(Camera.camera, Camera.YZ, -Camera.XZ);
+  U.rotate(Camera.PC, Camera.YZ, -Camera.XZ);
   Rain.run(false);
   Snowball.run();
   UI.gameFPS = Double.POSITIVE_INFINITY;
@@ -265,9 +265,17 @@ public enum VS {//VehicleSelect
   if (!supportInfrastructure) {
    if (V.type != Vehicle.Type.turret) {
     U.textR("Top Speed:", lineLL, Y1);
+    boolean hasWrath = false;
+    for (Special special : V.specials) {
+     if (special.type == Special.Type.thewrath) {
+      hasWrath = true;
+      break;
+     }
+    }
     String topSpeed = V.topSpeeds[1] >= Long.MAX_VALUE ? SL.None :
-    V.speedBoost > 0 && V.topSpeeds[2] >= Long.MAX_VALUE ? "None (Speed Boost)" :
-    V.speedBoost > 0 ? Math.round(Units.getSpeed(V.topSpeeds[2])) + " " + Units.getSpeedName() + " (Speed Boost)" :
+    V.speedBoost > 0 && V.topSpeeds[2] >= Long.MAX_VALUE ? "None (with Speed Boost)" :
+    hasWrath ? Math.round(Units.getSpeed(V.topSpeeds[2])) + " " + Units.getSpeedName() + " (with Wrath engaged)" :
+    V.speedBoost > 0 ? Math.round(Units.getSpeed(V.topSpeeds[2])) + " " + Units.getSpeedName() + " (with Speed Boost)" :
     Math.round(Units.getSpeed(V.topSpeeds[1])) + " " + Units.getSpeedName();
     U.textL(topSpeed, lineLR, Y1);
     U.textR("Acceleration Phases:", lineLL, Y2);
@@ -280,18 +288,16 @@ public enum VS {//VehicleSelect
     U.textL(String.valueOf(V.airAcceleration == Double.POSITIVE_INFINITY ? SL.Instant : (float) V.airAcceleration), lineLR, Y4);
    }
   }
-  U.textR("Special(s):", lineLL, Y5);
-  StringBuilder specials = new StringBuilder();
   boolean hasForceField = false;
-  if (V.specials.isEmpty()) {
-   specials.append(SL.None);
-  } else {
+  if (!V.specials.isEmpty()) {
+   U.textR("Special(s):", lineLL, Y5);
+   StringBuilder specials = new StringBuilder();
    for (Special special : V.specials) {
     specials.append(special.type.name()).append(", ");
     hasForceField = special.type == Special.Type.forcefield || hasForceField;
    }
+   U.textL(String.valueOf(specials), lineLR, Y5);
   }
-  U.textL(String.valueOf(specials), lineLR, Y5);
   U.textR("Collision Damage Rating:", lineRL, Y0);
   String damageDealt =
   V.dealsMassiveDamage() || V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) ? "Instant-Kill" :
@@ -307,7 +313,7 @@ public enum VS {//VehicleSelect
   if (!V.isFixed()) {
    U.textR("Speed Boost:", lineRL, Y4);
    U.textL(V.speedBoost > 0 ? UI.Yes : UI.No, lineRR, Y4);
-   U.textR("Amphibious:", lineRL, Y5);
+   U.textR("Amphibious-Capable:", lineRL, Y5);
    U.textL(V.amphibious != null ? UI.Yes : UI.No, lineRR, Y5);
   }
  }

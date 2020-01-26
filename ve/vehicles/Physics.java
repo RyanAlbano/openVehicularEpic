@@ -101,9 +101,7 @@ public class Physics {
   if (fragilityBased > (vehicleCollide ? 0 : 50)) {
    V.addDamage(fragilityBased * 3 * U.tick);
    V.deformParts();
-   for (VehiclePart part : V.parts) {
-    part.throwChip(U.randomPlusMinus(power));
-   }
+   V.throwChips(power, true);
    if (V.isIntegral() && V.VA.crashTimer <= 0) {
     (power > RichHit.minimumSpeed ? V.VA.crashHard : V.VA.crashSoft).play(Double.NaN, V.VA.distanceVehicleToCamera);
     V.VA.crashTimer = 2;
@@ -177,9 +175,7 @@ public class Physics {
         V.VA.massiveHit.play(Double.NaN, V.VA.distanceVehicleToCamera);
         massiveHitTimer = U.random(5.);
         otherV.deformParts();
-        for (VehiclePart part : otherV.parts) {
-         part.throwChip(netSpeed - otherV.P.getNetSpeed());//<-Get it again because netSpeed field won't be updated with velocities from a KILL-O-MATIC slam
-        }
+        otherV.throwChips(netSpeed - otherV.P.getNetSpeed()/*<-Get it again because netSpeed field won't be updated with velocities from a KILL-O-MATIC slam*/, false);
         V.setCameraShake(Camera.shakePresets.massiveHit);
        }
       }
@@ -252,9 +248,7 @@ public class Physics {
        if (vehicle.fragility > 0) {
         vehicle.deformParts();
        }
-       for (VehiclePart part : vehicle.parts) {
-        part.throwChip(U.randomPlusMinus(vehicle.P.netSpeed));
-       }
+       vehicle.throwChips(vehicle.P.netSpeed, true);
        V.VA.crashHard.play(U.random(4), V.VA.distanceVehicleToCamera);
        V.VA.crashHard.play(U.random(4), V.VA.distanceVehicleToCamera);
        V.VA.crashHard.play(U.random(4), V.VA.distanceVehicleToCamera);
@@ -287,26 +281,8 @@ public class Physics {
       }
      }
      Lightning.vehicleInteract(V);
-     for (Fire.Instance fire : Fire.instances) {
-      double distance = U.distance(V, fire);
-      if (distance < V.collisionRadius + fire.absoluteRadius) {
-       V.addDamage(10 * U.tick);
-       if (distance * 2 < V.collisionRadius + fire.absoluteRadius) {
-        V.addDamage(10 * U.tick);
-       }
-       V.deformParts();
-      }
-     }
-     for (Boulder.Instance boulder : Boulder.instances) {
-      if (U.distanceXZ(V, boulder) < V.collisionRadius + boulder.S.getRadius() && V.Y > boulder.Y - V.collisionRadius - boulder.S.getRadius()) {//<-Will call incorrectly in the unlikely event a vehicle is underground and the boulder rolls directly overhead
-       V.setDamage(V.damageCeiling());
-       V.deformParts();
-       for (VehiclePart part : V.parts) {
-        part.throwChip(U.randomPlusMinus(boulder.speed));
-       }
-       V.VA.crashDestroy.play(Double.NaN, V.VA.distanceVehicleToCamera);
-      }
-     }
+     Fire.vehicleInteract(V);
+     Boulder.vehicleInteract(V);
      Volcano.rockVehicleInteract(V);
      Meteor.vehicleInteract(V);
     }

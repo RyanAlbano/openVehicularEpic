@@ -47,20 +47,20 @@ public enum Viewer {
     Nodes.remove(Sun.S, Ground.C);
     Nodes.removePointLight(Sun.light);
     UI.scene3D.setFill(U.getColor(0));
-    Nodes.setRGB(Sun.light, 1, 1, 1);
-    Camera.X = Camera.Y = Camera.Z = Camera.XZ = Camera.YZ = Camera.XY = Y = YZ = 0;
+    Nodes.setLightRGB(Sun.light, 1, 1, 1);
+    Camera.C.X = Camera.C.Y = Camera.C.Z = Camera.XZ = Camera.YZ = Camera.XY = Y = YZ = 0;
     E.viewableMapDistance = Double.POSITIVE_INFINITY;
-    U.rotate(Camera.camera, Camera.YZ, -Camera.XZ);
+    U.rotate(Camera.PC, Camera.YZ, -Camera.XZ);
     Camera.rotateXY.setAngle(0);
     Camera.setAngleTable();
     Z = 1000;
     XZ = 180;
     showCollisionBounds = false;//<-Covers vehicle otherwise
     loadModel = true;
-    Nodes.setRGB(E.ambientLight, 1, 1, 1);
+    Nodes.setLightRGB(E.ambientLight, 1, 1, 1);
     U.setTranslate(Sun.light, 0, -Long.MAX_VALUE, 0);
     if (lighting3D) {
-     Nodes.setRGB(E.ambientLight, .5, .5, .5);
+     Nodes.setLightRGB(E.ambientLight, .5, .5, .5);
      Nodes.addPointLight(Sun.light);
     }
     UI.page = 1;
@@ -120,10 +120,10 @@ public enum Viewer {
     } else if (UI.selected == 1) {
      lighting3D = !lighting3D;
      if (lighting3D) {
-      Nodes.setRGB(E.ambientLight, .5, .5, .5);
+      Nodes.setLightRGB(E.ambientLight, .5, .5, .5);
       Nodes.addPointLight(Sun.light);
      } else {
-      Nodes.setRGB(E.ambientLight, 1, 1, 1);
+      Nodes.setLightRGB(E.ambientLight, 1, 1, 1);
       Nodes.removePointLight(Sun.light);
      }
     } else if (UI.selected == 2) {
@@ -171,7 +171,7 @@ public enum Viewer {
   U.fillRGB(1);
   U.text("Map Viewer", .075);
   if (UI.page < 1) {
-   Camera.X = Camera.Z = Camera.XZ = Camera.YZ = Camera.XY = 0;
+   Camera.C.X = Camera.C.Z = Camera.XZ = Camera.YZ = Camera.XY = 0;
    Y = -5000;
    UI.page = 1;
   }
@@ -180,15 +180,15 @@ public enum Viewer {
   Camera.YZ += Keys.up ? 5 : 0;
   Camera.YZ -= Keys.down ? 5 : 0;
   Y += heightChange * UI.movementSpeedMultiple * U.tick;
-  Camera.Y = Y;
-  Camera.Z += depthChange * U.cos(Camera.XZ) * UI.movementSpeedMultiple * U.tick;
-  Camera.X += depthChange * U.sin(Camera.XZ) * UI.movementSpeedMultiple * U.tick;
-  U.rotate(Camera.camera, Camera.YZ, -Camera.XZ);
+  Camera.C.Y = Y;
+  Camera.C.Z += depthChange * U.cos(Camera.XZ) * UI.movementSpeedMultiple * U.tick;
+  Camera.C.X += depthChange * U.sin(Camera.XZ) * UI.movementSpeedMultiple * U.tick;
+  U.rotate(Camera.PC, Camera.YZ, -Camera.XZ);
   Camera.rotateXY.setAngle(-Camera.XY);
   Camera.setAngleTable();
   if (!E.lights.getChildren().contains(Sun.light)) {
    Nodes.addPointLight(E.mapViewerLight);
-   U.setTranslate(E.mapViewerLight, Camera.X, Camera.Y, Camera.Z);
+   U.setTranslate(E.mapViewerLight, Camera.C.X, Camera.C.Y, Camera.C.Z);
   }
   E.run(gamePlay);
   for (TrackPart trackPart : TE.trackParts) {

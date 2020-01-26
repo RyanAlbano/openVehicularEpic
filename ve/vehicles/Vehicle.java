@@ -97,7 +97,7 @@ public class Vehicle extends Instance {
  final boolean realVehicle;
  public boolean phantomEngaged;
  public boolean drive, reverse, turnL, turnR, handbrake;
- private boolean passBonus;
+ boolean passBonus;
  boolean drive2, reverse2;
  public boolean boost;
  boolean steerByMouse;
@@ -603,7 +603,7 @@ public class Vehicle extends Instance {
    }
    AI = new AI(this);
    VA.load();
-   double volcanoDistance = U.distance(X, Volcano.X, Z, Volcano.Z);
+   double volcanoDistance = U.distanceXZ(this, Volcano.C);
    P.onVolcano = Volcano.exists && volcanoDistance < Volcano.radiusBottom && volcanoDistance > Volcano.radiusTop && Y > -Volcano.radiusBottom + volcanoDistance;
    Y = P.onVolcano ? Math.min(Y, -Volcano.radiusBottom + volcanoDistance) - (isFixed() ? turretBaseY : 0) : Y;
    P.atPoolXZ = Pool.exists && U.distanceXZ(this, Pool.pool) < Pool.C[0].getRadius();
@@ -625,7 +625,7 @@ public class Vehicle extends Instance {
   damage = U.clamp(0, in, damageCeiling());
  }
 
- public double getDamage(boolean percent) {
+ public double getDamage(boolean percent) {//<-'Percent' here is out of 1, not 100
   return percent ? damage / durability : damage;
  }
 
@@ -633,6 +633,14 @@ public class Vehicle extends Instance {
   double deformAngle = getDamage(true) * 6.;
   for (VehiclePart part : parts) {
    part.deform(deformAngle);
+  }
+ }
+
+ public void throwChips(double power, boolean randomizePower) {//<-Parameter passed in should never have random() or randomPlusMinus() applied
+  for (VehiclePart part : parts) {
+   if (part.chip != null) {
+    part.chip.deploy(randomizePower ? U.randomPlusMinus(power) : power);
+   }
   }
  }
 
@@ -689,7 +697,7 @@ public class Vehicle extends Instance {
    }
    if (part.thrustTrails != null) {
     for (ThrustTrail trail : part.thrustTrails) {
-     trail.run(part);
+     trail.run();
     }
    }
    part.MV.setVisible(part.visible);
@@ -731,7 +739,7 @@ public class Vehicle extends Instance {
    reviveImmortality = false;
   }
   if (!isIntegral() && Maps.defaultVehicleLightBrightness > 0 && !parts.isEmpty() && distanceToCamera < E.viewableMapDistance) {
-   Nodes.setRGB(burnLight, .5, .25 + U.random(.2), U.random(.125));
+   Nodes.setLightRGB(burnLight, .5, .25 + U.random(.2), U.random(.125));
    U.setTranslate(burnLight, this);
    Nodes.addPointLight(burnLight);
   }
@@ -883,10 +891,11 @@ public class Vehicle extends Instance {
   (thrustDrive || (P.mode == Physics.Mode.fly && engine != Engine.turbine && VA.engineClipQuantity * (Math.abs(P.speed) / topSpeeds[1]) >= 1))));
   if (thrusting) {
    boolean forceOut = isJet || (speedBoost > 0 && boost);
+   double sinXZ = U.sin(XZ), cosXZ = U.cos(XZ), sinYZ = U.sin(YZ);
    for (VehiclePart part : parts) {
     if (part.thrustTrails != null) {
      for (n = 4; --n >= 0; ) {
-      part.thrustTrails.get(part.currentThrustTrail).deploy(this, part, forceOut);
+      part.thrustTrails.get(part.currentThrustTrail).deploy(forceOut, sinXZ, cosXZ, sinYZ);
       part.currentThrustTrail = ++part.currentThrustTrail >= ThrustTrail.defaultQuantity ? 0 : part.currentThrustTrail;
      }
     }

@@ -86,7 +86,7 @@ public class EnergyBolt extends MeshView {
    mixX = (V.X + targetV.X) * .5, mixZ = (V.Z + targetV.Z) * .5, mixY = (sourceY + targetV.Y) * .5,
    mixPulse = targetV.absoluteRadius * .25,
    mixPulseX = U.randomPlusMinus(mixPulse), mixPulseY = U.randomPlusMinus(mixPulse), mixPulseZ = U.randomPlusMinus(mixPulse),
-   X = Camera.X, Y = Camera.Y, Z = Camera.Z;//This implementation is ugly, but trying to set Node translate would probably be less accurate
+   X = Camera.C.X, Y = Camera.C.Y, Z = Camera.C.Z;//This implementation is ugly, but trying to set Node translate would probably be less accurate
    ((TriangleMesh) getMesh()).getPoints().setAll(
    //SOURCE
    (float) (V.X + U.randomPlusMinus(sizeAtSource) - X), (float) (sourceY + U.randomPlusMinus(sizeAtSource) - Y), (float) (V.Z + U.randomPlusMinus(sizeAtSource) - Z),

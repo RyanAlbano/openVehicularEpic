@@ -238,7 +238,7 @@ public class VehiclePart extends InstancePart {
  private void setBrightness() {
   PM.setSelfIlluminationMap(Phong.getSelfIllumination(RGB.getRed() * 2 * brightness, RGB.getGreen() * 2 * brightness, RGB.getBlue() * 2 * brightness));
   if (light) {
-   Nodes.setRGB(pointLight, RGB.getRed() * brightness, RGB.getGreen() * brightness, RGB.getBlue() * brightness);
+   Nodes.setLightRGB(pointLight, RGB.getRed() * brightness, RGB.getGreen() * brightness, RGB.getBlue() * brightness);
   }
  }
 
@@ -270,12 +270,14 @@ public class VehiclePart extends InstancePart {
    if (!nullPhysics && (pivotZ != 0 || pivotX != 0 || (!controller && V.VT != null))) {//<-May need to be further amended later so things don't rotate unintentionally
     if (steer.contains(SL.thick(SL.YZ)) || vehicleTurretBarrel) {
      U.rotateWithPivot(placementZ, placementY,
-     vehicleTurretBarrel ? V.VT.pivotY + pivotY : (pivotZ + displaceZ), vehicleTurretBarrel ? V.VT.pivotZ + pivotZ : (pivotY + displaceY),
+     vehicleTurretBarrel ? V.VT.pivotY + pivotY : (pivotZ + displaceZ),
+     vehicleTurretBarrel ? V.VT.pivotZ + pivotZ : (pivotY + displaceY),
      vehicleTurretBarrel ? V.VT.YZ : ((steer.contains(SL.thick(SL.fromYZ)) ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply));
     }
     if (steer.contains(SL.thick(SL.XZ)) || vehicleTurret) {
      U.rotateWithPivot(placementX, placementZ,
-     pivotX + (vehicleTurret ? 0 : displaceX), vehicleTurret ? V.VT.pivotZ : (pivotZ + displaceZ),
+     pivotX + (vehicleTurret ? 0 : displaceX),
+     vehicleTurret ? V.VT.pivotZ : (pivotZ + displaceZ),
      vehicleTurret ? V.VT.XZ : ((steer.contains(SL.thick(SL.fromYZ)) && !steer.contains(SL.thick(SL.fromXZ)) ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply));
     }
    }
@@ -312,7 +314,7 @@ public class VehiclePart extends InstancePart {
      shiftedAxis = ++shiftedAxis > 2 ? -1 : shiftedAxis;
      shiftedAxis = ++shiftedAxis > 2 ? -1 : shiftedAxis;
     }
-    render = shiftedAxis == 2 ? Camera.Z >= V.Z : shiftedAxis < 0 ? Camera.X >= V.X : shiftedAxis > 0 ? Camera.X <= V.X : Camera.Z <= V.Z;
+    render = shiftedAxis == 2 ? Camera.C.Z >= V.Z : shiftedAxis < 0 ? Camera.C.X >= V.X : shiftedAxis > 0 ? Camera.C.X <= V.X : Camera.C.Z <= V.Z;
    }
    if (render) {
     if (!base) {
@@ -343,7 +345,7 @@ public class VehiclePart extends InstancePart {
     if (!V.destroyed) {
      if (fireLight) {
       U.setTranslate(pointLight, this);
-      Nodes.setRGB(pointLight, 1, .5 + U.random(.25), 0);
+      Nodes.setLightRGB(pointLight, 1, .5 + U.random(.25), 0);
       Nodes.addPointLight(pointLight);
      } else if (light) {
       if (brightness != V.lightBrightness) {
@@ -375,12 +377,6 @@ public class VehiclePart extends InstancePart {
      }
     }
    }
-  }
- }
-
- public void throwChip(double power) {
-  if (chip != null) {
-   chip.deploy(power);
   }
  }
 

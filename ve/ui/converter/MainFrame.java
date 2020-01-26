@@ -17,11 +17,6 @@ static final String convertedFileFolder = "ConvertedFiles";
   if (!saveFolder.exists()) {
    saveFolder.mkdir();
   }
-  /*try {
-   UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-  } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e) {
-   java.util.logging.Logger.getLogger(MainFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, e);
-  }*/
   fileDialog = new JFileChooser();
   selectedFile = new JTextField();
   JButton browse = new JButton();
@@ -113,7 +108,7 @@ static final String convertedFileFolder = "ConvertedFiles";
    try {
     Converter.saveFile(fileDialog.getSelectedFile(), new Converter().convert(fileDialog.getSelectedFile(), invertX.isSelected(), invertY.isSelected(), invertZ.isSelected()));
     JOptionPane.showMessageDialog(this, "Conversion Successful", "Completed", JOptionPane.INFORMATION_MESSAGE);
-   } catch (IllegalStateException e) {
+   } catch (IllegalStateException E) {
     JOptionPane.showMessageDialog(this, Converter.triangulationError, error, JOptionPane.ERROR_MESSAGE);
    }
   } else {

@@ -6,20 +6,20 @@ import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
 import ve.effects.Effects;
+import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.utilities.*;
 import ve.vehicles.Physics;
 import ve.vehicles.Vehicle;
-import ve.vehicles.VehiclePart;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public enum Volcano {
  ;
+ public static final Core C = new Core();
  public static boolean exists;
  public static final double radiusBottom = 53000, radiusTop = 3000, height = 50000;
- public static double X, Z;
  private static double eruptionStage;
  public static double cameraShake;
  private static final MeshView MV;
@@ -117,8 +117,8 @@ public enum Volcano {
    PhongMaterial volcanoPM = new PhongMaterial();
    Phong.setDiffuseRGB(volcanoPM, Ground.RGB);
    U.setMaterialSecurely(MV, volcanoPM);
-   X = U.getValue(s, 0);
-   Z = U.getValue(s, 1);
+   C.X = U.getValue(s, 0);
+   C.Z = U.getValue(s, 1);
    Nodes.add(MV);
    exists = true;
    if (s.contains("active")) {
@@ -145,39 +145,39 @@ public enum Volcano {
 
  static void run(boolean updateIfMatchBegan) {
   if (exists) {
-   U.setTranslate(MV, X, 0, Z);
+   U.setTranslate(MV, C);//<-Core's Y should be '0'
    if (!rocks.isEmpty()) {//<-If active volcano
     if (eruptionStage > 0) {
      long rocksLanded = 0;
-     for (Volcano.Rock volcanoRock : rocks) {
-      if (volcanoRock.groundHit) {
-       volcanoRock.Y = -U.random(46000.);
+     for (Rock rock : rocks) {
+      if (rock.groundHit) {
+       rock.Y = -U.random(46000.);
        rocksLanded++;
       } else {
        if (updateIfMatchBegan) {
-        volcanoRock.X += volcanoRock.speedX;
-        volcanoRock.Y += volcanoRock.speedY;
-        volcanoRock.Z += volcanoRock.speedZ;
-        volcanoRock.speedY += E.gravity * U.tick;
+        rock.X += rock.speedX;
+        rock.Y += rock.speedY;
+        rock.Z += rock.speedZ;
+        rock.speedY += E.gravity * U.tick;
        }
-       if (volcanoRock.Y > volcanoRock.S.getRadius()) {
-        volcanoRock.groundHit = true;
-        volcanoRock.X = X;
-        volcanoRock.Z = Z;
+       if (rock.Y > rock.S.getRadius()) {
+        rock.groundHit = true;
+        rock.X = C.X;
+        rock.Z = C.Z;
        }
       }
      }
      eruptionStage = rocksLanded >= rocks.size() ? 0 : eruptionStage + U.tick;
     } else if (updateIfMatchBegan) {
-     for (Volcano.Rock volcanoRock : rocks) {
-      volcanoRock.deploy();
+     for (Rock rock : rocks) {
+      rock.deploy();
      }
      eruptionStage = 1;
      setCameraShake(Camera.shakePresets.volcano);
-     sound.play(Math.sqrt(U.distance(Camera.X, X, Camera.Y, -height, Camera.Z, Z)) * Sound.standardGain(Sound.gainMultiples.volcano));
+     sound.play(Math.sqrt(U.distance(Camera.C.X, C.X, Camera.C.Y, -height, Camera.C.Z, C.Z)) * Sound.standardGain(Sound.gainMultiples.volcano));
     }
-    for (Volcano.Rock volcanoRock : rocks) {
-     volcanoRock.run();
+    for (Rock rock : rocks) {
+     rock.run();
     }
     cameraShake -= cameraShake > 0 ? U.tick : 0;
    }
@@ -187,7 +187,7 @@ public enum Volcano {
  public static void runVehicleInteract(Vehicle V) {
   if (exists) {
    V.P.onVolcano = false;
-   double volcanoDistance = U.distance(V.X, X, V.Z, Z);
+   double volcanoDistance = U.distanceXZ(V, C);
    if (volcanoDistance < radiusBottom && volcanoDistance > radiusTop && V.Y > -radiusBottom + volcanoDistance - V.P.clearance) {
     V.P.onVolcano = true;
     V.terrainRGB = Ground.RGB;
@@ -196,7 +196,7 @@ public enum Volcano {
     double halfRadiusBottom = radiusBottom * .5,
     baseAngle = V.P.flipped() ? 225 : 45, vehicleVolcanoXZ = V.XZ,
     volcanoPlaneY = Math.max(radiusTop * .5, halfRadiusBottom - (halfRadiusBottom * (Math.abs(V.Y) / height)));
-    vehicleVolcanoXZ += V.Z < Z && Math.abs(V.X - X) < volcanoPlaneY ? 180 : V.X >= X + volcanoPlaneY ? 90 : V.X <= X - volcanoPlaneY ? -90 : 0;
+    vehicleVolcanoXZ += V.Z < C.Z && Math.abs(V.X - C.X) < volcanoPlaneY ? 180 : V.X >= C.X + volcanoPlaneY ? 90 : V.X <= C.X - volcanoPlaneY ? -90 : 0;
     V.XY += (baseAngle * U.sin(vehicleVolcanoXZ) - V.XY) * Physics.valueAdjustSmoothing * U.tick;
     V.YZ += (-baseAngle * U.cos(vehicleVolcanoXZ) - V.YZ) * Physics.valueAdjustSmoothing * U.tick;
     V.Y = -radiusBottom + volcanoDistance - V.P.clearance;//<-'onVolcano' is already confirmed, so there should be no reason not to hard-set this
@@ -206,14 +206,12 @@ public enum Volcano {
  }
 
  public static void rockVehicleInteract(Vehicle V) {
-  for (Volcano.Rock volcanoRock : rocks) {
-   double vehicleVolcanoRockDistance = U.distance(V, volcanoRock);
-   if (vehicleVolcanoRockDistance < (V.collisionRadius + volcanoRock.S.getRadius()) * 1.5) {
-    V.addDamage(V.durability * .5 + (vehicleVolcanoRockDistance < V.collisionRadius + volcanoRock.S.getRadius() ? V.durability : 0));
+  for (Rock rock : rocks) {
+   double vehicleVolcanoRockDistance = U.distance(V, rock);
+   if (vehicleVolcanoRockDistance < (V.collisionRadius + rock.S.getRadius()) * 1.5) {
+    V.addDamage(V.durability * .5 + (vehicleVolcanoRockDistance < V.collisionRadius + rock.S.getRadius() ? V.durability : 0));
     V.deformParts();
-    for (VehiclePart part : V.parts) {
-     part.throwChip(U.randomPlusMinus(U.netValue(volcanoRock.speedX, volcanoRock.speedY, volcanoRock.speedZ)));
-    }
+    V.throwChips(U.netValue(rock.speedX, rock.speedY, rock.speedZ), true);
     V.VA.crashDestroy.play(Double.NaN, V.VA.distanceVehicleToCamera);
    }
   }
@@ -234,8 +232,8 @@ public enum Volcano {
   }
 
   void deploy() {
-   X = Volcano.X;
-   Z = Volcano.Z;
+   X = C.X;
+   Z = C.Z;
    Y = -50000;
    speedX = U.randomPlusMinus(1000.);
    speedZ = U.randomPlusMinus(1000.);

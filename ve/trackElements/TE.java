@@ -3,6 +3,7 @@ package ve.trackElements;
 import javafx.scene.image.Image;
 import javafx.scene.paint.PhongMaterial;
 import ve.environment.*;
+import ve.instances.Core;
 import ve.instances.I;
 import ve.trackElements.trackParts.TrackPart;
 import ve.ui.*;
@@ -86,11 +87,10 @@ public enum TE {//TrackElements
    }
    rotation += U.random() < .5 ? 180 : 0;
   }
-  if ((listNumber == getTrackPartIndex(Models.checkpoint.name()) || listNumber == getTrackPartIndex(Models.repair.name()))) {
+  if (listNumber == getTrackPartIndex(Models.checkpoint.name()) || listNumber == getTrackPartIndex(Models.repair.name())) {
+   forceTrackPartOutsideExistingParts(s, X, Y, Z, (String[]) null);//<-Always call, since in this case it's only used to set the mound sit
    if (Maps.name.equals("Pyramid Paradise")) {
     forceTrackPartOutsideExistingParts(s, X, Y, Z, Models.pyramid.name());
-   } else if (U.equals(Maps.name, "the Forest", "Volatile Sands")) {
-    forceTrackPartOutsideExistingParts(s, X, Y, Z, (String[]) null);
    } else if (Maps.name.equals("Military Base")) {
     forceTrackPartOutsideExistingParts(s, X, Y, Z, Models.cube.name(), Models.ramptriangle.name());
    }
@@ -200,14 +200,20 @@ public enum TE {//TrackElements
   repairPointsExist = listNumber == getTrackPartIndex(Models.repair.name()) || repairPointsExist;
  }
 
+ /**
+  * Forces the current map-loading X, Y, and Z values to move outside of any existing map parts that are defined in the String... parameter.
+  * In the case of mounds, the Y-value is simply set to sit to the mounds' upper terrain.
+  */
  private static void forceTrackPartOutsideExistingParts(CharSequence source, double[] X, double[] Y, double[] Z, String... targets) {
+  Core set = new Core(X[0], Y[0], Z[0]);
+  E.setMoundSit(set, false);
+  X[0] = set.X;
+  Y[0] = set.Y;
+  Z[0] = set.Z;
   boolean inside = true;
   double tolerance = 1.05;//<-Not a sufficient distance away otherwise
   while (inside) {
    inside = false;
-   for (FrustumMound mound : mounds) {
-    inside = !mound.wraps && U.distance(X[0], mound.X, Z[0], mound.Z) <= mound.mound.getMajorRadius() * tolerance || inside;
-   }
    if (targets != null) {
     for (TrackPart trackPart : trackParts) {
      inside = U.contains(trackPart.modelName, targets) &&
@@ -276,7 +282,6 @@ public enum TE {//TrackElements
   } else if (Maps.name.equals(SL.Maps.highlands)) {
    V.X = U.randomPlusMinus(100000);
    V.Z = U.randomPlusMinus(100000);
-   V.Y = -175000;
   } else if (Maps.name.equals(SL.Maps.circleRaceXL)) {
    V.Z += 320000;
   } else if (Maps.name.equals(SL.Maps.XYLand)) {
@@ -330,7 +335,7 @@ public enum TE {//TrackElements
    V.Z = 0;
   }
   if (E.gravity == 0) {
-   if (Maps.name.equals("Outer Space V1")) {
+   if (Maps.name.equals(SL.Maps.outerSpace1)) {
     V.X = U.randomPlusMinus(500.);
     V.Z = U.random(2000.) - U.random(4000.);
     if (V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name())) {
@@ -356,6 +361,7 @@ public enum TE {//TrackElements
   if (Maps.name.equals("Black Hole")) {
    V.X = V.Y = V.Z = 0;
   }
+  E.setMoundSit(V, true);
   V.Y -= V.isFixed() ? 0 : V.clearanceY;
  }
 
@@ -441,5 +447,6 @@ public enum TE {//TrackElements
   points.clear();
   checkpoints.clear();
   repairPointsExist = false;
+  Bonus.reset();
  }
 }

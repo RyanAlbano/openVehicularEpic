@@ -122,9 +122,7 @@ public class Explosion extends Core {
     vehicle.speedY += U.randomPlusMinus(V.P.explosionPush);
    }
    vehicle.deformParts();
-   for (VehiclePart part : vehicle.parts) {
-    part.throwChip(300);
-   }
+   vehicle.throwChips(300, false);
    if (nuclear) {
     V.VA.crashDestroy.play(Double.NaN, V.VA.distanceVehicleToCamera);
    }

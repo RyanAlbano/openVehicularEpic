@@ -429,10 +429,16 @@ public class TrackPart extends Instance {
   }
  }
 
+ public void setInitialSit() {
+  if (wraps) {
+   E.setTerrainSit(this, false);
+  }
+ }
+
  public void runGraphics(boolean renderALL) {
   if (rainbow) {
    for (TrackPartPart part : parts) {
-    U.setTranslate(part.MV, Camera.X + X, Camera.Y + Y, Camera.Z + Z);
+    U.setTranslate(part.MV, Camera.C.X + X, Camera.C.Y + Y, Camera.C.Z + Z);
     part.MV.setVisible(true);
    }
   } else {
@@ -465,7 +471,7 @@ public class TrackPart extends Instance {
    boolean showFoliageSphere = false;
    if (U.getDepth(this) > -renderRadius) {
     if (checkpointNumber >= 0 && checkpointNumber == TE.currentCheckpoint) {
-     checkpointSignRotation = sidewaysXZ ? (XZ > 0 ? Camera.X < X : Camera.X > X) : Camera.Z > Z;//If checkpoint, XZ is never > Math.abs(90)
+     checkpointSignRotation = sidewaysXZ ? (XZ > 0 ? Camera.C.X < X : Camera.C.X > X) : Camera.C.Z > Z;//If checkpoint, XZ is never > Math.abs(90)
     }
     double distanceToCamera = U.distance(this);
     if (vehicleModel) {

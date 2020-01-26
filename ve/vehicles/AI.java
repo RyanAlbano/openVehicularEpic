@@ -232,6 +232,7 @@ public class AI {
     }
    }
    runJuke();
+   passBonus();
   }
  }
 
@@ -246,7 +247,7 @@ public class AI {
  }
 
  private void runRaceCheckpointSteeringOptimization() {
-  if (!engagingOthers && TE.points.size() > 1 && !Maps.name.contains("Circle")) {
+  if (!engagingOthers && TE.points.size() > 1 && !Maps.name.contains("Circle")) {//<-Void is not helpful for AI's in circle races
    int n = V.point + 1;
    while (n >= TE.points.size()) n -= TE.points.size();
    double pointX = TE.points.get(n).X, pointZ = TE.points.get(n).Z,
@@ -739,6 +740,20 @@ public class AI {
     } else if (vehicleTurretDirectionYZ < V.VT.YZ) {
      V.reverse2 = false;
      V.drive2 = true;
+    }
+   }
+  }
+ }
+
+ void passBonus() {
+  if (I.vehiclesInMatch > 2) {//<-Otherwise there's no teammate to pass to, obviously
+   V.passBonus = false;
+   double yourDamage = V.getDamage(true);
+   for (Vehicle otherV : I.vehicles) {
+    if (!U.sameVehicle(otherV, V) && U.sameTeam(V, otherV) && !otherV.destroyed && U.distance(V, otherV) < V.collisionRadius + otherV.collisionRadius &&
+    otherV.durability > V.durability && V.fragility > otherV.fragility && (yourDamage > otherV.getDamage(true) || V.selfRepair < otherV.selfRepair)) {//<-Trying to guess what's the best reasoning for an AI passing the bonus to another teammate
+     V.passBonus = true;
+     break;
     }
    }
   }

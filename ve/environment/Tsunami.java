@@ -109,23 +109,25 @@ public enum Tsunami {
  }
 
  public static void vehicleInteract(Vehicle V) {
-  for (Tsunami.Part tsunamiPart : parts) {
-   if (U.distance(V, tsunamiPart) < V.collisionRadius + tsunamiPart.C.getRadius()) {
-    if (V.getsPushed >= 0) {
-     V.speedX += speedX * .5 * U.tick;
-     V.speedZ += speedZ * .5 * U.tick;
+  if (!V.phantomEngaged) {
+   for (Tsunami.Part tsunamiPart : parts) {
+    if (U.distance(V, tsunamiPart) < V.collisionRadius + tsunamiPart.C.getRadius()) {
+     if (V.getsPushed >= 0) {
+      V.speedX += speedX * .5 * U.tick;
+      V.speedZ += speedZ * .5 * U.tick;
+     }
+     if (V.getsLifted >= 0) {
+      V.speedY += E.gravity * U.tick * 4 * Double.compare(tsunamiPart.Y, V.Y);
+     }
+     for (int n1 = 20; --n1 >= 0; ) {
+      V.splashes.get(V.currentSplash).deploy(V.wheels.isEmpty() ? null : V.wheels.get(U.random(4)), U.random(V.absoluteRadius * .05),
+      speedX + U.randomPlusMinus(Math.max(speed, V.P.netSpeed)),
+      U.randomPlusMinus(Math.max(speed, V.P.netSpeed)),
+      speedZ + U.randomPlusMinus(Math.max(speed, V.P.netSpeed)));
+      V.currentSplash = ++V.currentSplash >= Splash.defaultQuantity ? 0 : V.currentSplash;
+     }
+     V.VA.tsunamiSplash.playIfNotPlaying(V.VA.distanceVehicleToCamera);
     }
-    if (V.getsLifted >= 0) {
-     V.speedY += E.gravity * U.tick * 4 * Double.compare(tsunamiPart.Y, V.Y);
-    }
-    for (int n1 = 20; --n1 >= 0; ) {
-     V.splashes.get(V.currentSplash).deploy(V.wheels.isEmpty() ? null : V.wheels.get(U.random(4)), U.random(V.absoluteRadius * .05),
-     speedX + U.randomPlusMinus(Math.max(speed, V.P.netSpeed)),
-     U.randomPlusMinus(Math.max(speed, V.P.netSpeed)),
-     speedZ + U.randomPlusMinus(Math.max(speed, V.P.netSpeed)));
-     V.currentSplash = ++V.currentSplash >= Splash.defaultQuantity ? 0 : V.currentSplash;
-    }
-    V.VA.tsunamiSplash.playIfNotPlaying(V.VA.distanceVehicleToCamera);
    }
   }
  }
@@ -157,8 +159,8 @@ public enum Tsunami {
   }
  }
 
- static void reset(){
+ static void reset() {
   parts.clear();
-  exists =false;
+  exists = false;
  }
 }

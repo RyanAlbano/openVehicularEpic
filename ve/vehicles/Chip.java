@@ -21,6 +21,7 @@ class Chip extends CoreAdvanced {
  Chip(VehiclePart part) {
   VP = part;
   absoluteRadius = .1 * VP.absoluteRadius;
+  core.absoluteRadius = absoluteRadius;//<-Must transfer this--parts were not showing up otherwise!
   TriangleMesh TM = new TriangleMesh();
   setPoints(TM);//<-Call it here as well so mesh loads properly
   TM.getTexCoords().addAll(U.random() < .5 ? I.textureCoordinateBase0 : I.textureCoordinateBase1);
@@ -73,8 +74,8 @@ class Chip extends CoreAdvanced {
      Y += speedY * U.tick + (VP.V.P.mode.name().startsWith(SL.drive) ? gravitySpeed * U.tick : 0);
     }
     core.X = X + VP.X;
-    core.Y = X + VP.Y;
-    core.Z = X + VP.Z;
+    core.Y = Y + VP.Y;
+    core.Z = Z + VP.Z;
     if (VP.MV.isVisible() && U.render(core, absoluteRadius, true, true)) {
      U.setTranslate(MV, core);
      U.rotate(MV, this);

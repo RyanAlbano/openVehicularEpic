@@ -39,11 +39,11 @@ class GameLoop extends AnimationTimer {
    E.renderLevel = U.maxedFPS(true) ? Double.POSITIVE_INFINITY : E.renderLevel;
    Camera.FOV = Math.min(Camera.FOV * Camera.adjustFOV, 170);
    Camera.FOV = Camera.restoreZoom[0] && Camera.restoreZoom[1] ? Camera.defaultFOV : Camera.FOV;
-   Camera.camera.setFieldOfView(Camera.FOV);
+   Camera.PC.setFieldOfView(Camera.FOV);
    if (I.userPlayerIndex < I.vehicles.size() && I.vehicles.get(I.userPlayerIndex) != null) {
     I.vehicles.get(I.userPlayerIndex).lightBrightness = U.clamp(I.vehicles.get(I.userPlayerIndex).lightBrightness + Match.vehicleLightBrightnessChange);
    }
-   E.lightsAdded = 0;
+   E.lightsAdded = 0;//<-Must come before any lights get added, obviously
    if (Mouse.click) {
     Mouse.mouse = Keys.left = Keys.right = Keys.enter = false;
    }
@@ -288,7 +288,7 @@ class GameLoop extends AnimationTimer {
     UI.gameFPS = Double.POSITIVE_INFINITY;
     E.renderType = E.RenderType.standard;
    } else {
-    Pool.pool.runVision();//<-Not called in-match HERE because it would draw over screenFlash
+    Pool.runVision();//<-Not called in-match HERE because it would draw over screenFlash
    }
    if (UI.status == UI.Status.paused) {
     UI.runPaused();

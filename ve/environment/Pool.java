@@ -6,8 +6,9 @@ import ve.instances.Core;
 import ve.ui.Maps;
 import ve.utilities.*;
 
-public class Pool extends Core {
- public static final Pool pool = new Pool();
+public enum Pool {
+ ;
+ public static final Core pool = new Core();
  public static boolean exists;
  static final PhongMaterial PM = new PhongMaterial();
  public static double depth;
@@ -25,10 +26,10 @@ public class Pool extends Core {
 
  public enum Type {water, lava, acid}
 
- public void load(String s) {
+ public static void load(String s) {
   if (s.startsWith("pool(")) {
-   X = U.getValue(s, 0);
-   Z = U.getValue(s, 1);
+   pool.X = U.getValue(s, 0);
+   pool.Z = U.getValue(s, 1);
    C[0].setRadius(U.getValue(s, 2));
    C[1].setRadius(U.getValue(s, 2));
    depth = U.getValue(s, 3);
@@ -51,8 +52,8 @@ public class Pool extends Core {
   }
  }
 
- public void runVision() {
-  if (exists && Camera.Y > 0 && Camera.Y <= depth && U.distanceXZ(this) < C[0].getRadius()) {
+ public static void runVision() {
+  if (exists && Camera.C.Y > 0 && Camera.C.Y <= depth && U.distanceXZ(pool) < C[0].getRadius()) {
    if (type == Pool.Type.lava) {
     U.fillRGB(E.GC, 1, .5 + U.random(.25), 0, .75);
    } else if (type == Pool.Type.acid) {

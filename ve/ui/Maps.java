@@ -37,7 +37,7 @@ public enum Maps {
    I.vehicles.clear();
    E.reset();
    TE.reset();
-   Camera.camera.setFarClip(Camera.clipRange.maximumFar);
+   Camera.PC.setFarClip(Camera.clipRange.maximumFar);
    UI.scene3D.setFill(U.getColor(0));
    defaultVehicleLightBrightness = 0;
    randomVehicleStartAngle = guardCheckpointAI = false;
@@ -51,7 +51,7 @@ public enum Maps {
     if (UI.status == UI.Status.mapLoadPass2) {
      name = s.startsWith(SL.name) ? U.getString(s, 0) : name;
      if (s.startsWith("ambientLight(")) {
-      Nodes.setRGB(E.ambientLight, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
+      Nodes.setLightRGB(E.ambientLight, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
      }
      Star.load(s);
      E.loadSky(s);
@@ -60,12 +60,12 @@ public enum Maps {
      Terrain.load(s);
      if (s.startsWith("viewDistance(")) {
       E.viewableMapDistance = U.getValue(s, 0);
-      Camera.camera.setFarClip(U.clamp(Camera.clipRange.normalNear + 1, U.getValue(s, 0), Camera.clipRange.maximumFar));
+      Camera.PC.setFarClip(U.clamp(Camera.clipRange.normalNear + 1, U.getValue(s, 0), Camera.clipRange.maximumFar));
      } else if (s.startsWith("soundTravel(")) {
       E.soundMultiple = U.getValue(s, 0);
      }
      E.gravity = s.startsWith("gravity(") ? U.getValue(s, 0) : E.gravity;
-     Sun.sun.load(s);
+     Sun.load(s);
      defaultVehicleLightBrightness = s.startsWith("defaultBrightness(") ? U.getValue(s, 0) : defaultVehicleLightBrightness;
      randomVehicleStartAngle = s.startsWith("randomStartAngle") || randomVehicleStartAngle;
      MapBounds.left = s.startsWith("xLimitLeft(") ? U.getValue(s, 0) : MapBounds.left;
@@ -93,7 +93,7 @@ public enum Maps {
      Storm.load(s);
      Tornado.load(s);
      E.loadFrustumMountains(s);
-     Pool.pool.load(s);
+     Pool.load(s);
      if (s.startsWith("trees(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
        TE.trackParts.add(
@@ -120,6 +120,14 @@ public enum Maps {
      Tsunami.load(s);
      Volcano.load(s);
      Meteor.load(s);
+     if (s.startsWith("bonus(")) {
+      Bonus.startY = U.getValue(s, 0);
+      try {
+       Bonus.startX = U.getValue(s, 1);
+       Bonus.startZ = U.getValue(s, 2);
+      } catch (Exception ignored) {
+      }
+     }
     }
     TE.instanceSize = s.startsWith(SL.size + "(") ? U.getValue(s, 0) : TE.instanceSize;
     if (s.startsWith(SL.scale + "(")) {
@@ -151,10 +159,10 @@ public enum Maps {
       if (U.equals(name, "Columns Condemn")) {
        random[0] *= 5000;
        random[2] *= 5000;
-       while (random[0] > 47500) random[0] -= 25000;
-       while (random[0] < -47500) random[0] += 25000;
-       while (random[2] > 47500) random[2] -= 25000;
-       while (random[2] < -47500) random[2] += 25000;
+       //while (random[0] > 47500) random[0] -= 47500;
+       //while (random[0] < -47500) random[0] += 47500;
+       //while (random[2] > 47500) random[2] -= 47500;
+       //while (random[2] < -47500) random[2] += 47500;
       } else if (U.equals(name, "the Linear Accelerator")) {
        random[0] *= 1000;
        random[2] *= 1000;
@@ -259,12 +267,14 @@ public enum Maps {
      ((PhongMaterial) tsunamiPart.C.getMaterial()).setSelfIlluminationMap(Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
     }
    }
-   TE.bonus.X = TE.bonus.Y = TE.bonus.Z = 0;
-   Nodes.add(Bonus.big);
-   for (Bonus.Ball bonusBall : Bonus.balls) {
-    Nodes.add(bonusBall.S);
-   }
+   Bonus.load();
   } else if (UI.status == UI.Status.mapLoadPass4) {
+   for (TrackPart TP : TE.trackParts) {
+    TP.setInitialSit();
+   }
+   for (FrustumMound FM : TE.mounds) {
+    FM.setInitialSit();
+   }
    if (!Viewer.inUse) {
     for (n = I.vehiclesInMatch; --n >= 0; ) {
      I.vehicles.add(null);
@@ -411,7 +421,7 @@ public enum Maps {
 
  public static void runView(boolean gamePlay) {
   Camera.runAroundTrack();
-  U.rotate(Camera.camera, Camera.YZ, -Camera.XZ);
+  U.rotate(Camera.PC, Camera.YZ, -Camera.XZ);
   E.run(gamePlay);
   for (Vehicle vehicle : I.vehicles) {
    vehicle.runRender(gamePlay);

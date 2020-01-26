@@ -71,7 +71,8 @@ public enum Images {
   } else if (name.startsWith(SL.water)) {
    return water;
   }
-  throw new IllegalStateException("Return of '" + name + "' is not supported");
+  UI.crashGame("Return of '" + name + "' is not supported");
+  return null;//<-Dummy value--should never be reached
  }
 
  public static Image getNormalMap(String name) {
@@ -104,7 +105,7 @@ public enum Images {
  }
 
  public static Image getLowResolution(Image I) {
-  UI.crashOnExpensiveInGameCall();
+  UI.denyExpensiveInGameCall();
   if (I != null) {
    ImageView IV = new ImageView(I);
    IV.setScaleX(Math.min(500 / I.getWidth(), 1));//*Don't exceed the original size!

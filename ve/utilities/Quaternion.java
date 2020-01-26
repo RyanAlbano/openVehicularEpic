@@ -5,7 +5,6 @@ public class Quaternion {
  double X, Y, Z, W;
 
  public Quaternion() {
-  Z = 0;
   W = 1;
  }
 

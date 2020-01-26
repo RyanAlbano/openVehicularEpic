@@ -163,7 +163,7 @@ public class TrackPartPart extends InstancePart {
      shiftedAxis = ++shiftedAxis > 2 ? -1 : shiftedAxis;
      shiftedAxis = ++shiftedAxis > 2 ? -1 : shiftedAxis;
     }
-    render = shiftedAxis == 2 ? Camera.Z >= TP.Z : shiftedAxis < 0 ? Camera.X >= TP.X : shiftedAxis > 0 ? Camera.X <= TP.X : Camera.Z <= TP.Z;
+    render = shiftedAxis == 2 ? Camera.C.Z >= TP.Z : shiftedAxis < 0 ? Camera.C.X >= TP.X : shiftedAxis > 0 ? Camera.C.X <= TP.X : Camera.C.Z <= TP.Z;
    }
    if (render) {
     double[] placementX = {displaceX + (controller ? TP.driverViewX * Options.driverSeat : 0)};
@@ -197,13 +197,13 @@ public class TrackPartPart extends InstancePart {
    boolean render = true;
    if (!Double.isNaN(fastCull) && !renderALL) {
     if (fastCull == 0) {
-     render = Camera.Z <= TP.Z;
+     render = Camera.C.Z <= TP.Z;
     } else if (fastCull == 2) {
-     render = Camera.Z >= TP.Z;
+     render = Camera.C.Z >= TP.Z;
     } else if (fastCull == -1) {
-     render = Camera.X >= TP.X;
+     render = Camera.C.X >= TP.X;
     } else if (fastCull == 1) {
-     render = Camera.X <= TP.X;
+     render = Camera.C.X <= TP.X;
     }
    }
    if (renderALL || (render && U.getDepth(TP) > -renderRadius)) {

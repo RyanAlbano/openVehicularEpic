@@ -325,7 +325,7 @@ public class VehicleAudio {
   crashTimer -= crashTimer > 0 ? U.tick : 0;
   landTimer -= landTimer > 0 ? U.tick : 0;
   if (!Double.isNaN(splashing)) {
-   if (splashing > 150 && Camera.Y <= 0) {
+   if (splashing > 150 && Camera.C.Y <= 0) {
     splashOverSurface.loop(distanceVehicleToCamera);
     splash.stop();
    } else if (splashing > 0) {

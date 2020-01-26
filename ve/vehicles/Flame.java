@@ -9,8 +9,8 @@ class Flame extends MeshView {
 
  private final VehiclePart VP;
 
- Flame(VehiclePart vp) {
-  VP = vp;
+ Flame(VehiclePart part) {
+  VP = part;
   TriangleMesh flameMesh = new TriangleMesh();
   double size = VP.absoluteRadius * .125;
   flameMesh.getPoints().setAll(

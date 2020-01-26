@@ -14,7 +14,9 @@ public enum Sounds {
 
  public static void clear() {//Not all sounds close
   for (Vehicle vehicle : I.vehicles) {
-   vehicle.closeSounds();
+   if (vehicle != null) {//<-This is likely needed--there's a brief period on map-load where null 'placeholder' Vehicles are added to the list. A crash there would cause a nullPointer here as well
+    vehicle.closeSounds();
+   }
   }
   Rain.sound.stop();
   Tornado.sound.stop();

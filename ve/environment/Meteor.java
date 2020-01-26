@@ -9,7 +9,6 @@ import ve.instances.CoreAdvanced;
 import ve.ui.Match;
 import ve.utilities.*;
 import ve.vehicles.Vehicle;
-import ve.vehicles.VehiclePart;
 
 public enum Meteor {
  ;
@@ -45,9 +44,7 @@ public enum Meteor {
      V.speedZ += U.randomPlusMinus(globalSpeed * .5);
     }
     V.deformParts();
-    for (VehiclePart part : V.parts) {
-     part.throwChip(U.randomPlusMinus(U.netValue(meteor.speedX, globalSpeed, meteor.speedZ)));
-    }
+    V.throwChips(U.netValue(meteor.speedX, globalSpeed, meteor.speedZ), true);
     V.VA.crashDestroy.play(Double.NaN, V.VA.distanceVehicleToCamera);
    }
   }
@@ -72,9 +69,9 @@ public enum Meteor {
    if (Ground.level == Double.POSITIVE_INFINITY && U.random() < .5) {
     speedY *= -1;
    }
-   parts.get(0).X = Camera.X + U.randomPlusMinus(500000.);
-   parts.get(0).Y = Camera.Y - ((125000 + U.random(250000.)) * (speedY > 0 ? 1 : -1));
-   parts.get(0).Z = Camera.Z + U.randomPlusMinus(500000.);
+   parts.get(0).X = Camera.C.X + U.randomPlusMinus(500000.);
+   parts.get(0).Y = Camera.C.Y - ((125000 + U.random(250000.)) * (speedY > 0 ? 1 : -1));
+   parts.get(0).Z = Camera.C.Z + U.randomPlusMinus(500000.);
    double speedsXZ = U.random(2.) * globalSpeed;
    speedX = U.random() < .5 ? speedsXZ : -speedsXZ;
    speedsXZ -= globalSpeed * 2;
@@ -84,8 +81,8 @@ public enum Meteor {
     meteorPart.rotation[1] = U.randomPlusMinus(45.);
    }
    parts.get(parts.size() - 1).Y = parts.get(0).Y;//<-Why was this done?
-   speedX = parts.get(0).X > Camera.X ? -Math.abs(speedX) : parts.get(0).X < Camera.X ? Math.abs(speedX) : 0;
-   speedZ = parts.get(0).Z > Camera.Z ? -Math.abs(speedZ) : parts.get(0).Z < Camera.Z ? Math.abs(speedZ) : 0;
+   speedX = parts.get(0).X > Camera.C.X ? -Math.abs(speedX) : parts.get(0).X < Camera.C.X ? Math.abs(speedX) : 0;
+   speedZ = parts.get(0).Z > Camera.C.Z ? -Math.abs(speedZ) : parts.get(0).Z < Camera.C.Z ? Math.abs(speedZ) : 0;
   }
 
   private void run(boolean update) {
@@ -95,7 +92,7 @@ public enum Meteor {
     parts.get(0).Y += speedY * U.tick;
     parts.get(0).Z += speedZ * U.tick;
     if (parts.get(parts.size() - 1).Y >= Ground.level ||
-    Math.abs(parts.get(0).Y - Camera.Y) > 375000 || Math.abs(parts.get(0).X - Camera.X) > 500000 || Math.abs(parts.get(0).Z - Camera.Z) > 500000) {
+    Math.abs(parts.get(0).Y - Camera.C.Y) > 375000 || Math.abs(parts.get(0).X - Camera.C.X) > 500000 || Math.abs(parts.get(0).Z - Camera.C.Z) > 500000) {
      deploy();
     }
    }

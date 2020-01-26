@@ -5,6 +5,7 @@ import javafx.scene.transform.Rotate;
 import ve.environment.Ground;
 import ve.environment.Pool;
 import ve.environment.Volcano;
+import ve.instances.Core;
 import ve.instances.I;
 import ve.trackElements.Arrow;
 import ve.trackElements.TE;
@@ -12,12 +13,11 @@ import ve.ui.Options;
 import ve.ui.UI;
 import ve.vehicles.Vehicle;
 
-public enum Camera {//<-Don't extend Core!
+public enum Camera {//*No need to extend core--a Core for calling location is defined below
  ;
-
- public static final PerspectiveCamera camera = new PerspectiveCamera(true);
+ public static final Core C = new Core();//*
+ public static final PerspectiveCamera PC = new PerspectiveCamera(true);
  public static final Rotate rotateXY = new Rotate();
- public static double X, Y, Z;
  public static double XY;
  public static double XZ, YZ;
  public static double sinXZ, cosXZ, sinYZ, cosYZ;
@@ -55,13 +55,13 @@ public enum Camera {//<-Don't extend Core!
  public enum View {docked, near, distant, driver, flow, watchMove, watch}
 
  static {
-  camera.getTransforms().add(rotateXY);
-  camera.setNearClip(clipRange.normalNear);
-  camera.setFarClip(clipRange.maximumFar);
-  camera.setTranslateX(0);
-  camera.setTranslateY(0);
-  camera.setTranslateZ(0);
-  UI.scene3D.setCamera(camera);
+  PC.getTransforms().add(rotateXY);
+  PC.setNearClip(clipRange.normalNear);
+  PC.setFarClip(clipRange.maximumFar);
+  PC.setTranslateX(0);
+  PC.setTranslateY(0);
+  PC.setTranslateZ(0);
+  UI.scene3D.setCamera(PC);
   PerspectiveCamera camera2 = new PerspectiveCamera(true);
   camera2.setFieldOfView(defaultFOV);
   camera2.setTranslateX(0);
@@ -74,7 +74,7 @@ public enum Camera {//<-Don't extend Core!
   if (lookForward[0] && lookForward[1]) {
    aroundVehicleXZ = 0;
   }
-  camera.setNearClip(view == View.driver ? clipRange.minimumNear : clipRange.normalNear);
+  PC.setNearClip(view == View.driver ? clipRange.minimumNear : clipRange.normalNear);
   double cameraVehicleXZ, cameraVehicleY;
   if (view == View.flow || view == View.distant) {
    cameraVehicleXZ = lastViewNear ? playerV.absoluteRadius * .45 : 800;
@@ -105,9 +105,9 @@ public enum Camera {//<-Don't extend Core!
    YZ = -yz1;
    XZ = -xz1;
    XY = -xy1;
-   X = playerV.X + driverViewX[0];
-   Y = playerV.Y + driverViewY[0];
-   Z = playerV.Z + driverViewZ[0];
+   C.X = playerV.X + driverViewX[0];
+   C.Y = playerV.Y + driverViewY[0];
+   C.Z = playerV.Z + driverViewZ[0];
   } else if (view == View.flow) {
    XY = 0;
    double moveRate = .125 * U.tick,
@@ -134,18 +134,18 @@ public enum Camera {//<-Don't extend Core!
     YZ += (-playerV.YZ - YZ) * moveRate;
    }
    double e = xd * U.sin(playerV.YZ) - (cameraVehicleXZ * U.cos(playerV.YZ));
-   X += (playerV.X + (-e * U.sin(playerV.XZ)) - X) * moveRate;
-   Y += (playerV.Y + ((xd * U.cos(playerV.YZ)) + (cameraVehicleXZ * U.sin(playerV.YZ))) - Y) * moveRate;
-   Z += (playerV.Z + (e * U.cos(playerV.XZ)) - Z) * moveRate;
+   C.X += (playerV.X + (-e * U.sin(playerV.XZ)) - C.X) * moveRate;
+   C.Y += (playerV.Y + ((xd * U.cos(playerV.YZ)) + (cameraVehicleXZ * U.sin(playerV.YZ))) - C.Y) * moveRate;
+   C.Z += (playerV.Z + (e * U.cos(playerV.XZ)) - C.Z) * moveRate;
   } else if (view.name().contains(View.watch.name())) {
    XY = 0;
    if (view == View.watchMove) {
-    while (Math.abs(playerV.X - X) > 10000) X += playerV.X > X ? 20000 : -20000;
-    while (Math.abs(playerV.Z - Z) > 10000) Z += playerV.Z > Z ? 20000 : -20000;
-    while (Math.abs(playerV.Y - Y) > 10000) Y += playerV.Y > Y ? 20000 : -20000;
-    Y = Math.min(Y, Ground.level - playerV.collisionRadius + (Pool.exists && U.distanceXZ(Pool.pool) < Pool.C[0].getRadius() ? Pool.depth : 0));
+    while (Math.abs(playerV.X - C.X) > 10000) C.X += playerV.X > C.X ? 20000 : -20000;
+    while (Math.abs(playerV.Z - C.Z) > 10000) C.Z += playerV.Z > C.Z ? 20000 : -20000;
+    while (Math.abs(playerV.Y - C.Y) > 10000) C.Y += playerV.Y > C.Y ? 20000 : -20000;
+    C.Y = Math.min(C.Y, Ground.level - playerV.collisionRadius + (Pool.exists && U.distanceXZ(Pool.pool) < Pool.C[0].getRadius() ? Pool.depth : 0));
    }
-   double vehicleCameraDistanceX = playerV.X - X, vehicleCameraDistanceZ = playerV.Z - Z, vehicleCameraDistanceY = playerV.Y - Y;
+   double vehicleCameraDistanceX = playerV.X - C.X, vehicleCameraDistanceZ = playerV.Z - C.Z, vehicleCameraDistanceY = playerV.Y - C.Y;
    XZ = -((90 + (vehicleCameraDistanceX >= 0 ? 180 : 0)) + U.arcTan(vehicleCameraDistanceZ / vehicleCameraDistanceX));
    YZ = (90 * (vehicleCameraDistanceY > 0 ? 1 : -1)) - U.arcTan(U.netValue(vehicleCameraDistanceZ, vehicleCameraDistanceX) / vehicleCameraDistanceY);
   } else {
@@ -166,9 +166,9 @@ public enum Camera {//<-Don't extend Core!
     setZ = {syncToTurret ? (playerV.VT.pivotZ * .5 * U.sin(Math.abs(playerV.VT.XZ)) - playerV.VT.pivotZ * 2 * U.sin(Math.abs(playerV.VT.XZ * .5))) : 0};
     setZ[0] -= cameraVehicleXZ * viewMultiply;
     U.rotate(setX, setZ, sourceCameraXZ);
-    X = setX[0] + playerV.X;
-    Z = setZ[0] + playerV.Z;
-    Y = playerV.Y - ((cameraVehicleY + extraViewHeight) * viewMultiply);
+    C.X = setX[0] + playerV.X;
+    C.Z = setZ[0] + playerV.Z;
+    C.Y = playerV.Y - ((cameraVehicleY + extraViewHeight) * viewMultiply);
    } else {
     double YZ1 = playerV.YZ, XZ1 = playerV.XZ, xd = -cameraVehicleY * viewMultiply;
     boolean lookBack = lookAround != 0;
@@ -183,9 +183,9 @@ public enum Camera {//<-Don't extend Core!
     YZ = -YZ1 * lookDirection;
     XZ = -XZ1 + aroundVehicleXZ;
     double e = cameraVehicleXZ * viewMultiply * lookDirection * U.cos(playerV.YZ);
-    X = playerV.X + (-(xd * U.sin(playerV.YZ) - e) * U.sin(playerV.XZ));
-    Y = playerV.Y - extraViewHeight + ((xd * U.cos(playerV.YZ)) + (cameraVehicleXZ * viewMultiply * lookDirection * U.sin(playerV.YZ)));
-    Z = playerV.Z + ((xd * U.sin(playerV.YZ) - e) * U.cos(playerV.XZ));
+    C.X = playerV.X + (-(xd * U.sin(playerV.YZ) - e) * U.sin(playerV.XZ));
+    C.Y = playerV.Y - extraViewHeight + ((xd * U.cos(playerV.YZ)) + (cameraVehicleXZ * viewMultiply * lookDirection * U.sin(playerV.YZ)));
+    C.Z = playerV.Z + ((xd * U.sin(playerV.YZ) - e) * U.cos(playerV.XZ));
    }
   }
   if (Math.abs(aroundVehicleXZ) > 180) {
@@ -193,16 +193,16 @@ public enum Camera {//<-Don't extend Core!
   }
   runShake();
   setAngleTable();
-  U.rotate(camera, YZ, -XZ);
+  U.rotate(PC, YZ, -XZ);//<-Not trying optimized rotate because passed XZ is negative
   rotateXY.setAngle(-XY);
  }
 
  public static void runAroundTrack() {
   YZ = 10;
-  Y = TE.MS.Y - 5000;
+  C.Y = TE.MS.Y - 5000;
   XY = 0;
-  X = TE.MS.X - (17000 * U.sin(aroundMapXZ));
-  Z = TE.MS.Z - (17000 * U.cos(aroundMapXZ));
+  C.X = TE.MS.X - (17000 * U.sin(aroundMapXZ));
+  C.Z = TE.MS.Z - (17000 * U.cos(aroundMapXZ));
   mapSelectRandomRotationDirection *= U.random() > .999 ? -1 : 1;
   aroundMapXZ += mapSelectRandomRotationDirection * U.tick;
   while (aroundMapXZ > 180) aroundMapXZ -= 360;
@@ -228,15 +228,15 @@ public enum Camera {//<-Don't extend Core!
    double shakeXZ = 0, shakeYZ = 0;
    for (Vehicle vehicle : I.vehicles) {
     if (vehicle.cameraShake > 0) {
-     double distance = U.distance(vehicle);
-     shakeXZ += U.randomPlusMinus(vehicle.cameraShake * vehicle.cameraShake) / Math.max(1, distance * .1);
-     shakeYZ += U.randomPlusMinus(vehicle.cameraShake * vehicle.cameraShake) / Math.max(1, distance * .1);
+     double distance = Math.max(1, U.distance(vehicle) * .1);
+     shakeXZ += U.randomPlusMinus(vehicle.cameraShake * vehicle.cameraShake) / distance;
+     shakeYZ += U.randomPlusMinus(vehicle.cameraShake * vehicle.cameraShake) / distance;
     }
    }
    if (!Volcano.rocks.isEmpty() && Volcano.cameraShake > 0) {
-    double distance = U.distance(X, Volcano.X, Y, -Volcano.height, Z, Volcano.Z);
-    shakeXZ += U.randomPlusMinus(Volcano.cameraShake * Volcano.cameraShake) / Math.max(1, distance * .1);
-    shakeYZ += U.randomPlusMinus(Volcano.cameraShake * Volcano.cameraShake) / Math.max(1, distance * .1);
+    double distance = Math.max(1, U.distance(C.X, Volcano.C.X, C.Y, -Volcano.height, C.Z, Volcano.C.Z) * .1);
+    shakeXZ += U.randomPlusMinus(Volcano.cameraShake * Volcano.cameraShake) / distance;
+    shakeYZ += U.randomPlusMinus(Volcano.cameraShake * Volcano.cameraShake) / distance;
    }
    XZ += U.clamp(-45, shakeXZ, 45);
    YZ += U.clamp(-45, shakeYZ, 45);
