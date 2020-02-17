@@ -8,7 +8,7 @@ import ve.utilities.*;
 
 public enum Pool {
  ;
- public static final Core pool = new Core();
+ public static final Core core = new Core();
  public static boolean exists;
  static final PhongMaterial PM = new PhongMaterial();
  public static double depth;
@@ -28,8 +28,8 @@ public enum Pool {
 
  public static void load(String s) {
   if (s.startsWith("pool(")) {
-   pool.X = U.getValue(s, 0);
-   pool.Z = U.getValue(s, 1);
+   core.X = U.getValue(s, 0);
+   core.Z = U.getValue(s, 1);
    C[0].setRadius(U.getValue(s, 2));
    C[1].setRadius(U.getValue(s, 2));
    depth = U.getValue(s, 3);
@@ -45,7 +45,7 @@ public enum Pool {
     R = B = .25;
     G = 1;
    }
-   PM.setDiffuseMap(Images.get(SL.water));
+   PM.setDiffuseMap(Images.get(D.water));
    Phong.setDiffuseRGB(PM, R, G, B);
    Phong.setSpecularRGB(PM, E.Specular.Colors.shiny);
    exists = true;
@@ -53,7 +53,7 @@ public enum Pool {
  }
 
  public static void runVision() {
-  if (exists && Camera.C.Y > 0 && Camera.C.Y <= depth && U.distanceXZ(pool) < C[0].getRadius()) {
+  if (exists && Camera.C.Y > 0 && Camera.C.Y <= depth && U.distanceXZ(core) < C[0].getRadius()) {
    if (type == Pool.Type.lava) {
     U.fillRGB(E.GC, 1, .5 + U.random(.25), 0, .75);
    } else if (type == Pool.Type.acid) {

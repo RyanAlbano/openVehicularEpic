@@ -11,8 +11,8 @@ import ve.instances.I;
 import ve.instances.InstancePart;
 import ve.trackElements.TE;
 import ve.ui.Maps;
-import ve.ui.Options;
 import ve.ui.UI;
+import ve.ui.options.Options;
 import ve.utilities.*;
 
 public class TrackPartPart extends InstancePart {
@@ -28,14 +28,14 @@ public class TrackPartPart extends InstancePart {
   double[] storeX = new double[vertexQuantity];
   double[] storeY = new double[vertexQuantity];
   double[] storeZ = new double[vertexQuantity];
-  light = type.contains(SL.thick(SL.light));
-  blink = type.contains(SL.thick(SL.blink));
-  checkpointWord = type.contains(SL.thick(SL.checkPointWord));
-  lapWord = type.contains(SL.thick(SL.lapWord));
+  light = type.contains(D.thick(D.light));
+  blink = type.contains(D.thick(D.blink));
+  checkpointWord = type.contains(D.thick(D.checkPointWord));
+  lapWord = type.contains(D.thick(D.lapWord));
   checkpoint = checkpointWord || lapWord;
-  selfIlluminate = type.contains(SL.thick(SL.selfIlluminate)) || checkpoint;
-  base = type.contains(SL.thick(SL.base));
-  controller = type.contains(SL.thick(SL.controller));
+  selfIlluminate = type.contains(D.thick(D.selfIlluminate)) || checkpoint;
+  base = type.contains(D.thick(D.base));
+  controller = type.contains(D.thick(D.controller));
   for (n = vertexQuantity; --n >= 0; ) {
    storeX[n] = i_X[n];
    storeY[n] = i_Y[n];
@@ -57,37 +57,37 @@ public class TrackPartPart extends InstancePart {
   for (n = 0; n < vertexQuantity / (double) 3; n++) {
    TM.getTexCoords().addAll(textureCoordinates);//<-'addAll' and NOT 'setAll'
   }
-  if (type.contains(SL.thick(FaceFunction.triangles.name()))) {
-   setTriangles(vertexQuantity);
-  } else if (type.contains(SL.thick(FaceFunction.conic.name()))) {
-   setConic(TP, vertexQuantity);
-  } else if (type.contains(SL.thick(FaceFunction.strip.name()))) {
-   setStrip(TP, vertexQuantity);
-  } else if (type.contains(SL.thick(FaceFunction.squares.name()))) {
-   setSquares(TP, vertexQuantity);
-  } else if (type.contains(SL.thick(FaceFunction.cylindric.name()))) {
-   setCylindric(TP, vertexQuantity);
-  } else if (type.contains(SL.thick(SL.rimFaces))) {
-   setConic(TP, 7);
-  } else if (type.contains(SL.thick(SL.sportRimFaces))) {
-   setConic(TP, 16);
-  } else if (type.contains(SL.thick(SL.wheelRingFaces))) {
-   setCylindric(TP, 48);
-   setWheelRingFaces();
+  if (type.contains(D.thick(FaceFunction.triangles.name()))) {
+   setTriangles(TM, vertexQuantity);
+  } else if (type.contains(D.thick(FaceFunction.conic.name()))) {
+   setConic(TM, vertexQuantity, TP);
+  } else if (type.contains(D.thick(FaceFunction.strip.name()))) {
+   setStrip(TM, vertexQuantity, TP);
+  } else if (type.contains(D.thick(FaceFunction.squares.name()))) {
+   setSquares(TM, vertexQuantity, TP);
+  } else if (type.contains(D.thick(FaceFunction.cylindric.name()))) {
+   setCylindric(TM, vertexQuantity, TP);
+  } else if (type.contains(D.thick(D.rimFaces))) {
+   setConic(TM, 7, TP);
+  } else if (type.contains(D.thick(D.sportRimFaces))) {
+   setConic(TM, 16, TP);
+  } else if (type.contains(D.thick(D.wheelRingFaces))) {
+   setCylindric(TM, 48, TP);
+   setWheelRingFaces(TM);
   } else {
-   setFaces(TP, type.contains(SL.thick(SL.wheelFaces)) ? 24 : vertexQuantity);
+   setFaces(TM, type.contains(D.thick(D.wheelFaces)) ? 24 : vertexQuantity, TP);
   }
   MV = new MeshView(TM);
-  MV.setDrawMode(type.contains(SL.thick(SL.line)) ? DrawMode.LINE : DrawMode.FILL);
+  MV.setDrawMode(type.contains(D.thick(D.line)) ? DrawMode.LINE : DrawMode.FILL);
   MV.setCullFace(CullFace.BACK);
-  setPhong(type, type.contains(SL.thick(SL.noTexture)) ? "" : textureType, i_RGB);
+  setPhong(type, type.contains(D.thick(D.noTexture)) ? "" : textureType, i_RGB);
   if (UI.status != UI.Status.vehicleViewer) {
-   fastCull = type.contains(SL.thick(SL.fastCullB)) ? 0 : fastCull;
-   fastCull = type.contains(SL.thick(SL.fastCullF)) ? 2 : fastCull;
-   fastCull = type.contains(SL.thick(SL.fastCullR)) ? -1 : fastCull;
-   fastCull = type.contains(SL.thick(SL.fastCullL)) ? 1 : fastCull;
+   fastCull = type.contains(D.thick(D.fastCullB)) ? 0 : fastCull;
+   fastCull = type.contains(D.thick(D.fastCullF)) ? 2 : fastCull;
+   fastCull = type.contains(D.thick(D.fastCullR)) ? -1 : fastCull;
+   fastCull = type.contains(D.thick(D.fastCullL)) ? 1 : fastCull;
   }
-  flickPolarity = type.contains(SL.thick(SL.flick1)) ? 1 : type.contains(SL.thick(SL.flick2)) ? 2 : flickPolarity;
+  flickPolarity = type.contains(D.thick(D.flick1)) ? 1 : type.contains(D.thick(D.flick2)) ? 2 : flickPolarity;
   setRenderSizeRequirement(storeX, storeY, storeZ, vertexQuantity, checkpoint || light || blink);// || true);//<-Use 'true' when getting logo image
   MV.setVisible(false);
   if (matrix != null) {
@@ -96,24 +96,24 @@ public class TrackPartPart extends InstancePart {
  }
 
  private void setPhong(String type, String textureType, Color i_RGB) {//Don't bother moving this void to super
-  if (TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.terrain && !type.contains(SL.thick(SL.noTexture))) {
+  if (TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.terrain && !type.contains(D.thick(D.noTexture))) {
    U.setMaterialSecurely(MV, Terrain.universal);
-  } else if (TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.paved && !type.contains(SL.thick(SL.noTexture))) {
+  } else if (TP.universalPhongMaterialUsage == TrackPart.UniversalPhongMaterialUsage.paved && !type.contains(D.thick(D.noTexture))) {
    U.setMaterialSecurely(MV, TE.Paved.universal);
   } else {
-   Color RGB = type.contains(SL.thick(SL.theRandomColor)) ? TP.theRandomColor : i_RGB;
+   Color RGB = type.contains(D.thick(D.theRandomColor)) ? TP.theRandomColor : i_RGB;
    if (TP.tree && (RGB.getRed() > 0 || RGB.getGreen() > 0 || RGB.getBlue() > 0)) {
     while (RGB.getRed() < 1 && RGB.getGreen() < 1 && RGB.getBlue() < 1) {
      RGB = U.getColor(RGB.getRed() * 1.01, RGB.getGreen() * 1.01, RGB.getBlue() * 1.01);
     }
    }
    if (light) {
-    if (Maps.defaultVehicleLightBrightness <= 0 && type.contains(SL.thick(SL.reflect))) {
+    if (Maps.defaultVehicleLightBrightness <= 0 && type.contains(D.thick(D.reflect))) {
      RGB = U.getColor(E.skyRGB);
-    } else if (type.contains(SL.thick(SL.reflect)) || (RGB.getRed() == RGB.getGreen() && RGB.getGreen() == RGB.getBlue())) {
+    } else if (type.contains(D.thick(D.reflect)) || (RGB.getRed() == RGB.getGreen() && RGB.getGreen() == RGB.getBlue())) {
      RGB = U.getColor(1);
     }
-   } else if (type.contains(SL.thick(SL.reflect))) {
+   } else if (type.contains(D.thick(D.reflect))) {
     RGB = U.getColor(E.skyRGB);
    }
    RGB =
@@ -128,10 +128,10 @@ public class TrackPartPart extends InstancePart {
    if (TP.tree) {
     PM.setSelfIlluminationMap(Phong.getSelfIllumination(RGB.getRed() * .25, RGB.getGreen() * .25, RGB.getBlue() * .25));
    }
-   if (type.contains(SL.thick(SL.noSpecular)) || blink) {
+   if (type.contains(D.thick(D.noSpecular)) || blink) {
     Phong.setSpecularRGB(PM, 0);
    } else {
-    boolean shiny = type.contains(SL.thick(SL.shiny));
+    boolean shiny = type.contains(D.thick(D.shiny));
     Phong.setSpecularRGB(PM, shiny ? E.Specular.Colors.shiny : E.Specular.Colors.standard);
     PM.setSpecularPower(shiny ? E.Specular.Powers.shiny : E.Specular.Powers.standard);
    }

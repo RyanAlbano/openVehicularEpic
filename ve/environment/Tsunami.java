@@ -6,10 +6,9 @@ import javafx.scene.shape.Cylinder;
 import ve.instances.Core;
 import ve.ui.Match;
 import ve.ui.UI;
-import ve.utilities.Nodes;
-import ve.utilities.Phong;
-import ve.utilities.Sound;
-import ve.utilities.U;
+import ve.utilities.*;
+import ve.utilities.sound.Controlled;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Splash;
 import ve.vehicles.Vehicle;
 
@@ -25,7 +24,7 @@ public enum Tsunami {
  private static double globalSize;
  public static Direction direction;
  public static final List<Part> parts = new ArrayList<>();
- public static Sound sound;
+ private static Controlled sound;
 
  public enum Direction {
   forward, backward, right, left;
@@ -47,10 +46,11 @@ public enum Tsunami {
    } catch (RuntimeException e) {
     globalSize = 200000;
    }
-   for (Part tsunamiPart : parts) {
-    tsunamiPart.Y = -tsunamiPart.C.getRadius() * .5;
-    Nodes.add(tsunamiPart.C);
+   for (var part : parts) {
+    part.Y = -part.C.getRadius() * .5;
+    Nodes.add(part.C);
    }
+   sound = new Controlled(D.tsunami);
    wrap();
   }
  }
@@ -82,15 +82,15 @@ public enum Tsunami {
      parts.get(n).X = X;
     }
    }
-   for (Tsunami.Part tsunamiPart : parts) {
-    tsunamiPart.run();
+   for (var part : parts) {
+    part.run();
    }
    if (!Match.muteSound && update) {
     double soundDistance = Double.POSITIVE_INFINITY;
-    for (Tsunami.Part tsunamiPart : parts) {
-     soundDistance = Math.min(soundDistance, U.distance(tsunamiPart));
+    for (var part : parts) {
+     soundDistance = Math.min(soundDistance, U.distance(part));
     }
-    sound.loop(Math.sqrt(soundDistance) * Sound.standardGain(Sound.gainMultiples.tsunami));
+    sound.loop(Math.sqrt(soundDistance) * Sounds.standardGain(Sounds.gainMultiples.tsunami));
    } else {
     sound.stop();
    }
@@ -110,14 +110,14 @@ public enum Tsunami {
 
  public static void vehicleInteract(Vehicle V) {
   if (!V.phantomEngaged) {
-   for (Tsunami.Part tsunamiPart : parts) {
-    if (U.distance(V, tsunamiPart) < V.collisionRadius + tsunamiPart.C.getRadius()) {
+   for (var part : parts) {
+    if (U.distance(V, part) < V.collisionRadius + part.C.getRadius()) {
      if (V.getsPushed >= 0) {
       V.speedX += speedX * .5 * U.tick;
       V.speedZ += speedZ * .5 * U.tick;
      }
      if (V.getsLifted >= 0) {
-      V.speedY += E.gravity * U.tick * 4 * Double.compare(tsunamiPart.Y, V.Y);
+      V.speedY += E.gravity * U.tick * 4 * Double.compare(part.Y, V.Y);
      }
      for (int n1 = 20; --n1 >= 0; ) {
       V.splashes.get(V.currentSplash).deploy(V.wheels.isEmpty() ? null : V.wheels.get(U.random(4)), U.random(V.absoluteRadius * .05),
@@ -162,5 +162,9 @@ public enum Tsunami {
  static void reset() {
   parts.clear();
   exists = false;
+ }
+
+ public static void closeSound() {
+  if (sound != null) sound.close();
  }
 }

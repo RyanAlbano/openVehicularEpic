@@ -2,16 +2,16 @@ package ve.environment;
 
 import ve.ui.Match;
 import ve.ui.UI;
-import ve.utilities.Sound;
 import ve.utilities.U;
+import ve.utilities.sound.Controlled;
 
 public enum Wind {
  ;
  public static double maxPotency, speedX, speedZ;
  public static boolean stormExists;
- public static Sound storm;
+ public static Controlled storm;
 
- static void runPowerSet() {
+ static void runSetPower() {
   if (maxPotency > 0) {
    speedX += U.randomPlusMinus(maxPotency * .1 * U.tick);
    speedZ += U.randomPlusMinus(maxPotency * .1 * U.tick);
@@ -45,5 +45,9 @@ public enum Wind {
  static void reset() {
   maxPotency = speedX = speedZ = 0;
   stormExists = false;
+ }
+
+ public static void closeSound() {
+  if (storm != null) storm.close();
  }
 }

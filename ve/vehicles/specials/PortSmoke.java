@@ -10,10 +10,14 @@ import ve.utilities.U;
 public class PortSmoke extends CoreAdvanced {
 
  public final Cylinder C;
- final Special S;
- final Port P;
- double stage, speed;
- double sinXZ, cosXZ, sinYZ, cosYZ;//<-Performance optimization
+ private final Special S;
+ private final Port P;
+ private double stage;
+ private double speed;
+ private double sinXZ;
+ private double cosXZ;
+ private double sinYZ;
+ private double cosYZ;//<-Performance optimization
 
  public PortSmoke(Special special, Port port) {
   S = special;

@@ -6,6 +6,8 @@ import javafx.scene.shape.Cylinder;
 import ve.instances.Core;
 import ve.ui.Match;
 import ve.utilities.*;
+import ve.utilities.sound.Controlled;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Physics;
 import ve.vehicles.Vehicle;
 
@@ -17,7 +19,7 @@ public enum Tornado {
  public static boolean movesRepairPoints;
  private static double maxTravelDistance;
  public static final List<Part> parts = new ArrayList<>();
- public static Sound sound;
+ private static Controlled sound;
 
  public static void load(String s) {
   if (s.startsWith("tornado(")) {
@@ -35,6 +37,7 @@ public enum Tornado {
    }
    maxTravelDistance = U.getValue(s, 3);
    movesRepairPoints = s.contains("moveRepairPoints");
+   sound = new Controlled(D.tornado);
   }
  }
 
@@ -54,11 +57,11 @@ public enum Tornado {
     parts.get(n).X = (parts.get(n - 1).X + parts.get(n).X) * .5;
     parts.get(n).Z = (parts.get(n - 1).Z + parts.get(n).Z) * .5;
    }
-   for (Tornado.Part tornadoPart : parts) {
+   for (var tornadoPart : parts) {
     tornadoPart.run();
    }
    if (!Match.muteSound && update) {
-    sound.loop(Math.sqrt(U.distance(parts.get(0))) * Sound.standardGain(1));
+    sound.loop(Math.sqrt(U.distance(parts.get(0))) * Sounds.standardGain(1));
    } else {
     sound.stop();
    }
@@ -83,6 +86,10 @@ public enum Tornado {
    V.speedY += V.getsLifted >= 0 && Math.abs(V.speedY) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
    V.P.inTornado = V.getsLifted >= 0;
   }
+ }
+
+ public static void closeSound() {
+  if (sound != null) sound.close();
  }
 
  public static class Part extends Core {//<-Do NOT weaken access--will fail in 'TrackPart'!

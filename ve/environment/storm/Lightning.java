@@ -9,6 +9,8 @@ import ve.effects.GroundBurst;
 import ve.environment.E;
 import ve.ui.UI;
 import ve.utilities.*;
+import ve.utilities.sound.Sound;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
 
 import java.util.ArrayList;
@@ -22,7 +24,7 @@ public enum Lightning {
  static final MeshView MV = new MeshView();
  private static final PointLight[] light = new PointLight[2];
  public static final List<GroundBurst> groundBursts = new ArrayList<>();
- static int currentBurst;
+ private static int currentBurst;
  public static Sound thunder;
 
  static {
@@ -71,7 +73,7 @@ public enum Lightning {
        currentBurst = ++currentBurst >= groundBursts.size() ? 0 : currentBurst;
       }
       if (update) {
-       thunder.play(Double.NaN, Math.sqrt(U.distance(Camera.C.X, X, Camera.C.Y, 0, Camera.C.Z, Z)) * Sound.standardGain(Sound.gainMultiples.thunder));
+       thunder.play(Double.NaN, Math.sqrt(U.distance(Camera.C.X, X, Camera.C.Y, 0, Camera.C.Z, Z)) * Sounds.standardGain(Sounds.gainMultiples.thunder));
       }
      }
     }
@@ -88,7 +90,7 @@ public enum Lightning {
     Z = Camera.C.Z + U.randomPlusMinus(200000.);
     strikeStage = 0;
    }
-   for (GroundBurst burst : groundBursts) {
+   for (var burst : groundBursts) {
     burst.run();
    }
   }
@@ -106,5 +108,9 @@ public enum Lightning {
     V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
    }
   }
+ }
+
+ public static void closeSound() {
+  if (thunder != null) thunder.close();
  }
 }

@@ -6,21 +6,20 @@ import javafx.scene.PointLight;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.*;
+import ve.effects.echo.TimerEcho;
 import ve.environment.storm.Storm;
 import ve.instances.Core;
 import ve.instances.I;
 import ve.trackElements.TE;
-import ve.trackElements.trackParts.TrackPart;
 import ve.trackElements.trackParts.TrackPlane;
 import ve.ui.Maps;
 import ve.ui.Match;
 import ve.ui.UI;
 import ve.utilities.*;
-import ve.vehicles.Vehicle;
 
 import java.util.Random;
 
-public enum E {//<-Static content for V.E.'s Environment
+public enum E {//<-Static game-environment content
  ;
 
  public static Canvas canvas;
@@ -34,10 +33,10 @@ public enum E {//<-Static content for V.E.'s Environment
  public static RenderType renderType = RenderType.standard;
  public static double viewableMapDistance = Double.POSITIVE_INFINITY;
  public static double gravity;
- public static double centerShiftOffAt;
+ private static double centerShiftOffAt;
  public static Color skyRGB = U.getColor(1);//<-Keep bright for first vehicle select
  public static final double[] lavaSelfIllumination = {1, .5, 0};//<-Not explicitly a Pool property, so leave here
- public static double soundMultiple;
+ public static double soundMultiple;//<-This system is technically wrong--should be based on gainHalf and not simply * or / 2, etc.
 
  static {
   Nodes.setLightRGB(ambientLight, .5, .5, .5);
@@ -59,7 +58,7 @@ public enum E {//<-Static content for V.E.'s Environment
   public enum Powers {
    ;
    public static final double standard = 10;
-   static final double dull = 4;
+   public static final double dull = 4;
    public static final double shiny = 100;
   }
  }
@@ -85,7 +84,7 @@ public enum E {//<-Static content for V.E.'s Environment
    long key;
    try {
     key = Math.round(U.getValue(s, 2));
-   } catch (Exception E) {
+   } catch (RuntimeException E) {
     key = U.random(Long.MAX_VALUE);
    }
    Random random = new Random(key);//<-Will SecureRandom change established mountain positions on maps?
@@ -100,7 +99,7 @@ public enum E {//<-Static content for V.E.'s Environment
  public static void run(boolean gamePlay) {
   boolean mapViewer = UI.status == UI.Status.mapViewer, updateIfMatchBegan = mapViewer || (gamePlay && Match.started);
   double sunlightAngle = Sun.C.X != 0 || Sun.C.Z != 0 ? (((Sun.C.X / (Sun.C.Y * 50)) * Camera.sinXZ) + ((Sun.C.Z / (Sun.C.Y * 50)) * Camera.cosXZ)) * Camera.cosYZ : 0;//<-Camera needs the angleTable set for these sin's to be correct!
-  if (Maps.name.equals(SL.Maps.theSun)) {
+  if (Maps.name.equals(D.Maps.theSun)) {
    Sun.RGBVariance *= U.random() < .5 ? 81 / 80. : 80 / 81.;
    Sun.RGBVariance = U.clamp(.2, Sun.RGBVariance, 1);
    UI.scene3D.setFill(Color.color(Sun.RGBVariance, Sun.RGBVariance * .5, 0));
@@ -119,7 +118,7 @@ public enum E {//<-Static content for V.E.'s Environment
    }
   }
   if (Ground.exists && Ground.level <= 0) {
-   double groundY = Pool.exists && U.distanceXZ(Pool.pool) < Pool.C[0].getRadius() && Camera.C.Y > 0 ? Pool.depth : Math.max(0, -Camera.C.Y * .01);
+   double groundY = Pool.exists && U.distanceXZ(Pool.core) < Pool.C[0].getRadius() && Camera.C.Y > 0 ? Pool.depth : Math.max(0, -Camera.C.Y * .01);
    while (Math.abs(Ground.X - Camera.C.X) > 100000) Ground.X += Ground.X > Camera.C.X ? -200000 : 200000;
    while (Math.abs(Ground.Z - Camera.C.Z) > 100000) Ground.Z += Ground.Z > Camera.C.Z ? -200000 : 200000;
    if (Camera.C.Y < groundY) {
@@ -131,24 +130,8 @@ public enum E {//<-Static content for V.E.'s Environment
   } else {
    Ground.C.setVisible(false);
   }
-  if (U.averageFPS < 30) {//<-Don't use direct FPS!
-   Terrain.universal.setDiffuseMap(Terrain.lowResolution[0]);
-   Terrain.universal.setSpecularMap(Terrain.lowResolution[0]);
-   Terrain.universal.setBumpMap(Terrain.lowResolution[1]);
-   TE.Paved.universal.setDiffuseMap(TE.Paved.lowResolution[0]);
-   TE.Paved.universal.setSpecularMap(TE.Paved.lowResolution[0]);
-   TE.Paved.universal.setBumpMap(TE.Paved.lowResolution[1]);
-  } else if (U.maxedFPS(true)) {//Don't create any 'new' images while setting the universals--or RAM will be killed!
-   if (!Terrain.terrain.equals(SL.thick(SL.ground))) {//<-'ground' string will crash if checked in getter, thus skipped
-    Terrain.universal.setDiffuseMap(Images.get(Terrain.terrain.trim()));
-    Terrain.universal.setSpecularMap(Images.get(Terrain.terrain.trim()));
-    Terrain.universal.setBumpMap(Images.getNormalMap(Terrain.terrain.trim()));
-   }
-   TE.Paved.universal.setDiffuseMap(Images.get(SL.paved));
-   TE.Paved.universal.setSpecularMap(Images.get(SL.paved));
-   TE.Paved.universal.setBumpMap(Images.getNormalMap(SL.paved));
-  }
-  Wind.runPowerSet();
+  Texture.adapt();
+  Wind.runSetPower();
   Fog.run();
   Star.run();
   Cloud.run();
@@ -157,11 +140,11 @@ public enum E {//<-Static content for V.E.'s Environment
   Storm.run(gamePlay || mapViewer);
   if (Pool.exists) {
    if (Camera.C.Y < 0) {
-    U.setTranslate(Pool.C[0], Pool.pool.X, 0, Pool.pool.Z);
+    U.setTranslate(Pool.C[0], Pool.core.X, 0, Pool.core.Z);
     Pool.C[0].setVisible(true);
     Pool.C[1].setVisible(false);
    } else {
-    U.setTranslate(Pool.C[1], Pool.pool.X, Pool.depth * .5, Pool.pool.Z);
+    U.setTranslate(Pool.C[1], Pool.core.X, Pool.depth * .5, Pool.core.Z);
     Pool.C[1].setVisible(true);
     Pool.C[0].setVisible(false);
    }
@@ -176,10 +159,10 @@ public enum E {//<-Static content for V.E.'s Environment
   Boulder.run(updateIfMatchBegan);
   Volcano.run(updateIfMatchBegan);
   Meteor.run(gamePlay || mapViewer);
-  Wind.runStorm(gamePlay || mapViewer);
-  Pool.runVision();
-  //Draw order is windstorm, poolVision, screenFlashes
-  for (Vehicle vehicle : I.vehicles) {
+  //*Draw order is windstorm, poolVision, screenFlashes
+  Wind.runStorm(gamePlay || mapViewer);//*
+  Pool.runVision();//*
+  for (var vehicle : I.vehicles) {//*
    if (vehicle.screenFlash > 0) {
     U.fillRGB(GC, 1, 1, 1, vehicle.screenFlash);
     U.fillRectangle(GC, .5, .5, 1, 1);
@@ -188,19 +171,19 @@ public enum E {//<-Static content for V.E.'s Environment
  }
 
  public static void setTerrainSit(Core core, boolean vehicle) {
-  core.Y = U.distanceXZ(core, Pool.pool) < Pool.C[0].getRadius() ? Pool.depth : 0;
+  core.Y = U.distanceXZ(core, Pool.core) < Pool.C[0].getRadius() ? Pool.depth : 0;
   if (Volcano.exists) {
    double volcanoDistance = U.distanceXZ(core, Volcano.C);
    core.Y = volcanoDistance < Volcano.radiusBottom && volcanoDistance > Volcano.radiusTop && core.Y > -Volcano.radiusBottom + volcanoDistance ? Math.min(core.Y, -Volcano.radiusBottom + volcanoDistance) : core.Y;
   }
-  for (TrackPart trackPart : TE.trackParts) {
+  for (var trackPart : TE.trackParts) {
    if ((!trackPart.wraps || vehicle) && !trackPart.trackPlanes.isEmpty() && U.distanceXZ(core, trackPart) < trackPart.renderRadius + core.absoluteRadius) {//<-Not sure how much this section helps optimize in actuality
-    for (TrackPlane trackPlane : trackPart.trackPlanes) {
-     if (!trackPlane.type.contains(SL.gate)) {
+    for (var trackPlane : trackPart.trackPlanes) {
+     if (!trackPlane.type.contains(D.gate)) {
       double trackX = trackPlane.X + trackPart.X, trackZ = trackPlane.Z + trackPart.Z;
       if (Math.abs(core.X - trackX) <= trackPlane.radiusX && Math.abs(core.Z - trackZ) <= trackPlane.radiusZ) {
        double trackY = trackPlane.Y + trackPart.Y;
-       if (trackPlane.type.contains(SL.thick(SL.tree))) {
+       if (trackPlane.type.contains(D.thick(D.tree))) {
         core.Y = trackY - trackPlane.radiusY;
        } else if (trackPlane.wall == TrackPlane.Wall.none) {
         if (trackPlane.YZ == 0 && trackPlane.XY == 0) {
@@ -222,11 +205,11 @@ public enum E {//<-Static content for V.E.'s Environment
  }
 
  public static void setMoundSit(Core core, boolean vehicle) {
-  for (FrustumMound FM : TE.mounds) {
+  for (var FM : TE.mounds) {
    if (!FM.wraps || vehicle) {
-    double distance = U.distanceXZ(core, FM), radiusBottom = FM.mound.getMajorRadius();
+    double distance = U.distanceXZ(core, FM), radiusBottom = FM.majorRadius;
     if (distance < radiusBottom) {
-     double radiusTop = FM.mound.getMinorRadius(), moundHeight = FM.mound.getHeight();
+     double radiusTop = FM.minorRadius, moundHeight = FM.height;
      if (distance < radiusTop) {
       if (core.Y <= FM.Y) {//<-Prevents lifting objects with a Y below mound's Y
        core.Y = Math.min(core.Y, FM.Y - moundHeight);
@@ -284,8 +267,9 @@ public enum E {//<-Static content for V.E.'s Environment
   viewableMapDistance = Double.POSITIVE_INFINITY;
   gravity = 7;
   soundMultiple = 1;
+  TimerEcho.presence = 0;
   Terrain.reset();
   Nodes.setLightRGB(ambientLight, 0, 0, 0);
-  centerShiftOffAt = Maps.name.equals(SL.Maps.speedway2000000) ? 2000 : Maps.name.equals(SL.Maps.volcanicProphecy) ? 1000 : Double.NEGATIVE_INFINITY;
+  centerShiftOffAt = Maps.name.equals(D.Maps.speedway2000000) ? 2000 : Maps.name.equals(D.Maps.volcanicProphecy) ? 1000 : Double.NEGATIVE_INFINITY;
  }
 }

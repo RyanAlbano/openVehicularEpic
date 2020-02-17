@@ -1,8 +1,8 @@
 package ve.vehicles;
 
-import ve.utilities.SL;
-import ve.utilities.Sound;
+import ve.utilities.D;
 import ve.utilities.U;
+import ve.utilities.sound.Controlled;
 
 public class VehicleTurret {
  private final Vehicle V;
@@ -28,13 +28,13 @@ public class VehicleTurret {
   long audioChoice = 0;
   try {
    audioChoice = Math.round(U.getValue(s, 5));
-  } catch (Exception ignored) {
+  } catch (RuntimeException ignored) {
   }
-  if (V.VA.turret == null) {
-   V.VA.turret = new Sound();
-   V.VA.turret.addClip(SL.turret + (audioChoice > 0 ? audioChoice : ""), pitchRatio);
+  if (V.VA.turret == null && V.realVehicle) {
+   V.VA.turret = new Controlled();
+   V.VA.turret.addClip(D.turret + (audioChoice > 0 ? audioChoice : ""), pitchRatio);
   }
-  hasAutoAim = s.contains(SL.autoAim);
+  hasAutoAim = s.contains(D.autoAim);
   driverInside = s.contains("driverViewInside");
  }
 

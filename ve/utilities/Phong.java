@@ -8,8 +8,8 @@ import javafx.scene.paint.PhongMaterial;
 
 public enum Phong {
  ;
- static final Canvas colorGetterCanvas = new Canvas(1, 1);
- static final GraphicsContext colorGetter = colorGetterCanvas.getGraphicsContext2D();
+ private static final Canvas colorGetterCanvas = new Canvas(1, 1);
+ private static final GraphicsContext colorGetter = colorGetterCanvas.getGraphicsContext2D();
 
  public static void setDiffuseRGB(PhongMaterial PM, Color C) {
   PM.setDiffuseColor(C);

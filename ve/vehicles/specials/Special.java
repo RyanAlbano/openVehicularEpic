@@ -2,9 +2,11 @@ package ve.vehicles.specials;
 
 import ve.instances.I;
 import ve.ui.UI;
-import ve.utilities.SL;
-import ve.utilities.Sound;
+import ve.utilities.D;
 import ve.utilities.U;
+import ve.utilities.sound.FireAndForget;
+import ve.utilities.sound.Sound;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
 
 import java.util.*;
@@ -16,15 +18,16 @@ public class Special {
  public final Type type;
  private int currentShot;
  public double randomPosition, randomAngle;
- public double timer;
+ public double timer, timerMultiple = 1;
  public double speed;
- public double diameter, damageDealt;
- public double pushPower;
+ public double diameter;
+ double damageDealt;
+ double pushPower;
  double length;
  double width;
  public final boolean homing;
  boolean hasThrust;
- public boolean ricochets, useSmallHits;
+ boolean ricochets, useSmallHits;
  public boolean fire;
  public long AIAimPrecision = Long.MAX_VALUE;
  public final List<Shot> shots = new ArrayList<>();
@@ -47,7 +50,7 @@ public class Special {
  public Special(Vehicle vehicle, String s) {
   V = vehicle;
   type = Special.Type.valueOf(U.getString(s, 0));
-  if (!type.name().contains(SL.particle) && type != Special.Type.spinner && type != Type.bumpIgnore) {
+  if (V.realVehicle/*<-Memory leak possible if this is not checked!*/ && !type.name().contains(D.particle) && type != Special.Type.spinner && type != Type.bumpIgnore) {
    if (type == Type.energy) {
     sound = new Sound(type.name(), Double.POSITIVE_INFINITY);
    } else {
@@ -60,12 +63,12 @@ public class Special {
    }
   }
   homing = s.contains("homing");
-  aimType = s.contains(SL.autoAim) ? Special.AimType.auto : s.contains("ofVehicleTurret") ? Special.AimType.ofVehicleTurret : AimType.normal;
+  aimType = s.contains(D.autoAim) ? Special.AimType.auto : s.contains("ofVehicleTurret") ? Special.AimType.ofVehicleTurret : AimType.normal;
  }
 
- boolean hasShots() {
+ private boolean hasShots() {
   return type != Type.bumpIgnore && type != Type.spinner && type != Type.phantom && type != Type.teleport && type != Type.energy &&
-  !type.name().contains(SL.particle);
+  !type.name().contains(D.particle);
  }
 
  public void load() {
@@ -115,7 +118,7 @@ public class Special {
    diameter = 10;
    damageDealt = 100;//<-Multiplied by tick in-game
    pushPower = 0;
-   width = 5;
+   width = 50;
    length = width * 10;
    useSmallHits = V.hasShooting = true;
   } else if (type == Type.shell) {
@@ -217,22 +220,23 @@ public class Special {
     shots.add(new Shot(V, this));
    }
    if (!type.name().contains(Type.blaster.name()) && type != Type.raygun && type != Type.forcefield && type != Type.mine && type != Type.thewrath) {
-    for (Port port : ports) {
+    for (var port : ports) {
      port.spit = new Spit(this, port);
     }
    }
    if (smokeyWeapon) {
-    for (Port port : ports) {
+    for (var port : ports) {
      port.addSmokes(this);
     }
    }
   }
   //*Checking if null because these are single objects OUTSIDE of this class--loading them multiple times is bad (for the sounds, especially)
-  if (useSmallHits && V.VA.hitShot == null) {//*
-   V.VA.hitShot = new Sound("hitShot", Double.POSITIVE_INFINITY);
+  //**No need to check realVehicle here--void is already checked for such
+  if (useSmallHits && V.VA.hitShot == null) {//* **
+   V.VA.hitShot = Sounds.softwareBased ? Sounds.hitShot : new FireAndForget(D.hitShot, Double.POSITIVE_INFINITY);
   }
-  if (ricochets && V.VA.hitRicochet == null) {//*
-   V.VA.hitRicochet = new Sound("hitRicochet", Double.POSITIVE_INFINITY);
+  if (ricochets && V.VA.hitRicochet == null) {//* **
+   V.VA.hitRicochet = Sounds.softwareBased ? Sounds.hitRicochet : new FireAndForget(D.hitRicochet, Double.POSITIVE_INFINITY);
   }
   if (type == Type.thewrath && V.P.wrathStuck == null) {//*
    V.P.wrathStuck = new boolean[I.vehiclesInMatch];
@@ -240,7 +244,7 @@ public class Special {
  }
 
  public void run(boolean gamePlay, double V_sinXZ, double V_cosXZ, double V_sinYZ, double V_cosYZ, double V_sinXY, double V_cosXY) {
-  if (type != Type.energy && !type.name().contains(SL.particle) && type != Type.spinner && type != Type.phantom && type != Type.teleport) {
+  if (type != Type.energy && !type.name().contains(D.particle) && type != Type.spinner && type != Type.phantom && type != Type.teleport) {
    if (gamePlay) {
     if (timer <= 0) {
      if (fire && !V.destroyed) {
@@ -266,19 +270,19 @@ public class Special {
     }
    }
    if (!V.destroyed && type == Type.flamethrower) {
-    for (Port port : ports) {
+    for (var port : ports) {
      port.spit.deploy(V_sinXY, V_cosXY);
     }
    }
-   for (Shot shot : shots) {
+   for (var shot : shots) {
     shot.runLogic(gamePlay);
    }
-   for (Port port : ports) {
+   for (var port : ports) {
     if (port.spit != null) {
      port.spit.runLogic(gamePlay, V_sinXZ, V_cosXZ, V_sinYZ, V_cosYZ, V_sinXY, V_cosXY);
     }
     if (port.smokes != null) {
-     for (PortSmoke smoke : port.smokes) {
+     for (var smoke : port.smokes) {
       smoke.runLogic();
      }
     }
@@ -287,7 +291,7 @@ public class Special {
  }
 
  private void fire(double V_sinXZ, double V_cosXZ, double V_sinYZ, double V_cosYZ, double V_sinXY, double V_cosXY) {
-  for (Port port : ports) {
+  for (var port : ports) {
    shots.get(currentShot).deploy(port, V_sinXZ, V_cosXZ, V_sinYZ, V_cosYZ, V_sinXY, V_cosXY);
    currentShot = ++currentShot >= Shot.defaultQuantity ? 0 : currentShot;
    if (port.spit != null) {
@@ -335,9 +339,10 @@ public class Special {
   type == Type.forcefield ? 20 :
   type == Type.thewrath ? 1000 :
   0;
+  timer *= timerMultiple;
  }
 
- public boolean isThrough() {
+ public boolean throughWeapon() {
   return type == Type.raygun || type == Type.flamethrower || type == Type.thewrath || type.name().contains(Type.blaster.name());
  }
 }

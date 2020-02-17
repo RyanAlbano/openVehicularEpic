@@ -6,7 +6,6 @@ import ve.ui.UI;
 import ve.utilities.Camera;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
-import ve.vehicles.Wheel;
 
 public class Spinner {
  private final Vehicle V;
@@ -27,7 +26,7 @@ public class Spinner {
     }
    } else {
     boolean runSpinner = false;
-    for (Special special : V.specials) {
+    for (var special : V.specials) {
      if (special.fire) {
       runSpinner = true;
       break;
@@ -64,12 +63,12 @@ public class Spinner {
    double absSpeed = Math.abs(speed), speedReduction = absSpeed > .95 ? 1 : U.random();
    if (vehicle != null) {
     if (absSpeed > .125) {
+     V.P.hitCheck(vehicle);//<-Must come BEFORE any damage is added, or the target vehicle might not be integral when checked!
      double damageAmount = vehicle.durability * absSpeed * speedReduction + (speedReduction >= 1 ? vehicle.damageCeiling() - vehicle.durability : 0);
      vehicle.addDamage(damageAmount);
      Match.scoreDamage[V.index < I.vehiclesInMatch >> 1 ? 0 : 1] += UI.status == UI.Status.replay ? 0 : damageAmount;
-     V.P.hitCheck(vehicle);
      if (absSpeed > .5) {
-      for (Wheel wheel : vehicle.wheels) {
+      for (var wheel : vehicle.wheels) {
        wheel.sparks(false);
       }
      }
@@ -91,9 +90,9 @@ public class Spinner {
      V.VA.massiveHit.play(Double.NaN, V.VA.distanceVehicleToCamera);
     } else if (absSpeed > .25) {
      V.setCameraShake(15);
-     V.VA.crashHard.play(U.random(5), V.VA.distanceVehicleToCamera);
+     V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
     } else {
-     V.VA.crashSoft.play(U.random(3), V.VA.distanceVehicleToCamera);
+     V.VA.crashSoft.play(Double.NaN, V.VA.distanceVehicleToCamera);
     }
    }
   }

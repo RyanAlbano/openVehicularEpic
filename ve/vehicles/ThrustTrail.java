@@ -9,7 +9,7 @@ import ve.utilities.Phong;
 import ve.utilities.U;
 
 class ThrustTrail extends CoreAdvanced {
- final VehiclePart VP;
+ private final VehiclePart VP;
  final Box B;
  private double stage;
  static final long defaultQuantity = 48;

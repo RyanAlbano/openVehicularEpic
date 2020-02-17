@@ -7,6 +7,8 @@ import ve.instances.CoreAdvanced;
 import ve.ui.Match;
 import ve.utilities.*;
 import ve.effects.Dust;
+import ve.utilities.sound.Controlled;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
 
 import java.util.*;
@@ -26,13 +28,13 @@ public enum Boulder {
  }
 
  static void run(boolean updateIfMatchBegan) {
-  for (Boulder.Instance boulder : instances) {
+  for (var boulder : instances) {
    boulder.run(updateIfMatchBegan);
   }
  }
 
  public static void vehicleInteract(Vehicle V) {
-  for (Instance boulder : instances) {
+  for (var boulder : instances) {
    if (U.distanceXZ(V, boulder) < V.collisionRadius + boulder.S.getRadius() && V.Y > boulder.Y - V.collisionRadius - boulder.S.getRadius()) {//<-Will call incorrectly in the unlikely event a vehicle is underground and the boulder rolls directly overhead
     V.setDamage(V.damageCeiling());
     V.deformParts();
@@ -45,10 +47,10 @@ public enum Boulder {
  public static class Instance extends CoreAdvanced {
 
   public final Sphere S;
-  public final double speed;
+  final double speed;
   private final List<Dust> dusts = new ArrayList<>();
   private int currentDust;
-  public final Sound sound;
+  final Controlled sound;
 
   Instance(double radius, double speed) {
    S = new Sphere(radius, 5);
@@ -58,12 +60,12 @@ public enum Boulder {
    Y = -S.getRadius();
    Phong.setDiffuseRGB(PM, 1);
    Phong.setSpecularRGB(PM, E.Specular.Colors.standard);
-   PM.setDiffuseMap(Images.get(SL.rock));
-   PM.setSpecularMap(Images.get(SL.rock));
-   PM.setBumpMap(Images.getNormalMap(SL.rock));
+   PM.setDiffuseMap(Images.get(D.rock));
+   PM.setSpecularMap(Images.get(D.rock));
+   PM.setBumpMap(Images.getNormalMap(D.rock));
    U.setMaterialSecurely(S, PM);
    Nodes.add(S);
-   sound = new Sound(SL.boulder, Double.POSITIVE_INFINITY);
+   sound = new Controlled(D.boulder + U.random(2));
   }
 
   public void addTransparentNodes() {
@@ -79,7 +81,7 @@ public enum Boulder {
     dusts.get(currentDust).deploy(this);
     currentDust = ++currentDust >= Dust.defaultQuantity ? 0 : currentDust;
    }
-   for (Instance otherBoulder : instances) {
+   for (var otherBoulder : instances) {
     if (U.random() < .5 && otherBoulder != this && U.distance(this, otherBoulder) < S.getRadius() + otherBoulder.S.getRadius()) {
      XZ = U.random(360.);
     }
@@ -100,13 +102,17 @@ public enum Boulder {
     S.setVisible(false);
    }
    if (!Match.muteSound && update) {
-    sound.loop(Math.sqrt(U.distance(this)) * Sound.standardGain(1));
+    sound.loop(Math.sqrt(U.distance(this)) * Sounds.standardGain(1));
    } else {
     sound.stop();
    }
-   for (Dust dust : dusts) {
+   for (var dust : dusts) {
     dust.run();
    }
+  }
+
+  public void closeSound() {
+   if (sound != null) sound.close();
   }
  }
 }

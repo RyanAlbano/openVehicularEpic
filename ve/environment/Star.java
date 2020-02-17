@@ -12,7 +12,8 @@ import java.util.Collection;
 
 public enum Star {
  ;
- private static final PhongMaterial PM = new PhongMaterial(null, null, null, null, Images.white);
+ private static final PhongMaterial PM = new PhongMaterial(U.getColor(0),//<-Stars did not display on Linux if this entry was null!
+ null, null, null, Images.white);
  public static final Collection<Instance> instances = new ArrayList<>();
 
  public static void load(String s) {
@@ -24,7 +25,7 @@ public enum Star {
  }
 
  public static void run() {
-  for (Star.Instance star : instances) {
+  for (var star : instances) {
    star.run();
   }
  }

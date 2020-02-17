@@ -11,10 +11,10 @@ import ve.environment.E;
 import ve.instances.I;
 import ve.ui.Match;
 import ve.ui.UI;
-import ve.ui.Units;
+import ve.ui.options.Units;
 import ve.utilities.Camera;
 import ve.utilities.Phong;
-import ve.utilities.SL;
+import ve.utilities.D;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
 
@@ -75,7 +75,7 @@ public enum Arrow {
 
  public static void run() {
   if (lastStatus != status) {
-   Match.print = status == Arrow.Status.locked ? "Arrow now Locked on " + UI.playerNames[target] : "Arrow now pointing at " + (status == Arrow.Status.vehicles ? "Vehicles" : SL.Map);
+   Match.print = status == Arrow.Status.locked ? "Arrow now Locked on " + UI.playerNames[target] : "Arrow now pointing at " + (status == Arrow.Status.vehicles ? "Vehicles" : D.Map);
    Match.messageWait = false;
    Match.printTimer = 50;
    lastStatus = status;
@@ -95,7 +95,7 @@ public enum Arrow {
   } else {
    if (status != Arrow.Status.locked) {
     double compareDistance = Double.POSITIVE_INFINITY;
-    for (Vehicle vehicle : I.vehicles) {
+    for (var vehicle : I.vehicles) {
      if (vehicle.index != I.vehiclePerspective && vehicle.isIntegral() && U.distance(V, vehicle) < compareDistance) {
       target = vehicle.index;
       compareDistance = U.distance(V, vehicle);

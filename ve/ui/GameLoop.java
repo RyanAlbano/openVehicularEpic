@@ -3,20 +3,16 @@ package ve.ui;
 import javafx.animation.AnimationTimer;
 import javafx.stage.Stage;
 import ve.environment.E;
-import ve.environment.FrustumMound;
 import ve.environment.Pool;
 import ve.instances.I;
 import ve.trackElements.Arrow;
 import ve.trackElements.TE;
-import ve.trackElements.trackParts.TrackPart;
+import ve.ui.options.GraphicsOptions;
+import ve.ui.options.Options;
+import ve.ui.options.SoundOptions;
 import ve.utilities.*;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Physics;
-import ve.vehicles.Vehicle;
-import ve.vehicles.VehiclePart;
-import ve.vehicles.explosions.Explosion;
-import ve.vehicles.specials.Port;
-import ve.vehicles.specials.PortSmoke;
-import ve.vehicles.specials.Shot;
 import ve.vehicles.specials.Special;
 
 import java.io.File;
@@ -73,15 +69,15 @@ class GameLoop extends AnimationTimer {
     E.canvas.setHeight(UI.height);
    }
    if (gamePlay || UI.status == UI.Status.paused || UI.status == UI.Status.optionsMatch) {
-    for (Vehicle vehicle : I.vehicles) {//*These are SPLIT so that energy towers can empower specials before the affected vehicles fire, and to make shots render correctly
-     for (Special special : vehicle.specials) {
+    for (var vehicle : I.vehicles) {//*These are SPLIT so that energy towers can empower specials before the affected vehicles fire, and to make shots render correctly
+     for (var special : vehicle.specials) {
       if (special.type == Special.Type.energy) {
        special.EB.run(gamePlay);//*
       }
      }
     }
     //Energization before runMiscellaneous() is called
-    for (Vehicle vehicle : I.vehicles) {
+    for (var vehicle : I.vehicles) {
      vehicle.runMiscellaneous(gamePlay);
     }
     if (Match.started) {
@@ -105,7 +101,7 @@ class GameLoop extends AnimationTimer {
       Network.matchDataOut();
      }
      if (gamePlay) {
-      for (Vehicle vehicle : I.vehicles) {
+      for (var vehicle : I.vehicles) {
        vehicle.getPlayerInput();
        vehicle.P.run();
       }
@@ -113,23 +109,23 @@ class GameLoop extends AnimationTimer {
        Recorder.vehicles.get(n).recordVehicle(I.vehicles.get(n));
       }
      }
-     for (Vehicle vehicle : I.vehicles) {
-      for (Explosion explosion : vehicle.explosions) {
+     for (var vehicle : I.vehicles) {
+      for (var explosion : vehicle.explosions) {
        explosion.run(gamePlay);
       }
       double
       sinXZ = U.sin(vehicle.XZ), cosXZ = U.cos(vehicle.XZ),
       sinYZ = U.sin(vehicle.YZ), cosYZ = U.cos(vehicle.YZ),
       sinXY = U.sin(vehicle.XY), cosXY = U.cos(vehicle.XY);
-      for (Special special : vehicle.specials) {
+      for (var special : vehicle.specials) {
        special.run(gamePlay, sinXZ, cosXZ, sinYZ, cosYZ, sinXY, cosXY);//*
       }
      }
      if (gamePlay) {
-      for (Vehicle vehicle : I.vehicles) {
+      for (var vehicle : I.vehicles) {
        vehicle.P.runCollisions();
       }
-      for (Vehicle vehicle : I.vehicles) {
+      for (var vehicle : I.vehicles) {
        if (vehicle.destroyed && vehicle.P.vehicleHit > -1) {
         Match.scoreKill[vehicle.index < I.vehiclesInMatch >> 1 ? 1 : 0] += UI.status == UI.Status.replay ? 0 : 1;
         if (vehicle.index != I.userPlayerIndex) {
@@ -142,7 +138,7 @@ class GameLoop extends AnimationTimer {
       if (UI.status == UI.Status.play) {
        Recorder.recordGeneral();
        if (Network.mode == Network.Mode.OFF) {
-        for (Vehicle vehicle : I.vehicles) {
+        for (var vehicle : I.vehicles) {
          vehicle.AI.run();
         }
        }
@@ -150,7 +146,7 @@ class GameLoop extends AnimationTimer {
      }
      Recorder.updateFrame();
     } else {
-     for (Vehicle vehicle : I.vehicles) {
+     for (var vehicle : I.vehicles) {
       vehicle.setTurretY();
      }
      Network.preMatchCommunication(gamePlay);
@@ -186,13 +182,13 @@ class GameLoop extends AnimationTimer {
       } else {
        Network.ready[I.userPlayerIndex] = Network.waiting = true;
        if (Network.mode == Network.Mode.HOST) {
-        for (PrintWriter PW : Network.out) {
-         PW.println(SL.Ready + "0");
-         PW.println(SL.Ready + "0");
+        for (var PW : Network.out) {
+         PW.println(D.Ready + "0");
+         PW.println(D.Ready + "0");
         }
        } else {
-        Network.out.get(0).println(SL.Ready);
-        Network.out.get(0).println(SL.Ready);
+        Network.out.get(0).println(D.Ready);
+        Network.out.get(0).println(D.Ready);
        }
       }
       Keys.space = false;
@@ -222,17 +218,17 @@ class GameLoop extends AnimationTimer {
     //RENDERING begins here
     Camera.run(I.vehicles.get(I.vehiclePerspective), gamePlay);
     E.run(gamePlay);
-    for (Vehicle vehicle : I.vehicles) {
-     for (Special special : vehicle.specials) {
-      for (Shot shot : special.shots) {
+    for (var vehicle : I.vehicles) {
+     for (var special : vehicle.specials) {
+      for (var shot : special.shots) {
        shot.runRender();
       }
-      for (Port port : special.ports) {
+      for (var port : special.ports) {
        if (port.spit != null) {
         port.spit.runRender();
        }
        if (port.smokes != null) {
-        for (PortSmoke smoke : port.smokes) {
+        for (var smoke : port.smokes) {
          smoke.runRender();
         }
        }
@@ -241,12 +237,12 @@ class GameLoop extends AnimationTimer {
        special.EB.renderMesh();
       }
      }
-     for (VehiclePart part : vehicle.parts) {
+     for (var part : vehicle.parts) {
       Nodes.removePointLight(part.pointLight);
      }
     }
     if (Maps.defaultVehicleLightBrightness > 0) {
-     for (Vehicle vehicle : I.vehicles) {
+     for (var vehicle : I.vehicles) {
       Nodes.removePointLight(vehicle.burnLight);
      }
     }
@@ -255,7 +251,7 @@ class GameLoop extends AnimationTimer {
     } else {
      int closest = I.vehiclePerspective;
      double compareDistance = Double.POSITIVE_INFINITY;
-     for (Vehicle vehicle : I.vehicles) {
+     for (var vehicle : I.vehicles) {
       if (vehicle.index != I.vehiclePerspective && U.distance(I.vehicles.get(I.vehiclePerspective), vehicle) < compareDistance) {
        closest = vehicle.index;
        compareDistance = U.distance(I.vehicles.get(I.vehiclePerspective), vehicle);
@@ -268,16 +264,16 @@ class GameLoop extends AnimationTimer {
       I.vehicles.get(closest).runRender(gamePlay);
       I.vehicles.get(I.vehiclePerspective).runRender(gamePlay);
      }
-     for (Vehicle vehicle : I.vehicles) {
+     for (var vehicle : I.vehicles) {
       if (vehicle.index != I.vehiclePerspective && vehicle.index != closest) {
        vehicle.runRender(gamePlay);
       }
      }
     }
-    for (TrackPart trackPart : TE.trackParts) {
+    for (var trackPart : TE.trackParts) {
      trackPart.runGraphics(renderALL);
     }
-    for (FrustumMound mound : TE.mounds) {
+    for (var mound : TE.mounds) {
      mound.runGraphics();
     }
     TE.bonus.run();
@@ -294,6 +290,10 @@ class GameLoop extends AnimationTimer {
     UI.runPaused();
    } else if (UI.status == UI.Status.optionsMatch || UI.status == UI.Status.optionsMenu) {
     Options.run();
+   } else if (UI.status == UI.Status.optionsGraphics) {
+    GraphicsOptions.run();
+   } else if (UI.status == UI.Status.optionsSound) {
+    SoundOptions.run();
    } else if (UI.status == UI.Status.vehicleViewer) {
     Viewer.Vehicle.run(gamePlay);
    } else if (UI.status == UI.Status.mapViewer) {
@@ -321,7 +321,7 @@ class GameLoop extends AnimationTimer {
    U.yinYang = !U.yinYang;
    U.timerBase20 = (U.timerBase20 += U.tick) > 20 ? 0 : U.timerBase20;
    if (UI.status != UI.Status.vehicleSelect) {
-    for (Vehicle vehicle : I.vehicles) {
+    for (var vehicle : I.vehicles) {
      if (vehicle != null && !vehicle.destroyed) {
       vehicle.flicker = !vehicle.flicker;
      }
@@ -333,7 +333,9 @@ class GameLoop extends AnimationTimer {
      UI.selectionWait = 30;
      UI.selectionTimer = 0;
     }
-    UI.selectionWait -= UI.selectionWait > 0 ? U.tick : 0;
+    if (UI.selectionWait > 0) {
+     UI.selectionWait -= U.tick;
+    }
    } else {
     UI.selectionWait = -1;
     UI.selectionTimer = 0;
@@ -375,19 +377,19 @@ class GameLoop extends AnimationTimer {
   UI.status = UI.Status.mainMenu;
   Tournament.stage = UI.selected = 0;
   Nodes.reset();
-  Sounds.clear();
+  Sounds.reset();
   Keys.falsify();
   for (int n = VS.chosen.length; --n >= 0; ) {//<-Prevents recursive shutout from Vehicle Select if a bugged vehicle is causing such
    VS.chosen[n] = U.random(I.vehicleModels.size());
   }
   if (Network.mode == Network.Mode.HOST) {
-   for (PrintWriter PW : Network.out) {
-    PW.println(SL.CANCEL);
-    PW.println(SL.CANCEL);
+   for (var PW : Network.out) {
+    PW.println(D.CANCEL);
+    PW.println(D.CANCEL);
    }
   } else if (Network.mode == Network.Mode.JOIN) {
-   Network.out.get(0).println(SL.CANCEL);
-   Network.out.get(0).println(SL.CANCEL);
+   Network.out.get(0).println(D.CANCEL);
+   Network.out.get(0).println(D.CANCEL);
   }
  }
 }

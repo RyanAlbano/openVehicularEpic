@@ -7,7 +7,7 @@ import ve.instances.Core;
 import ve.ui.Maps;
 import ve.utilities.Camera;
 import ve.utilities.Nodes;
-import ve.utilities.SL;
+import ve.utilities.D;
 import ve.utilities.U;
 
 import java.util.ArrayList;
@@ -18,13 +18,13 @@ enum GroundPlate {
  public static final List<Instance> instances = new ArrayList<>();
 
  static void load(String terrain) {
-  if (Ground.level <= 0 && !terrain.contains(SL.thick(SL.snow))) {
+  if (Ground.level <= 0 && !terrain.contains(D.thick(D.snow))) {
    for (int n = 0; n < 419; n++) {//<-'419' is the minimum needed to have groundPlates cover the entire ground surface with NO gaps, before duplicates get removed
     instances.add(new Instance(Maps.name.equals("Epic Trip") ? 1500 : 1732.0508075688772935274463415059));
    }
    double baseX = -30000, baseZ = -30000;
    boolean shift = false;
-   for (Instance groundPlate : instances) {
+   for (var groundPlate : instances) {
     groundPlate.X = baseX;
     groundPlate.Z = baseZ;
     baseZ += 3000;
@@ -38,7 +38,7 @@ enum GroundPlate {
     U.setMaterialSecurely(groundPlate.C, Terrain.universal);
     groundPlate.clampXZ();
     groundPlate.C.setRotationAxis(Rotate.Y_AXIS);
-    groundPlate.C.setRotate(-30 + (60 * U.random(6)));//<-INT random for hex-rotation!
+    groundPlate.C.setRotate(-30 + (60 * U.random(6/*<-INT random for hex-rotation!*/)));
     Nodes.add(groundPlate.C);
    }
    for (int n = 0; n < instances.size(); n++) {//<-NO enhanced loop--ConcurrentModificationException will occur!
@@ -50,7 +50,7 @@ enum GroundPlate {
  static void run() {
   if (!instances.isEmpty()) {
    double radius = Pool.C[0].getRadius() - instances.get(0).C.getRadius();
-   for (GroundPlate.Instance groundPlate : instances) {
+   for (var groundPlate : instances) {
     groundPlate.run(radius);
    }
   }
@@ -68,7 +68,7 @@ enum GroundPlate {
   void run(double radius) {
    clampXZ();
    Y = Math.max(0, -Camera.C.Y * .005);
-   if (Y > Camera.C.Y && (!Pool.exists || U.distanceXZ(this, Pool.pool) > radius) && U.render(this, -absoluteRadius, false, true)) {
+   if (Y > Camera.C.Y && (!Pool.exists || U.distanceXZ(this, Pool.core) > radius) && U.render(this, -absoluteRadius, false, true)) {
     U.setTranslate(C, this);
     C.setVisible(true);
    } else {

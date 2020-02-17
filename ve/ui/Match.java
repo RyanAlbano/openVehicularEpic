@@ -8,7 +8,10 @@ import ve.instances.I;
 import ve.trackElements.Arrow;
 import ve.trackElements.Bonus;
 import ve.trackElements.TE;
+import ve.ui.options.Options;
+import ve.ui.options.Units;
 import ve.utilities.*;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Physics;
 import ve.vehicles.Vehicle;
 
@@ -19,7 +22,7 @@ public enum Match {
  public static boolean started;
  public static boolean messageWait;
  public static double timeLeft;
- public static double stuntTimer;
+ private static double stuntTimer;
  public static double printTimer;
  public static String print = "";
  private static String stuntPrint = "";
@@ -86,7 +89,7 @@ public enum Match {
    U.font(.0125);
    if (!DestructionLog.inUse) {
     if (V.P.flipped() && V.P.flipTimer > 0) {
-     if (V.P.mode.name().startsWith(SL.drive)) {
+     if (V.P.mode.name().startsWith(D.drive)) {
       U.fillRGB(U.yinYang ? 0 : 1);
       U.text("Bad Landing", .075);
      }
@@ -101,8 +104,8 @@ public enum Match {
   scoreStunt0 = 1 + Math.round(scoreStunt[0] * .0005),
   scoreStunt1 = 1 + Math.round(scoreStunt[1] * .0005);
   double
-  scoreDamage0 = 1 + scoreDamage[0] * .000125,//*
-  scoreDamage1 = 1 + scoreDamage[1] * .000125;//*Values for scoreDamage dealt should be small--gameplay is arguably better if the damage dealt carries less weight than say, stunts or kills
+  scoreDamage0 = 1 + scoreDamage[0] * .0000125,//*
+  scoreDamage1 = 1 + scoreDamage[1] * .0000125;//*Values for scoreDamage should be small--gameplay is arguably better if the damage dealt carries less weight than say, stunts or kills
   double[] score = {
   scoreCheckpoint[0] * scoreLap[0] * scoreStunt0 * scoreDamage0 * scoreKill[0],
   scoreCheckpoint[1] * scoreLap[1] * scoreStunt1 * scoreDamage1 * scoreKill[1]};
@@ -253,7 +256,7 @@ public enum Match {
   }
  }
 
- public static void drawBumpIgnore() {
+ private static void drawBumpIgnore() {
   double top = UI.height * .84, bottom = UI.height * .87,
   hardLeft = UI.width * .01, left = UI.width * .02, right = UI.width * .03, hardRight = UI.width * .04;
   double[]
@@ -266,7 +269,7 @@ public enum Match {
   UI.GC.strokeLine(hardRight, top, hardLeft, bottom);
  }
 
- static void runMatchEndInfo() {
+ private static void runMatchEndInfo() {
   if (timeLeft <= 0) {
    double titleHeight = .12625;
    if (I.vehiclesInMatch > 1) {
@@ -327,15 +330,15 @@ public enum Match {
    long computeStuntYZ = 0, computeStuntXY = 0, computeStuntXZ = 0;
    //FLIPS
    while (computeStuntYZ < Math.abs(V.P.stuntYZ) - 45) computeStuntYZ += 360;
-   stuntFlips = computeStuntYZ > 0 ? (V.flipCheck[0] && V.flipCheck[1] ? SL.BiDirectional + " " : "") + computeStuntYZ + "-Flip" :
+   stuntFlips = computeStuntYZ > 0 ? (V.flipCheck[0] && V.flipCheck[1] ? D.BiDirectional + " " : "") + computeStuntYZ + "-Flip" :
    V.flipCheck[0] || V.flipCheck[1] ? "Half-Flip" : stuntFlips;
    //ROLLS
    while (computeStuntXY < Math.abs(V.P.stuntXY) - 45) computeStuntXY += 360;
-   stuntRolls = computeStuntXY > 0 ? (V.rollCheck[0] && V.rollCheck[1] ? SL.BiDirectional + " " : "") + computeStuntXY + "-Roll" :
+   stuntRolls = computeStuntXY > 0 ? (V.rollCheck[0] && V.rollCheck[1] ? D.BiDirectional + " " : "") + computeStuntXY + "-Roll" :
    V.rollCheck[0] || V.rollCheck[1] ? "Half-Roll" : stuntRolls;
    //SPINS
    while (computeStuntXZ < Math.abs(V.P.stuntXZ) - 45) computeStuntXZ += 180;
-   stuntSpins = computeStuntXZ > 0 ? (V.spinCheck[0] && V.spinCheck[1] ? SL.BiDirectional + " " : "") + computeStuntXZ + "-Spin" :
+   stuntSpins = computeStuntXZ > 0 ? (V.spinCheck[0] && V.spinCheck[1] ? D.BiDirectional + " " : "") + computeStuntXZ + "-Spin" :
    V.spinCheck[0] || V.spinCheck[1] ? "Half-Spin" : stuntSpins;
    //
    stuntTimer = (stuntFlips.isEmpty() ? 0 : 25) + (stuntRolls.isEmpty() ? 0 : 25) + (stuntSpins.isEmpty() ? 0 : 25) + (V.offTheEdge ? 25 : 0);
@@ -360,7 +363,7 @@ public enum Match {
   scoreCheckpoint[0] = scoreCheckpoint[1] = scoreLap[0] = scoreLap[1] = scoreKill[0] = scoreKill[1] = 1;
   scoreDamage[0] = scoreDamage[1] = Camera.aroundVehicleXZ = printTimer = Camera.lookAround = scoreStunt[0] = scoreStunt[1] = 0;
   Bonus.big.setVisible(true);
-  for (Bonus.Ball bonusBall : Bonus.balls) {
+  for (var bonusBall : Bonus.balls) {
    bonusBall.S.setVisible(false);
   }
   Bonus.holder = Network.bonusHolder = -1;

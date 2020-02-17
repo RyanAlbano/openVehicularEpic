@@ -16,13 +16,13 @@ public enum Snowball {
  private static final long wrapDistance = 2000;
 
  public static void run() {
-  for (Snowball.Instance snowball : instances) {
+  for (var snowball : instances) {
    snowball.run();
   }
  }
 
  public static class Instance extends CoreAdvanced {
-  public final Sphere S;
+  final Sphere S;
 
   public Instance() {
    X = U.randomPlusMinus(1000000.);

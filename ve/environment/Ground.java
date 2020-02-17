@@ -6,7 +6,7 @@ import javafx.scene.shape.Cylinder;
 import ve.ui.Maps;
 import ve.utilities.Nodes;
 import ve.utilities.Phong;
-import ve.utilities.SL;
+import ve.utilities.D;
 import ve.utilities.U;
 
 public enum Ground {
@@ -31,7 +31,7 @@ public enum Ground {
    RGB = U.getColor(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
    Phong.setDiffuseRGB((PhongMaterial) C.getMaterial(), RGB);
    Terrain.RGB = U.getColor(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
-   if (!Maps.name.equals(SL.Maps.crystalCavern)) {
+   if (!Maps.name.equals(D.Maps.crystalCavern)) {
     Nodes.add(C);
     exists = true;
    }

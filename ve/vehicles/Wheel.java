@@ -38,7 +38,7 @@ public /*Must be public, or fails in Tsunami!*/class Wheel extends CoreAdvanced 
    sparkZ = rotateZ[0] + V.Z;
   }
   double sparkSpeed = V.P.getNetSpeed();
-  for (Spark spark : sparks) {
+  for (var spark : sparks) {
    if (U.random() < .25) {
     spark.deploy(sparkX, sparkY, sparkZ, sparkSpeed);
    }

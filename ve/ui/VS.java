@@ -2,15 +2,12 @@ package ve.ui;
 
 import javafx.scene.paint.PhongMaterial;
 import ve.environment.Ground;
-import ve.environment.Snowball;
-import ve.environment.storm.Rain;
 import ve.instances.I;
 import ve.ui.converter.MainFrame;
+import ve.ui.options.Units;
 import ve.utilities.*;
 import ve.vehicles.Vehicle;
 import ve.vehicles.specials.Special;
-
-import java.io.PrintWriter;
 
 public enum VS {//VehicleSelect
  ;
@@ -31,19 +28,19 @@ public enum VS {//VehicleSelect
    }
    if (Network.mode == Network.Mode.HOST) {
     if (U.timerBase20 <= 0) {
-     for (PrintWriter PW : Network.out) {
-      PW.println(SL.Vehicle + "0" + "(" + I.vehicles.get(0).name);
+     for (var PW : Network.out) {
+      PW.println(D.Vehicle + "0" + "(" + I.vehicles.get(0).name);
      }
     }
     for (n = I.vehiclesInMatch; --n > 0; ) {
      String s = Network.readIn(n - 1);
-     if (s.startsWith(SL.CANCEL)) {
+     if (s.startsWith(D.CANCEL)) {
       UI.escapeToLast(false);
-     } else if (s.startsWith(SL.Vehicle + "(")) {
+     } else if (s.startsWith(D.Vehicle + "(")) {
       chosen[n] = I.getVehicleIndex(U.getString(s, 0));
       if (I.vehiclesInMatch > 2) {
-       for (PrintWriter out : Network.out) {
-        out.println(SL.Vehicle + n + "(" + U.getString(s, 0));
+       for (var out : Network.out) {
+        out.println(D.Vehicle + n + "(" + U.getString(s, 0));
        }
       }
       Network.ready[n] = true;
@@ -52,15 +49,15 @@ public enum VS {//VehicleSelect
     }
    } else {
     if (U.timerBase20 <= 0) {
-     Network.out.get(0).println(SL.Vehicle + "(" + I.vehicles.get(0).name);
+     Network.out.get(0).println(D.Vehicle + "(" + I.vehicles.get(0).name);
     }
     String s = Network.readIn(0);
-    if (s.startsWith(SL.CANCEL)) {
+    if (s.startsWith(D.CANCEL)) {
      UI.escapeToLast(false);
     } else {
      for (n = I.vehiclesInMatch; --n >= 0; ) {
       if (n != I.userPlayerIndex) {
-       if (s.startsWith(SL.Vehicle + n + "(")) {
+       if (s.startsWith(D.Vehicle + n + "(")) {
         chosen[n] = I.getVehicleIndex(U.getString(s, 0));
         Network.ready[n] = true;
        }
@@ -88,12 +85,6 @@ public enum VS {//VehicleSelect
     Camera.setAngleTable();
     U.setTranslate(Ground.C, 0, 0, 0);
     Phong.setDiffuseRGB((PhongMaterial) Ground.C.getMaterial(), .1);
-    for (Rain.Drop raindrop : Rain.raindrops) {
-     Nodes.add(raindrop.C);
-    }
-    for (Snowball.Instance snowball : Snowball.instances) {
-     Nodes.add(snowball.S);
-    }
     I.addVehicleModel(chosen[index], showModel);
     allSame = false;
     UI.page = 1;
@@ -133,8 +124,8 @@ public enum VS {//VehicleSelect
    U.text(UI.NEXT_, .875, .5);
    U.font(.01);
    if (showModel) {
-    U.text(SL.Meshes_ + V.parts.size(), .8);
-    U.text(SL.Vertices_ + V.vertexQuantity, .825);
+    U.text(D.Meshes_ + V.parts.size(), .8);
+    U.text(D.Vertices_ + V.vertexQuantity, .825);
    }
    U.text("Vehicles [" + (showModel ? "SHOW (can be slow--not recommended)" : UI.HIDE) + "]", .875);
    U.text(UI.CONTINUE + (allSame ? " (with all players as " + V.name + ")" : ""), .9);
@@ -236,12 +227,10 @@ public enum VS {//VehicleSelect
    UI.selected;
   }
   U.rotate(Camera.PC, Camera.YZ, -Camera.XZ);
-  Rain.run(false);
-  Snowball.run();
   UI.gameFPS = Double.POSITIVE_INFINITY;
  }
 
- static void runDrawProperties(Vehicle V) {
+ private static void runDrawProperties(Vehicle V) {
   if (showModel) {
    U.font(.02);
    U.text(V.name, .15);
@@ -266,13 +255,13 @@ public enum VS {//VehicleSelect
    if (V.type != Vehicle.Type.turret) {
     U.textR("Top Speed:", lineLL, Y1);
     boolean hasWrath = false;
-    for (Special special : V.specials) {
+    for (var special : V.specials) {
      if (special.type == Special.Type.thewrath) {
       hasWrath = true;
       break;
      }
     }
-    String topSpeed = V.topSpeeds[1] >= Long.MAX_VALUE ? SL.None :
+    String topSpeed = V.topSpeeds[1] >= Long.MAX_VALUE ? D.None :
     V.speedBoost > 0 && V.topSpeeds[2] >= Long.MAX_VALUE ? "None (with Speed Boost)" :
     hasWrath ? Math.round(Units.getSpeed(V.topSpeeds[2])) + " " + Units.getSpeedName() + " (with Wrath engaged)" :
     V.speedBoost > 0 ? Math.round(Units.getSpeed(V.topSpeeds[2])) + " " + Units.getSpeedName() + " (with Speed Boost)" :
@@ -282,17 +271,17 @@ public enum VS {//VehicleSelect
     U.textL("+" + V.accelerationStages[0] + ",  +" + V.accelerationStages[1], lineLR, Y2);
    }
    U.textR("Handling Response:", lineLL, Y3);
-   U.textL(V.turnRate == Double.POSITIVE_INFINITY ? SL.Instant : String.valueOf(V.turnRate), lineLR, Y3);
+   U.textL(V.turnRate == Double.POSITIVE_INFINITY ? D.Instant : String.valueOf(V.turnRate), lineLR, Y3);
    if (V.type == Vehicle.Type.vehicle) {
     U.textR("Stunt Response:", lineLL, Y4);
-    U.textL(String.valueOf(V.airAcceleration == Double.POSITIVE_INFINITY ? SL.Instant : (float) V.airAcceleration), lineLR, Y4);
+    U.textL(String.valueOf(V.airAcceleration == Double.POSITIVE_INFINITY ? D.Instant : (float) V.airAcceleration), lineLR, Y4);
    }
   }
   boolean hasForceField = false;
   if (!V.specials.isEmpty()) {
    U.textR("Special(s):", lineLL, Y5);
    StringBuilder specials = new StringBuilder();
-   for (Special special : V.specials) {
+   for (var special : V.specials) {
     specials.append(special.type.name()).append(", ");
     hasForceField = special.type == Special.Type.forcefield || hasForceField;
    }

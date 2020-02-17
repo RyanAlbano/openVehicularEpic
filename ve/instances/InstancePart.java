@@ -65,7 +65,7 @@ public class InstancePart extends Core {
   }
  }
 
- protected void setFaces(Instance I, long vertexQuantity) {
+ protected static void setFaces(TriangleMesh TM, long vertexQuantity, Instance I) {
   if (vertexQuantity == 3) {
    TM.getFaces().addAll(0, 0, 1, 1, 2, 2,
    0, 0, 2, 2, 1, 1);
@@ -146,7 +146,7 @@ public class InstancePart extends Core {
   }
  }
 
- protected void setConic(Instance I, long vertexQuantity) {
+ protected static void setConic(TriangleMesh TM, long vertexQuantity, Instance I) {
   if (vertexQuantity == 4) {
    TM.getFaces().addAll(0, 0, 1, 1, 2, 2, 0, 0, 2, 2, 3, 3, 0, 0, 3, 3, 1, 1,
    0, 0, 2, 2, 1, 1, 0, 0, 3, 3, 2, 2, 0, 0, 1, 1, 3, 3);
@@ -215,7 +215,7 @@ public class InstancePart extends Core {
   }
  }
 
- protected void setCylindric(Instance I, long vertexQuantity) {
+ public static void setCylindric(TriangleMesh TM, long vertexQuantity, Instance I) {
   if (vertexQuantity == 6) {
    TM.getFaces().addAll(0, 0, 1, 1, 4, 4, 1, 1, 2, 2, 5, 5, 2, 2, 0, 0, 3, 3,
    0, 0, 3, 3, 4, 4, 1, 1, 4, 4, 5, 5, 2, 2, 5, 5, 3, 3);
@@ -271,7 +271,7 @@ public class InstancePart extends Core {
   }
  }
 
- protected void setStrip(Instance I, long vertexQuantity) {
+ protected static void setStrip(TriangleMesh TM, long vertexQuantity, Instance I) {
   if (vertexQuantity == 6) {
    TM.getFaces().addAll(0, 0, 1, 1, 4, 4, 1, 1, 2, 2, 5, 5,
    0, 0, 3, 3, 4, 4, 1, 1, 4, 4, 5, 5);
@@ -347,7 +347,7 @@ public class InstancePart extends Core {
   }
  }
 
- protected void setSquares(Instance I, long vertexQuantity) {
+ protected static void setSquares(TriangleMesh TM, long vertexQuantity, Instance I) {
   if (vertexQuantity == 4) {
    TM.getFaces().addAll(0, 0, 1, 1, 2, 2, 0, 0, 3, 3, 2, 2);
    TM.getFaces().addAll(0, 0, 2, 2, 1, 1, 0, 0, 2, 2, 3, 3);
@@ -389,7 +389,7 @@ public class InstancePart extends Core {
   }
  }
 
- protected void setTriangles(int vertexQuantity) {
+ protected static void setTriangles(TriangleMesh TM, int vertexQuantity) {
   int[] faces = new int[vertexQuantity << 2];
   {//FORWARD
    int baseCoordinate = 0;
@@ -418,7 +418,7 @@ public class InstancePart extends Core {
   TM.getFaces().addAll(faces);
  }
 
- protected void setWheelRingFaces() {
+ protected static void setWheelRingFaces(TriangleMesh TM) {
   int i = 48;
   TM.getFaces().addAll(0 + i, 0 + i, 1 + i, 1 + i, 25 + i, 25 + i, 1 + i, 1 + i, 2 + i, 2 + i, 26 + i, 26 + i, 2 + i, 2 + i, 3 + i, 3 + i, 27 + i, 27 + i, 3 + i, 3 + i, 4 + i, 4 + i, 28 + i, 28 + i, 4 + i, 4 + i, 5 + i, 5 + i, 29 + i, 29 + i, 5 + i, 5 + i, 6 + i, 6 + i, 30 + i, 30 + i, 6 + i, 6 + i, 7 + i, 7 + i, 31 + i, 31 + i, 7 + i, 7 + i, 8 + i, 8 + i, 32 + i, 32 + i, 8 + i, 8 + i, 9 + i, 9 + i, 33 + i, 33 + i, 9 + i, 9 + i, 10 + i, 10 + i, 34 + i, 34 + i, 10 + i, 10 + i, 11 + i, 11 + i, 35 + i, 35 + i, 11 + i, 11 + i, 12 + i, 12 + i, 36 + i, 36 + i, 12 + i, 12 + i, 13 + i, 13 + i, 37 + i, 37 + i, 13 + i, 13 + i, 14 + i, 14 + i, 38 + i, 38 + i, 14 + i, 14 + i, 15 + i, 15 + i, 39 + i, 39 + i, 15 + i, 15 + i, 16 + i, 16 + i, 40 + i, 40 + i, 16 + i, 16 + i, 17 + i, 17 + i, 41 + i, 41 + i, 17 + i, 17 + i, 18 + i, 18 + i, 42 + i, 42 + i, 18 + i, 18 + i, 19 + i, 19 + i, 43 + i, 43 + i, 19 + i, 19 + i, 20 + i, 20 + i, 44 + i, 44 + i, 20 + i, 20 + i, 21 + i, 21 + i, 45 + i, 45 + i, 21 + i, 21 + i, 22 + i, 22 + i, 46 + i, 46 + i, 22 + i, 22 + i, 23 + i, 23 + i, 47 + i, 47 + i, 23 + i, 23 + i, 0 + i, 0 + i, 24 + i, 24 + i,
   0 + i, 0 + i, 24 + i, 24 + i, 25 + i, 25 + i, 1 + i, 1 + i, 25 + i, 25 + i, 26 + i, 26 + i, 2 + i, 2 + i, 26 + i, 26 + i, 27 + i, 27 + i, 3 + i, 3 + i, 27 + i, 27 + i, 28 + i, 28 + i, 4 + i, 4 + i, 28 + i, 28 + i, 29 + i, 29 + i, 5 + i, 5 + i, 29 + i, 29 + i, 30 + i, 30 + i, 6 + i, 6 + i, 30 + i, 30 + i, 31 + i, 31 + i, 7 + i, 7 + i, 31 + i, 31 + i, 32 + i, 32 + i, 8 + i, 8 + i, 32 + i, 32 + i, 33 + i, 33 + i, 9 + i, 9 + i, 33 + i, 33 + i, 34 + i, 34 + i, 10 + i, 10 + i, 34 + i, 34 + i, 35 + i, 35 + i, 11 + i, 11 + i, 35 + i, 35 + i, 36 + i, 36 + i, 12 + i, 12 + i, 36 + i, 36 + i, 37 + i, 37 + i, 13 + i, 13 + i, 37 + i, 37 + i, 38 + i, 38 + i, 14 + i, 14 + i, 38 + i, 38 + i, 39 + i, 39 + i, 15 + i, 15 + i, 39 + i, 39 + i, 40 + i, 40 + i, 16 + i, 16 + i, 40 + i, 40 + i, 41 + i, 41 + i, 17 + i, 17 + i, 41 + i, 41 + i, 42 + i, 42 + i, 18 + i, 18 + i, 42 + i, 42 + i, 43 + i, 43 + i, 19 + i, 19 + i, 43 + i, 43 + i, 44 + i, 44 + i, 20 + i, 20 + i, 44 + i, 44 + i, 45 + i, 45 + i, 21 + i, 21 + i, 45 + i, 45 + i, 46 + i, 46 + i, 22 + i, 22 + i, 46 + i, 46 + i, 47 + i, 47 + i, 23 + i, 23 + i, 47 + i, 47 + i, 24 + i, 24 + i);
@@ -427,7 +427,7 @@ public class InstancePart extends Core {
  }
 
  private static void logNonexistentFaceFunction(long vertexQuantity, Instance I, FaceFunction function) {
-  System.out.println("Face-loading issue in model file '" + I.modelName + "'");
+  System.out.println("Face-loading issue in model file '" + (I == null ? "null" : I.modelName) + "'");
   System.out.println(vertexQuantity + "-vertex '" + function.name() + "' face function has not (yet) been developed. Contact the developer for further help.");
  }
 }

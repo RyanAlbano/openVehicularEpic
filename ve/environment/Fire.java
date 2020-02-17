@@ -13,6 +13,7 @@ import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.ui.Match;
 import ve.utilities.*;
+import ve.utilities.sound.Controlled;
 import ve.vehicles.Vehicle;
 
 public enum Fire {
@@ -26,13 +27,13 @@ public enum Fire {
  }
 
  static void run(boolean update) {
-  for (Fire.Instance fire : instances) {
+  for (var fire : instances) {
    fire.run(update);
   }
  }
 
  public static void vehicleInteract(Vehicle V) {
-  for (Instance fire : instances) {
+  for (var fire : instances) {
    double distance = U.distance(V, fire);
    if (distance < V.collisionRadius + fire.absoluteRadius) {
     V.addDamage(10 * U.tick);
@@ -49,19 +50,19 @@ public enum Fire {
   private final MeshView pit;
   private final PointLight PL;
   private final Collection<Flame> flames = new ArrayList<>();
-  private final Sound sound;
+  private final Controlled sound;
 
   Instance(String s) {
    X = U.getValue(s, 0);
    Z = U.getValue(s, 1);
    Y = U.getValue(s, 2);
    absoluteRadius = U.getValue(s, 3);
-   PL = s.contains(SL.light) ? new PointLight() : null;
+   PL = s.contains(D.light) ? new PointLight() : null;
    double flameSize = absoluteRadius * .25;
    for (int n = 0; n < 50; n++) {
     flames.add(new Flame(this, flameSize));
    }
-   sound = s.contains("hear") ? new Sound(SL.fire) : null;
+   sound = s.contains("hear") ? new Controlled(D.fire) : null;
    TriangleMesh TM = new TriangleMesh();
    double fireSize = absoluteRadius;
    TM.getPoints().setAll(
@@ -100,7 +101,7 @@ public enum Fire {
   }
 
   void run(boolean update) {
-   for (Flame flame : flames) {
+   for (var flame : flames) {
     flame.X += flame.speedX * U.tick + (Wind.speedX * U.tick);
     flame.Z += flame.speedZ * U.tick + (Wind.speedZ * U.tick);
     flame.Y -= .1 * absoluteRadius * U.tick;
@@ -115,7 +116,7 @@ public enum Fire {
    if (U.getDepth(this) > -absoluteRadius) {
     U.setTranslate(pit, this);
     pit.setVisible(true);
-    for (Flame flame : flames) {
+    for (var flame : flames) {
      U.randomRotate(flame.MV);
      ((PhongMaterial) flame.MV.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
      U.setTranslate(flame.MV, flame);
@@ -123,7 +124,7 @@ public enum Fire {
     }
    } else {
     pit.setVisible(false);
-    for (Flame flame : flames) {
+    for (var flame : flames) {
      flame.MV.setVisible(false);
     }
    }

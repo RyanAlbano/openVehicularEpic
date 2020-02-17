@@ -1,8 +1,6 @@
 package ve.utilities;
 
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import ve.ui.Options;
 import ve.ui.UI;
 
 import java.io.File;
@@ -13,16 +11,19 @@ import java.util.List;
 
 public enum Images {
  ;
- public static Image RA, white, amphibious,
- paved, rock, metal, brightmetal, wood, grid, ground1, ground2, sand, grass, foliage, cactus, water,
+ public static final String folder = "images";
+ public static final String extension = ".png";
+ private static final String exception = "Image-loading Exception: ";
+ public static Image RA, white, amphibious;
+ public static Texture paved, rock, metal, brightmetal, wood, grid, ground1, ground2, sand, grass, foliage, cactus, water,
  pavedN, rockN, metalN, brightmetalN, woodN, ground1N, ground2N, sandN, grassN, foliageN, cactusN;
  public static List<Image> blink, fireLight, blueJet;
 
  public static Image load(String name) {
   try {
-   return new Image(new FileInputStream(U.imageFolder + File.separator + name + U.imageExtension));
+   return new Image(new FileInputStream(folder + File.separator + name + extension));
   } catch (FileNotFoundException E) {
-   System.out.println(U.imageLoadingException + E);
+   System.out.println(exception + E);
    return null;
   }
  }
@@ -31,91 +32,108 @@ public enum Images {
   List<Image> I = new ArrayList<>();
   try {
    for (int n = 0; n < quantity; n++) {
-    I.add(new Image(new FileInputStream(U.imageFolder + File.separator + name + n + U.imageExtension)));
+    I.add(new Image(new FileInputStream(folder + File.separator + name + n + extension)));
    }
   } catch (FileNotFoundException E) {
    if (quantity < Double.POSITIVE_INFINITY) {
-    System.out.println(U.imageLoadingException + E);
+    System.out.println(exception + E);
    }
   }
   return I;
  }
 
  public static Image get(String name) {
-  if (name.isEmpty() || name.startsWith(SL.snow) || name.startsWith(SL.ice)) {
+  if (name.isEmpty() || name.startsWith(D.snow) || name.startsWith(D.ice)) {
    return null;
-  } else if (name.startsWith(SL.paved)) {
-   return paved;
-  } else if (name.startsWith(SL.rock)) {
-   return rock;
-  } else if (name.startsWith(SL.metal)) {
-   return metal;
-  } else if (name.startsWith(SL.brightmetal)) {
-   return brightmetal;
-  } else if (name.startsWith(SL.wood)) {
-   return wood;
-  } else if (name.startsWith(SL.grid)) {
-   return grid;
-  } else if (name.startsWith(SL.ground + 1)) {
-   return ground1;
-  } else if (name.startsWith(SL.ground + 2)) {
-   return ground2;
-  } else if (name.startsWith(SL.sand)) {
-   return sand;
-  } else if (name.startsWith(SL.grass)) {
-   return grass;
-  } else if (name.startsWith(SL.foliage)) {
-   return foliage;
-  } else if (name.startsWith(SL.cactus)) {
-   return cactus;
-  } else if (name.startsWith(SL.water)) {
-   return water;
+  } else if (name.startsWith(D.paved)) {
+   return paved.get();
+  } else if (name.startsWith(D.rock)) {
+   return rock.get();
+  } else if (name.startsWith(D.metal)) {
+   return metal.get();
+  } else if (name.startsWith(D.brightmetal)) {
+   return brightmetal.get();
+  } else if (name.startsWith(D.wood)) {
+   return wood.get();
+  } else if (name.startsWith(D.grid)) {
+   return grid.get();
+  } else if (name.startsWith(D.ground + 1)) {
+   return ground1.get();
+  } else if (name.startsWith(D.ground + 2)) {
+   return ground2.get();
+  } else if (name.startsWith(D.sand)) {
+   return sand.get();
+  } else if (name.startsWith(D.grass)) {
+   return grass.get();
+  } else if (name.startsWith(D.foliage)) {
+   return foliage.get();
+  } else if (name.startsWith(D.cactus)) {
+   return cactus.get();
+  } else if (name.startsWith(D.water)) {
+   return water.get();
   }
   UI.crashGame("Return of '" + name + "' is not supported");
   return null;//<-Dummy value--should never be reached
  }
 
  public static Image getNormalMap(String name) {
-  if (Options.normalMapping) {
-   if (name.startsWith(SL.paved)) {
-    return pavedN;
-   } else if (name.startsWith(SL.rock)) {
-    return rockN;
-   } else if (name.startsWith(SL.metal)) {
-    return metalN;
-   } else if (name.startsWith(SL.brightmetal)) {
-    return brightmetalN;
-   } else if (name.startsWith(SL.wood)) {
-    return woodN;
-   } else if (name.startsWith(SL.ground + 1)) {
-    return ground1N;
-   } else if (name.startsWith(SL.ground + 2)) {
-    return ground2N;
-   } else if (name.startsWith(SL.sand)) {
-    return sandN;
-   } else if (name.startsWith(SL.grass)) {
-    return grassN;
-   } else if (name.startsWith(SL.foliage)) {
-    return foliageN;
-   } else if (name.startsWith(SL.cactus)) {
-    return cactusN;
+  if (Texture.normalMapping) {
+   if (name.startsWith(D.paved)) {
+    return pavedN.get();
+   } else if (name.startsWith(D.rock)) {
+    return rockN.get();
+   } else if (name.startsWith(D.metal)) {
+    return metalN.get();
+   } else if (name.startsWith(D.brightmetal)) {
+    return brightmetalN.get();
+   } else if (name.startsWith(D.wood)) {
+    return woodN.get();
+   } else if (name.startsWith(D.ground + 1)) {
+    return ground1N.get();
+   } else if (name.startsWith(D.ground + 2)) {
+    return ground2N.get();
+   } else if (name.startsWith(D.sand)) {
+    return sandN.get();
+   } else if (name.startsWith(D.grass)) {
+    return grassN.get();
+   } else if (name.startsWith(D.foliage)) {
+    return foliageN.get();
+   } else if (name.startsWith(D.cactus)) {
+    return cactusN.get();
    }
-  }
-  return null;
- }
-
- public static Image getLowResolution(Image I) {
-  UI.denyExpensiveInGameCall();
-  if (I != null) {
-   ImageView IV = new ImageView(I);
-   IV.setScaleX(Math.min(500 / I.getWidth(), 1));//*Don't exceed the original size!
-   IV.setScaleY(Math.min(500 / I.getHeight(), 1));//*
-   return IV.snapshot(null, null);
   }
   return null;
  }
 
  public static void draw(Image I, double X, double Y) {
   UI.GC.drawImage(I, UI.width * X - (I.getWidth() * .5), UI.height * Y - (I.getHeight() * .5));
+ }
+
+ public static void getLowResolutionTextures() {
+  rock.getLowResolution();
+  rockN.getLowResolution();
+  metal.getLowResolution();
+  metalN.getLowResolution();
+  brightmetal.getLowResolution();
+  brightmetalN.getLowResolution();
+  paved.getLowResolution();
+  pavedN.getLowResolution();
+  wood.getLowResolution();
+  woodN.getLowResolution();
+  foliage.getLowResolution();
+  foliageN.getLowResolution();
+  cactus.getLowResolution();
+  cactusN.getLowResolution();
+  grass.getLowResolution();
+  grassN.getLowResolution();
+  sand.getLowResolution();
+  sandN.getLowResolution();
+  ground1.getLowResolution();
+  ground1N.getLowResolution();
+  ground2.getLowResolution();
+  ground2N.getLowResolution();
+  //non-normaled
+  grid.getLowResolution();
+  water.getLowResolution();
  }
 }

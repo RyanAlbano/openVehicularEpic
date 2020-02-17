@@ -26,7 +26,7 @@ import ve.instances.I;
 import ve.ui.UI;
 import ve.vehicles.Vehicle;
 
-public enum U {//Utilities
+public enum U {//Low-level utilities, such as math functions
  ;
 
  public static final String lineSeparator = System.lineSeparator();
@@ -41,22 +41,19 @@ public enum U {//Utilities
  public static final double minimumAccurateLayeredOpacity = .05;
  public static final long refreshRate = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode().getRefreshRate();
  public static final Dimension dimension = Toolkit.getDefaultToolkit().getScreenSize();
- public static final String imageFolder = "images", soundFolder = "sounds", soundExtension = ".au",
- modelFolder = "models";
- public static final String mapFolder = "maps";
+ public static final String modelFolder = "models";
  public static final String userSubmittedFolder = "User-Submitted";
- public static final String imageExtension = ".png";
  public static final Charset standardChars = StandardCharsets.UTF_8;
- public static final String imageLoadingException = "Image-loading Exception: ";
- public static final String soundLoadingException = "Sound-loading Exception: ";
  public static final String modelLoadingError = "Model-Loading Error: ";
  public static final DecimalFormat DF = new DecimalFormat("0.#E0");
  public static final Quaternion inert = new Quaternion();
+ //public static final boolean onLinux = System.getProperty("os.name").toLowerCase().contains("linux");
+ public static long maxMemory = Runtime.getRuntime().maxMemory();
 
  public static String getString(CharSequence s, int index) {
   try {
    return regex.split(s)[index + 1];
-  } catch (RuntimeException e) {
+  } catch (RuntimeException E) {
    return "";//Catch is needed!
   }
  }
@@ -69,8 +66,8 @@ public enum U {//Utilities
   return V1.index == V2.index;
  }
 
- public static boolean sameTeam(Vehicle vehicle, Vehicle targetVehicle) {
-  return sameTeam(vehicle.index, targetVehicle.index);
+ public static boolean sameTeam(Vehicle V1, Vehicle V2) {
+  return sameTeam(V1.index, V2.index);
  }
 
  public static boolean sameTeam(long index1, long index2) {
@@ -167,7 +164,7 @@ public enum U {//Utilities
  }
 
  public static boolean equals(String in, String... prefixes) {
-  for (String s : prefixes) {
+  for (var s : prefixes) {
    if (in.equals(s)) {
     return true;
    }
@@ -176,7 +173,7 @@ public enum U {//Utilities
  }
 
  public static boolean startsWith(String in, String... prefixes) {
-  for (String s : prefixes) {
+  for (var s : prefixes) {
    if (in.startsWith(s)) {
     return true;
    }
@@ -185,7 +182,7 @@ public enum U {//Utilities
  }
 
  public static boolean contains(String in, String... prefixes) {
-  for (String s : prefixes) {
+  for (var s : prefixes) {
    if (in.contains(s)) {
     return true;
    }
@@ -195,7 +192,7 @@ public enum U {//Utilities
 
  public static boolean containsEnum(Enum in, Enum... prefixes) {
   String name = in.name();
-  for (Enum e : prefixes) {
+  for (var e : prefixes) {
    if (name.contains(e.name())) {
     return true;
    }
@@ -217,7 +214,7 @@ public enum U {//Utilities
 
  static List<Double> arrayToList(double[] source) {//<-Keep in case it's needed later
   List<Double> d = new ArrayList<>();
-  for (double v : source) {
+  for (var v : source) {
    d.add(v);
   }
   return d;
@@ -272,7 +269,7 @@ public enum U {//Utilities
   return StrictMath.cos(in * .01745329251994329576923690768489);
  }
 
- public static double arcCos(double in) {
+ private static double arcCos(double in) {
   return StrictMath.acos(in);
  }
 
@@ -372,12 +369,12 @@ public enum U {//Utilities
   return netValue(coordinate1 - otherCoordinate1, coordinate2 - otherCoordinate2);
  }
 
- public static double distance(Core C1, Core C2) {
-  return distance(C1.X, C2.X, C1.Y, C2.Y, C1.Z, C2.Z);
+ public static double distance(Core core) {
+  return distance(core, Camera.C);
  }
 
- public static double distance(Core core) {
-  return distance(core.X, Camera.C.X, core.Y, Camera.C.Y, core.Z, Camera.C.Z);
+ public static double distance(Core C1, Core C2) {
+  return distance(C1.X, C2.X, C1.Y, C2.Y, C1.Z, C2.Z);
  }
 
  public static double distance(double X1, double X2, double Y1, double Y2, double Z1, double Z2) {
@@ -385,7 +382,7 @@ public enum U {//Utilities
  }
 
  public static double distanceXZ(Core core) {
-  return distance(core.X, Camera.C.X, core.Z, Camera.C.Z);
+  return distanceXZ(core, Camera.C);
  }
 
  public static double distanceXZ(Core C1, Core C2) {
@@ -413,7 +410,7 @@ public enum U {//Utilities
  }
 
  private static boolean outOfBounds(double x, double y, double z, double tolerance) {
-  double depth = Ground.level + (Pool.exists && distance(x, Pool.pool.X, z, Pool.pool.Z) < Pool.C[0].getRadius() ? Pool.depth : 0);
+  double depth = Ground.level + (Pool.exists && distance(x, Pool.core.X, z, Pool.core.Z) < Pool.C[0].getRadius() ? Pool.depth : 0);
   return y > depth || x > MapBounds.right + tolerance || x < MapBounds.left - tolerance || z > MapBounds.forward + tolerance || z < MapBounds.backward - tolerance || y < MapBounds.Y - tolerance;
  }
 

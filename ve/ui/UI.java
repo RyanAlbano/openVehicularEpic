@@ -13,13 +13,16 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+import kuusisto.tinysound.TinySound;
 import ve.environment.*;
-import ve.environment.storm.Rain;
 import ve.instances.I;
 import ve.trackElements.Arrow;
-import ve.trackElements.Bonus;
+import ve.trackElements.TE;
+import ve.ui.options.Options;
+import ve.ui.options.Units;
 import ve.utilities.*;
-import ve.vehicles.*;
+import ve.utilities.sound.FireAndForget;
+import ve.utilities.sound.Sounds;
 
 import java.io.*;
 import java.util.*;
@@ -40,22 +43,23 @@ public class UI/*UserInterface*/ extends Application {
  public static final String[] playerNames = new String[I.maxPlayers];
  public static Status status = Status.mainMenu;
  private static Status lastStatus;
- public static Sound sound;
+ public static FireAndForget sound;
 
  public enum Status {
-  play, replay, paused, optionsMatch, optionsMenu, mainMenu, credits,
+  play, replay, paused, mainMenu, credits,
   vehicleSelect, vehicleViewer,
+  optionsMatch, optionsMenu, optionsGraphics, optionsSound,
   mapJump, mapLoadPass0, mapLoadPass1, mapLoadPass2, mapLoadPass3, mapLoadPass4, mapError, mapView, mapViewer,
   howToPlay, loadLAN
  }
 
  public static long selected;
- public static double selectionWait;
- public static double selectionTimer;
+ static double selectionWait;
+ static double selectionTimer;
  public static long page;
  public static final double selectionHeight = .03;
  public static final double clickRangeY = selectionHeight * .5;
- private static final double baseClickOffset = -.025;
+ public static final double baseClickOffset = .025;
  public static final double textOffset = .01;
  public static double movementSpeedMultiple = 1;
  public static final String Yes = "Yes";
@@ -68,13 +72,14 @@ public class UI/*UserInterface*/ extends Application {
  public static final String CONTINUE = "CONTINUE";
  public static final String RETURN = "RETURN";
  public static final String BACK_TO_MAIN_MENU = "BACK TO MAIN MENU";
- static final String HOW_TO_PLAY = "HOW TO PLAY";
+ private static final String HOW_TO_PLAY = "HOW TO PLAY";
  public static final String Made_by_ = "Made by ";
  public static final String GREEN_TEAM = "GREEN TEAM";
  public static final String RED_TEAM = "RED TEAM";
  public static final String/*..*/Please_Wait_For_ = "..Please Wait for ";
  public static final String notifyUserOfArrowKeyNavigation = "You can also use the Arrow Keys and Enter to navigate.";
  public static final String At_File_/*:*/ = "At File: ", At_Line_/*:*/ = "At Line: ";
+ private static final String loadingTheRest = "Loading the rest";
 
  public static boolean selectionReady() {
   return selectionTimer > selectionWait;
@@ -94,14 +99,15 @@ public class UI/*UserInterface*/ extends Application {
   Thread.currentThread().setPriority(10);
   primaryStage.setTitle("openVehicularEpic");
   try {
-   primaryStage.getIcons().add(new Image(new FileInputStream(U.imageFolder + File.separator + "icon" + U.imageExtension)));
+   primaryStage.getIcons().add(new Image(new FileInputStream(Images.folder + File.separator + "icon" + Images.extension)));
   } catch (FileNotFoundException ignored) {
   }
+  //System.out.println(Arrays.toString(AudioSystem.getMixerInfo()));
   System.setProperty("sun.java2d.opengl", "true");//<-Is this even necessary?
   double windowSize = 1;
   boolean antiAliasing = false;
   String s;
-  try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(SL.GameSettings), U.standardChars))) {
+  try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(D.GameSettings), U.standardChars))) {
    for (String s1; (s1 = BR.readLine()) != null; ) {
     s = s1.trim();
     antiAliasing = s.startsWith("AntiAliasing(yes") || antiAliasing;
@@ -135,67 +141,43 @@ public class UI/*UserInterface*/ extends Application {
     int n;
     scene3D.setFill(U.getColor(0));
     Arrow.scene.setFill(Color.color(0, 0, 0, 0));
-    initialization = "Loading Images";
-    Images.RA = Images.load(SL.RA);
-    Images.white = Images.load(SL.white);
-    Images.fireLight = Images.load(SL.firelight, Double.POSITIVE_INFINITY);
-    Images.blueJet = Images.load(SL.blueJet, Double.POSITIVE_INFINITY);
-    Images.blink = Images.load(SL.blink, Double.POSITIVE_INFINITY);
-    Images.amphibious = Images.load("amphibious");
-    initialization = "Loading Textures";
-    Images.water = Images.load(SL.water);
-    Images.rock = Images.load(SL.rock);
-    Images.metal = Images.load(SL.metal);
-    Images.brightmetal = Images.load(SL.brightmetal);
-    Images.grid = Images.load(SL.grid);
-    Images.paved = Images.load(SL.paved);
-    Images.wood = Images.load(SL.wood);
-    Images.foliage = Images.load(SL.foliage);
-    Images.cactus = Images.load(SL.cactus);
-    Images.grass = Images.load(SL.grass);
-    Images.sand = Images.load(SL.sand);
-    Images.ground1 = Images.load(SL.ground + 1);
-    Images.ground2 = Images.load(SL.ground + 2);
-    initialization = "Loading Normal Maps";
-    Images.rockN = Images.load("rockN");
-    Images.metalN = Images.load("metalN");
-    Images.brightmetalN = Images.load("brightmetalN");
-    Images.pavedN = Images.load("pavedN");
-    Images.woodN = Images.load("woodN");
-    Images.foliageN = Images.load("foliageN");
-    Images.cactusN = Images.load("cactusN");
-    Images.grassN = Images.load("grassN");
-    Images.sandN = Images.load("sandN");
-    Images.ground1N = Images.load("ground1N");
-    Images.ground2N = Images.load("ground2N");
     initialization = "Loading Settings";
     String s;
-    try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(SL.GameSettings), U.standardChars))) {
+    try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(D.GameSettings), U.standardChars))) {
      for (String s1; (s1 = BR.readLine()) != null; ) {
       s = s1.trim();
-      if (s.startsWith("Units(metric")) {
-       Units.units = Units.Unit.metric;
-      } else if (s.startsWith("Units(U.S.")) {
+      Units.units = s.startsWith("Units(") ? Units.Unit.valueOf(U.getString(s, 0)) : Units.units;
+      if (s.startsWith("Units(U.S.")) {
        Units.units = Units.Unit.US;
       }
-      Options.normalMapping = s.startsWith("NormalMapping(yes") || Options.normalMapping;
       Camera.shake = s.startsWith("CameraShake(yes") || Camera.shake;
       try {
        userFPS = s.startsWith("fpsLimit(") ? Math.round(U.getValue(s, 0)) : userFPS;
       } catch (RuntimeException ignored) {
       }
-      Options.degradedSoundEffects = s.startsWith("DegradedSoundEffects(yes") || Options.degradedSoundEffects;
-      Options.matchLength = s.startsWith(SL.MatchLength + "(") ? Math.round(U.getValue(s, 0)) : Options.matchLength;
+      Options.matchLength = s.startsWith(D.MatchLength + "(") ? Math.round(U.getValue(s, 0)) : Options.matchLength;
       Options.driverSeat = s.startsWith("DriverSeat(left") ? -1 : s.startsWith("DriverSeat(right") ? 1 : Options.driverSeat;
       I.vehiclesInMatch = s.startsWith("#ofPlayers(") ? Math.max(1, Math.min((int) Math.round(U.getValue(s, 0)), I.maxPlayers)) : I.vehiclesInMatch;
       Options.headsUpDisplay = s.startsWith("HUD(on") || Options.headsUpDisplay;
-      Options.showAppInfo = s.startsWith("ShowInfo(yes") || Options.showAppInfo;
+      Options.showAppInfo = s.startsWith("ShowAppInfo(yes") || Options.showAppInfo;
       VS.showModel = s.startsWith("ShowVehiclesInVehicleSelect(yes") || VS.showModel;
-      Network.userName = s.startsWith(SL.UserName + "(") ? U.getString(s, 0) : Network.userName;
-      Network.targetHost = s.startsWith(SL.TargetHost + "(") ? U.getString(s, 0) : Network.targetHost;
-      Network.port = s.startsWith(SL.Port + "(") ? (int) Math.round(U.getValue(s, 0)) : Network.port;
-      if (s.startsWith(SL.GameVehicles + "(")) {
-       I.vehicleModels = new ArrayList<>(Arrays.asList(s.substring((SL.GameVehicles + "(").length(), s.length() - 1).split(",")));
+      //IMAGES
+      Texture.normalMapping = s.startsWith("NormalMapping(yes") || Texture.normalMapping;
+      Texture.type = s.startsWith("TextureResolution(") ? Texture.Resolution.valueOf(U.getString(s, 0)) : Texture.type;
+      Texture.userMaxResolution = s.startsWith("TextureResolutionLimit(") ? Math.round(U.getValue(s, 0)) : Texture.userMaxResolution;
+      //SOUND
+      Sounds.softwareBased = s.startsWith("SoftwareBased(yes") || Sounds.softwareBased;
+      Sounds.channels = s.startsWith("Channels(") ? (int) Math.round(U.getValue(s, 0)) : Sounds.channels;
+      Sounds.bitDepth = s.startsWith("BitDepth(") ? (int) Math.round(U.getValue(s, 0)) : Sounds.bitDepth;
+      Sounds.sampleRate = s.startsWith("SampleRate(") ? U.getValue(s, 0) : Sounds.sampleRate;
+      Sounds.bufferSize = s.startsWith("BufferSize(") ? U.getValue(s, 0) : Sounds.bufferSize;
+      //NETWORK
+      Network.userName = s.startsWith(D.UserName + "(") ? U.getString(s, 0) : Network.userName;
+      Network.targetHost = s.startsWith(D.TargetHost + "(") ? U.getString(s, 0) : Network.targetHost;
+      Network.port = s.startsWith(D.Port + "(") ? (int) Math.round(U.getValue(s, 0)) : Network.port;
+      //
+      if (s.startsWith(D.GameVehicles + "(")) {
+       I.vehicleModels = new ArrayList<>(Arrays.asList(s.substring((D.GameVehicles + "(").length(), s.length() - 1).split(",")));
       } else if (s.startsWith("UserSubmittedVehicles(")) {
        String[] models = U.regex.split(s);
        for (n = 1; n < models.length; n++) {
@@ -211,28 +193,56 @@ public class UI/*UserInterface*/ extends Application {
     } catch (FileNotFoundException E) {
      System.out.println("Error Loading GameSettings: " + E);
     }
-    initialization = "Loading Sounds";
-    Sounds.checkpoint = new Sound(SL.checkpoint);
-    Sounds.stunt = new Sound("stunt");
-    Bonus.sound = new Sound("bonus");
-    Rain.sound = new Sound(SL.rain);
-    Tornado.sound = new Sound(SL.tornado);
-    Tsunami.sound = new Sound(SL.tsunami);
-    Volcano.sound = new Sound("volcano");
-    sound = new Sound("UI", 2);
-    Sounds.finish = new Sound("finish", 2);
+    if (Sounds.softwareBased) {
+     TinySound.init();//<-Must load AFTER audio settings are gotten! Loaded here so that stunt boot sound can be fully heard?
+    }
+    initialization = "Loading Images";
+    Images.RA = Images.load(D.RA);
+    Images.white = Images.load(D.white);
+    Images.fireLight = Images.load(D.firelight, Double.POSITIVE_INFINITY);
+    Images.blueJet = Images.load(D.blueJet, Double.POSITIVE_INFINITY);
+    Images.blink = Images.load(D.blink, Double.POSITIVE_INFINITY);
+    Images.amphibious = Images.load("amphibious");
+    initialization = "Loading Textures";
+    Images.water = new Texture(D.water);
+    Images.rock = new Texture(D.rock);
+    Images.metal = new Texture(D.metal);
+    Images.brightmetal = new Texture(D.brightmetal);
+    Images.grid = new Texture(D.grid);
+    Images.paved = new Texture(D.paved);
+    Images.wood = new Texture(D.wood);
+    Images.foliage = new Texture(D.foliage);
+    Images.cactus = new Texture(D.cactus);
+    Images.grass = new Texture(D.grass);
+    Images.sand = new Texture(D.sand);
+    Images.ground1 = new Texture(D.ground + 1);
+    Images.ground2 = new Texture(D.ground + 2);
+    initialization = "Loading Normal Maps";
+    Images.rockN = new Texture("rockN");
+    Images.metalN = new Texture("metalN");
+    Images.brightmetalN = new Texture("brightmetalN");
+    Images.pavedN = new Texture("pavedN");
+    Images.woodN = new Texture("woodN");
+    Images.foliageN = new Texture("foliageN");
+    Images.cactusN = new Texture("cactusN");
+    Images.grassN = new Texture("grassN");
+    Images.sandN = new Texture("sandN");
+    Images.ground1N = new Texture("ground1N");
+    Images.ground2N = new Texture("ground2N");
+    TE.Paved.setTexture();
+    initialization = loadingTheRest;
     stage.setOnCloseRequest((WindowEvent WE) -> {
-     for (PrintWriter PW : Network.out) {
-      PW.println(SL.END);
-      PW.println(SL.END);
-      PW.println(SL.CANCEL);
-      PW.println(SL.CANCEL);
+     for (var PW : Network.out) {
+      PW.println(D.END);
+      PW.println(D.END);
+      PW.println(D.CANCEL);
+      PW.println(D.CANCEL);
      }
+     TinySound.shutdown();//<-IMPORTANT
     });
-    initialization = "";
-    Sounds.stunt.play(0);
-   } catch (Exception E) {
-    System.out.println("Exception in secondary load thread:" + E);
+   } catch (Exception E) {//<-Good enough
+    System.out.println("Exception in secondary load thread: " + E);
+    E.printStackTrace();//<-Not on the main thread, so better print
    }
   });
   loadVE.setDaemon(true);
@@ -243,20 +253,18 @@ public class UI/*UserInterface*/ extends Application {
   if (Network.mode == Network.Mode.OFF) {
    status = UI.Status.mainMenu;
   } else {
-   for (PrintWriter PW : Network.out) {
-    PW.println(SL.CANCEL);
-    PW.println(SL.CANCEL);
+   for (var PW : Network.out) {
+    PW.println(D.CANCEL);
+    PW.println(D.CANCEL);
    }
    status = UI.Status.loadLAN;
   }
   Network.mode = Network.Mode.OFF;
   page = Tournament.stage = 0;
-  if (wasUser) {
-   sound.play(1, 0);
-  }
   Keys.escape = Network.runLoadThread = false;
-  for (Vehicle vehicle : I.vehicles) {
-   vehicle.closeSounds();
+  Sounds.reset();
+  if (wasUser) {
+   sound.play(1, 0);//<-Must play sound AFTER resetting!
   }
  }
 
@@ -334,17 +342,17 @@ public class UI/*UserInterface*/ extends Application {
   }
   U.font(.075);
   U.fillRGB(.5);
-  U.text(SL.OPEN_VEHICULAR_EPIC, .498, .173);
-  U.text(SL.OPEN_VEHICULAR_EPIC, .502, .173);
-  U.text(SL.OPEN_VEHICULAR_EPIC, .498, .177);
-  U.text(SL.OPEN_VEHICULAR_EPIC, .502, .177);
+  U.text(D.OPEN_VEHICULAR_EPIC, .498, .173);
+  U.text(D.OPEN_VEHICULAR_EPIC, .502, .173);
+  U.text(D.OPEN_VEHICULAR_EPIC, .498, .177);
+  U.text(D.OPEN_VEHICULAR_EPIC, .502, .177);
   U.fillRGB(1);
-  U.text(SL.OPEN_VEHICULAR_EPIC, .499, .174);
-  U.text(SL.OPEN_VEHICULAR_EPIC, .501, .174);
-  U.text(SL.OPEN_VEHICULAR_EPIC, .499, .176);
-  U.text(SL.OPEN_VEHICULAR_EPIC, .501, .176);
+  U.text(D.OPEN_VEHICULAR_EPIC, .499, .174);
+  U.text(D.OPEN_VEHICULAR_EPIC, .501, .174);
+  U.text(D.OPEN_VEHICULAR_EPIC, .499, .176);
+  U.text(D.OPEN_VEHICULAR_EPIC, .501, .176);
   U.fillRGB(.75, .75, .75);
-  U.text(SL.OPEN_VEHICULAR_EPIC, .175);
+  U.text(D.OPEN_VEHICULAR_EPIC, .175);
   U.font(.015);
   U.fillRGB(1);
   if (loaded) {
@@ -352,7 +360,7 @@ public class UI/*UserInterface*/ extends Application {
    U.text("MULTIPLAYER MATCH", .65 + textOffset);
    U.text(HOW_TO_PLAY, .7 + textOffset);
    U.text("CREDITS", .75 + textOffset);
-   U.text(SL.OPTIONS, .8 + textOffset);
+   U.text(D.OPTIONS, .8 + textOffset);
    U.text("VEHICLE VIEWER", .85 + textOffset);
    U.text("MAP VIEWER", .9 + textOffset);
    if (!error.isEmpty()) {
@@ -362,16 +370,22 @@ public class UI/*UserInterface*/ extends Application {
   } else {
    U.font(.025);
    U.text(U.yinYang ? ".. " + initialization + "   " : "   " + initialization + " ..", .5);
+   if (initialization.equals(loadingTheRest)) {//<-All the stuff that couldn't be loaded on the secondary-load thread. Better late than never!
+    Images.getLowResolutionTextures();
+    Sounds.reset();
+    Sounds.stunt.play(0);
+    initialization = "";//<-Game booting is now finished
+   }
   }
   if (!Keys.inUse) {
    selected =
-   Math.abs(.6 + baseClickOffset - Mouse.Y) < clickRangeY ? 0 :
-   Math.abs(.65 + baseClickOffset - Mouse.Y) < clickRangeY ? 1 :
-   Math.abs(.7 + baseClickOffset - Mouse.Y) < clickRangeY ? 2 :
-   Math.abs(.75 + baseClickOffset - Mouse.Y) < clickRangeY ? 3 :
-   Math.abs(.8 + baseClickOffset - Mouse.Y) < clickRangeY ? 4 :
-   Math.abs(.85 + baseClickOffset - Mouse.Y) < clickRangeY ? 5 :
-   Math.abs(.9 + baseClickOffset - Mouse.Y) < clickRangeY ? 6 :
+   Math.abs(.6 - baseClickOffset - Mouse.Y) < clickRangeY ? 0 :
+   Math.abs(.65 - baseClickOffset - Mouse.Y) < clickRangeY ? 1 :
+   Math.abs(.7 - baseClickOffset - Mouse.Y) < clickRangeY ? 2 :
+   Math.abs(.75 - baseClickOffset - Mouse.Y) < clickRangeY ? 3 :
+   Math.abs(.8 - baseClickOffset - Mouse.Y) < clickRangeY ? 4 :
+   Math.abs(.85 - baseClickOffset - Mouse.Y) < clickRangeY ? 5 :
+   Math.abs(.9 - baseClickOffset - Mouse.Y) < clickRangeY ? 6 :
    selected;
   }
   gameFPS = U.refreshRate * .5;
@@ -412,7 +426,6 @@ public class UI/*UserInterface*/ extends Application {
   }
   if (Keys.escape) {
    ending = true;
-   sound.play(1, 0);
    Keys.escape = false;
   }
   if (ending) {
@@ -427,13 +440,14 @@ public class UI/*UserInterface*/ extends Application {
     }
     Camera.lastView = Camera.view;
     selected = 0;
-    Sounds.clear();
+    Sounds.reset();
+    sound.play(1, 0);
    } else {
     int n;
     if (Network.mode == Network.Mode.HOST) {
-     for (PrintWriter PW : Network.out) {
-      PW.println(SL.END);
-      PW.println(SL.END);
+     for (var PW : Network.out) {
+      PW.println(D.END);
+      PW.println(D.END);
      }
     }
     if (Network.hostLeftMatch || Network.mode == Network.Mode.HOST) {
@@ -444,7 +458,7 @@ public class UI/*UserInterface*/ extends Application {
      status = UI.Status.mainMenu;
      Camera.lastView = Camera.view;
      selected = 0;
-     Sounds.clear();
+     Sounds.reset();
      try {
       if (Network.server != null) {
        Network.server.close();
@@ -452,10 +466,10 @@ public class UI/*UserInterface*/ extends Application {
       if (Network.client != null) {
        Network.client.close();
       }
-      for (BufferedReader in : Network.in) {
+      for (var in : Network.in) {
        in.close();
       }
-      for (PrintWriter PW : Network.out) {
+      for (var PW : Network.out) {
        PW.close();
       }
      } catch (IOException e) {
@@ -483,19 +497,20 @@ public class UI/*UserInterface*/ extends Application {
   U.fillRGB(1);
   U.text(title, .375);
   U.font(.015);
-  double extraY = .01;
-  U.text("RESUME", .45 + extraY);
-  U.text("REPLAY", .475 + extraY);
-  U.text(SL.OPTIONS, .5 + extraY);
-  U.text(HOW_TO_PLAY, .525 + extraY);
-  U.text(Tournament.stage > 0 ? (Match.timeLeft > 0 ? "CANCEL TOURNAMENT" : Tournament.finished ? BACK_TO_MAIN_MENU : "NEXT ROUND") : Network.mode == Network.Mode.JOIN && !Network.hostLeftMatch ? "Please Wait for Host to exit Match first" : "END MATCH", .55 + extraY);
+  U.text("RESUME", .45 + textOffset);
+  U.text("REPLAY", .475 + textOffset);
+  U.text(D.OPTIONS, .5 + textOffset);
+  U.text(HOW_TO_PLAY, .525 + textOffset);
+  U.text(Tournament.stage > 0 ? (Match.timeLeft > 0 ? "CANCEL TOURNAMENT" : Tournament.finished ? BACK_TO_MAIN_MENU : "NEXT ROUND") :
+  Network.mode == Network.Mode.JOIN && !Network.hostLeftMatch ? "Please Wait for Host to exit Match first" :
+  "END MATCH", .55 + textOffset);
   if (!Keys.inUse) {
    selected =
-   Math.abs(.45 + baseClickOffset - Mouse.Y) < clickRangeY ? 0 :
-   Math.abs(.475 + baseClickOffset - Mouse.Y) < clickRangeY ? 1 :
-   Math.abs(.5 + baseClickOffset - Mouse.Y) < clickRangeY ? 2 :
-   Math.abs(.525 + baseClickOffset - Mouse.Y) < clickRangeY ? 3 :
-   Math.abs(.55 + baseClickOffset - Mouse.Y) < clickRangeY ? 4 :
+   Math.abs(.45 - baseClickOffset - Mouse.Y) < clickRangeY ? 0 :
+   Math.abs(.475 - baseClickOffset - Mouse.Y) < clickRangeY ? 1 :
+   Math.abs(.5 - baseClickOffset - Mouse.Y) < clickRangeY ? 2 :
+   Math.abs(.525 - baseClickOffset - Mouse.Y) < clickRangeY ? 3 :
+   Math.abs(.55 - baseClickOffset - Mouse.Y) < clickRangeY ? 4 :
    selected;
   }
  }
@@ -508,11 +523,11 @@ public class UI/*UserInterface*/ extends Application {
    Network.mode = Network.Mode.OFF;
    I.vehiclesInMatch = (int) U.clamp(2, I.vehiclesInMatch, Network.maxPlayers);
    try {
-    for (BufferedReader in : Network.in) {
+    for (var in : Network.in) {
      in.close();
     }
     Network.in.clear();
-    for (PrintWriter PW : Network.out) {
+    for (var PW : Network.out) {
      PW.close();
     }
     Network.out.clear();
@@ -553,12 +568,12 @@ public class UI/*UserInterface*/ extends Application {
     }
     U.fillRectangle(.5, selected == 1 ? .5 : .45, .25, selectionHeight);
     String s;
-    try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(SL.GameSettings), U.standardChars))) {
+    try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(D.GameSettings), U.standardChars))) {
      for (String s1; (s1 = BR.readLine()) != null; ) {
       s = s1.trim();
-      Network.userName = s.startsWith(SL.UserName + "(") ? U.getString(s, 0) : Network.userName;
-      Network.targetHost = s.startsWith(SL.TargetHost + "(") ? U.getString(s, 0) : Network.targetHost;
-      Network.port = s.startsWith(SL.Port + "(") ? (int) Math.round(U.getValue(s, 0)) : Network.port;
+      Network.userName = s.startsWith(D.UserName + "(") ? U.getString(s, 0) : Network.userName;
+      Network.targetHost = s.startsWith(D.TargetHost + "(") ? U.getString(s, 0) : Network.targetHost;
+      Network.port = s.startsWith(D.Port + "(") ? (int) Math.round(U.getValue(s, 0)) : Network.port;
      }
     } catch (IOException e) {
      System.out.println("Problem updating Online settings: " + e);
@@ -567,7 +582,7 @@ public class UI/*UserInterface*/ extends Application {
    if (Network.mode == Network.Mode.HOST && !Network.out.isEmpty()) {
     for (n = 0; n < Network.out.size(); n++) {
      String s = Network.readIn(n);
-     if (s.startsWith(SL.CANCEL)) {
+     if (s.startsWith(D.CANCEL)) {
       escapeToLast(false);
      }
     }
@@ -623,8 +638,8 @@ public class UI/*UserInterface*/ extends Application {
   }
   if (!Keys.inUse) {
    selected =
-   Math.abs(.45 + baseClickOffset - Mouse.Y) < clickRangeY ? 0 :
-   Math.abs(.5 + baseClickOffset - Mouse.Y) < clickRangeY ? 1 :
+   Math.abs(.45 - baseClickOffset - Mouse.Y) < clickRangeY ? 0 :
+   Math.abs(.5 - baseClickOffset - Mouse.Y) < clickRangeY ? 1 :
    selected;
   }
  }

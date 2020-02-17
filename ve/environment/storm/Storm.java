@@ -5,10 +5,11 @@ import javafx.scene.shape.CullFace;
 import javafx.scene.shape.Sphere;
 import ve.effects.GroundBurst;
 import ve.utilities.*;
+import ve.utilities.sound.Sound;
 
 public enum Storm {
  ;
- public static boolean exists;
+ private static boolean exists;
  private static final Sphere cloud = new Sphere(200000);
  public static double cloudY;
 
@@ -33,7 +34,8 @@ public enum Storm {
     for (int n = 75; --n >= 0; ) {
      Lightning.groundBursts.add(new GroundBurst());
     }
-    Lightning.thunder = new Sound("thunder", Double.POSITIVE_INFINITY);
+    String thunder = "thunder";
+    Lightning.thunder = new Sound(thunder, Double.POSITIVE_INFINITY);
    }
   }
  }

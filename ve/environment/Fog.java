@@ -10,12 +10,12 @@ import java.util.List;
 
 public enum Fog {
  ;
- static boolean exists;
+ private static boolean exists;
  public static final List<Sphere> spheres = new ArrayList<>();
- static final PhongMaterial PM = new PhongMaterial();
- static long currentQuantity;
- static final double opacityBase = 4;
- static double recalibrationTimer;
+ private static final PhongMaterial PM = new PhongMaterial();
+ private static long currentQuantity;
+ private static final double opacityBase = 4;
+ private static double recalibrationTimer;
 
  enum Recalibration {increment, decrement}
 
@@ -32,7 +32,7 @@ public enum Fog {
    Phong.setDiffuseRGB(PM, E.skyRGB, Math.min(opacityBase / currentQuantity, .5));
    Phong.setSpecularRGB(PM, 0);
    PM.setSpecularPower(Double.POSITIVE_INFINITY);
-   for (Sphere fog : spheres) {
+   for (var fog : spheres) {
     fog.setMaterial(PM);
     fog.setCullFace(CullFace.FRONT);
    }
@@ -52,11 +52,11 @@ public enum Fog {
   }
  }
 
- static void recalibrate(Enum recalibration) {
+ private static void recalibrate(Enum recalibration) {
   if (recalibrationTimer <= 0) {//<-Using '<=' so that initial down-calibration gets called
    currentQuantity += recalibration == null ? 0 : recalibration == Recalibration.increment ? 1 : -1;
    double radius = (E.viewableMapDistance / currentQuantity) * .5;
-   for (Sphere fog : spheres) {
+   for (var fog : spheres) {
     U.setScale(fog, radius);
     radius += E.viewableMapDistance / currentQuantity;
     fog.setVisible(spheres.indexOf(fog) < currentQuantity);

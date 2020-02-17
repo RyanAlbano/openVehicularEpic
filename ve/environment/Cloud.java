@@ -7,7 +7,7 @@ import ve.instances.Core;
 import ve.ui.Maps;
 import ve.utilities.Nodes;
 import ve.utilities.Phong;
-import ve.utilities.SL;
+import ve.utilities.D;
 import ve.utilities.U;
 
 import java.util.ArrayList;
@@ -27,7 +27,7 @@ public enum Cloud {
  public static void load(String s) {
   if (s.startsWith("clouds(")) {
    globalHeight = U.getValue(s, 3);
-   wrapDistance = U.equals(Maps.name, "the Test of Endurance", "an Immense Relevance", SL.Maps.summitOfEpic) ? 10000000 : 1000000;
+   wrapDistance = U.equals(Maps.name, "the Test of Endurance", "an Immense Relevance", D.Maps.summitOfEpic) ? 10000000 : 1000000;
    Phong.setDiffuseRGB(PM, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
    for (int n = 0; n < U.random(120); n++) {
     instances.add(new Instance());
@@ -36,7 +36,7 @@ public enum Cloud {
  }
 
  public static void run() {
-  for (Instance cloud : instances) {
+  for (var cloud : instances) {
    cloud.run();
   }
  }

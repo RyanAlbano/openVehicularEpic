@@ -9,11 +9,11 @@ import ve.utilities.Phong;
 import ve.utilities.U;
 
 public class Spit extends Core {
- final Special S;
- final Port P;
+ private final Special S;
+ private final Port P;
  private final MeshView MV;
  private double stage;
- static final long scale = 4;
+ private static final long scale = 4;
 
  Spit(Special special, Port port) {
   S = special;
@@ -40,7 +40,7 @@ public class Spit extends Core {
   stage = Double.MIN_VALUE;
  }
 
- long duration() {
+ private long duration() {
   return S.type.name().contains(Special.Type.shell.name()) || S.type == Special.Type.shotgun || S.type == Special.Type.missile ? 3 : 2;
  }
 
@@ -66,7 +66,7 @@ public class Spit extends Core {
   }
  }
 
- void setMesh(TriangleMesh TM) {
+ private void setMesh(TriangleMesh TM) {
   TM.getPoints().setAll(
   0, 0, (float) (scale * -S.length),
   (float) U.randomPlusMinus(scale * S.width), (float) U.randomPlusMinus(scale * S.width), 0,

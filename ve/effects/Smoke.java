@@ -11,7 +11,7 @@ import ve.vehicles.*;
 public class Smoke extends CoreAdvanced {
 
  public final Cylinder C;
- protected double stage;
+ private double stage;
  public static final long defaultQuantity = 50;
 
  public Smoke(double size) {

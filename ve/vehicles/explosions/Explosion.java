@@ -16,15 +16,15 @@ import ve.vehicles.*;
 
 public class Explosion extends Core {
 
- final Vehicle V;
+ private final Vehicle V;
  public Vehicle focusVehicle;
- final boolean nuclear;
+ private final boolean nuclear;
  private final MeshView MV;
  public double inX;
  public double inY;
  public double inZ;
  public double stage;
- public final boolean[] doneDamaging;
+ private final boolean[] doneDamaging;
  private final Collection<ExplosionPart> explosionParts = new ArrayList<>();
  public static final long defaultQuantity = 12;
 
@@ -67,7 +67,7 @@ public class Explosion extends Core {
   for (int n = I.vehiclesInMatch; --n >= 0; ) {
    doneDamaging[n] = false;
   }
-  for (ExplosionPart explosionPart : explosionParts) {
+  for (var explosionPart : explosionParts) {
    explosionPart.deploy();
   }
  }
@@ -97,7 +97,7 @@ public class Explosion extends Core {
     }
    }
   }
-  for (ExplosionPart explosionPart : explosionParts) {
+  for (var explosionPart : explosionParts) {
    explosionPart.run(gamePlay);
   }
  }

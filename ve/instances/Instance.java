@@ -36,13 +36,13 @@ public class Instance extends CoreAdvanced {
  public Quaternion rotation;
 
  protected static FileInputStream getFile(String file, boolean vehicle) {
-  String directory = vehicle ? SL.vehicles : "trackParts";
+  String directory = vehicle ? D.vehicles : "trackParts";
   File F = new File(U.modelFolder + File.separator + directory + File.separator + file);
   if (!F.exists()) {
    F = new File(U.modelFolder + File.separator + directory + File.separator + U.userSubmittedFolder + File.separator + file);
   }
   if (!F.exists()) {
-   F = new File(U.modelFolder + File.separator + directory + File.separator + SL.basic);
+   F = new File(U.modelFolder + File.separator + directory + File.separator + D.basic);
   }
   try {
    return new FileInputStream(F);
@@ -52,7 +52,7 @@ public class Instance extends CoreAdvanced {
  }
 
  protected static void append(StringBuilder SB, String s, boolean useContains, String... prefixes) {
-  for (String s1 : prefixes) {
+  for (var s1 : prefixes) {
    if (useContains ? s.contains(s1) : s.startsWith(s1)) {
     SB.append(" ").append(s1).append(" ");
    }
@@ -60,13 +60,13 @@ public class Instance extends CoreAdvanced {
  }
 
  protected Color getLoadColor(String s, Color RGB) {
-  if (U.startsWith(s, SL.RGB + "(", "><RGB(")) {
+  if (U.startsWith(s, D.RGB + "(", "><RGB(")) {
    try {
     RGB = U.getColor(U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
    } catch (RuntimeException E) {
     RGB = U.getColor(U.getValue(s, 0));
    }
-  } else if (s.contains(SL.theRandomColor)) {
+  } else if (s.contains(D.theRandomColor)) {
    try {
     RGB = U.getColor(
     theRandomColor.getRed() * U.getValue(s, 0),
@@ -75,15 +75,15 @@ public class Instance extends CoreAdvanced {
    } catch (RuntimeException E) {
     RGB = theRandomColor;
    }
-  } else if (s.startsWith(SL.pavedColor)) {
+  } else if (s.startsWith(D.pavedColor)) {
    RGB = U.getColor(TE.Paved.globalShade);
   }
   return RGB;//<-Value may pass through unchanged
  }
 
  protected void getSizeScaleTranslate(String s, double[] translate, double sizeIn, double[] scaleIn) {
-  modelSize = s.startsWith(SL.size + "(") ? U.getValue(s, 0) : modelSize;
-  if (s.startsWith(SL.scale + "(")) {
+  modelSize = s.startsWith(D.size + "(") ? U.getValue(s, 0) : modelSize;
+  if (s.startsWith(D.scale + "(")) {
    try {
     modelScale[0] = U.getValue(s, 0);
     modelScale[1] = U.getValue(s, 1);

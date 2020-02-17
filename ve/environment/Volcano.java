@@ -9,6 +9,8 @@ import ve.effects.Effects;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.utilities.*;
+import ve.utilities.sound.FireAndForget;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Physics;
 import ve.vehicles.Vehicle;
 
@@ -24,7 +26,7 @@ public enum Volcano {
  public static double cameraShake;
  private static final MeshView MV;
  public static final List<Rock> rocks = new ArrayList<>();
- public static Sound sound;
+ private static FireAndForget sound;
 
  static {
   TriangleMesh TM = new TriangleMesh();
@@ -131,14 +133,15 @@ public enum Volcano {
       Phong.setDiffuseRGB(PM, 0);
       Phong.setSpecularRGB(PM, 0);
      } else {
-      PM.setDiffuseMap(Images.get(SL.rock));
-      PM.setSpecularMap(Images.get(SL.rock));
-      PM.setBumpMap(Images.getNormalMap(SL.rock));
+      PM.setDiffuseMap(Images.get(D.rock));
+      PM.setSpecularMap(Images.get(D.rock));
+      PM.setBumpMap(Images.getNormalMap(D.rock));
      }
      U.setMaterialSecurely(rocks.get(n).S, PM);
      isLava = !isLava;
      Nodes.add(rocks.get(n).S);
     }
+    sound = new FireAndForget("volcano");
    }
   }
  }
@@ -149,7 +152,7 @@ public enum Volcano {
    if (!rocks.isEmpty()) {//<-If active volcano
     if (eruptionStage > 0) {
      long rocksLanded = 0;
-     for (Rock rock : rocks) {
+     for (var rock : rocks) {
       if (rock.groundHit) {
        rock.Y = -U.random(46000.);
        rocksLanded++;
@@ -169,14 +172,14 @@ public enum Volcano {
      }
      eruptionStage = rocksLanded >= rocks.size() ? 0 : eruptionStage + U.tick;
     } else if (updateIfMatchBegan) {
-     for (Rock rock : rocks) {
+     for (var rock : rocks) {
       rock.deploy();
      }
      eruptionStage = 1;
      setCameraShake(Camera.shakePresets.volcano);
-     sound.play(Math.sqrt(U.distance(Camera.C.X, C.X, Camera.C.Y, -height, Camera.C.Z, C.Z)) * Sound.standardGain(Sound.gainMultiples.volcano));
+     sound.play(Math.sqrt(U.distance(Camera.C.X, C.X, Camera.C.Y, -height, Camera.C.Z, C.Z)) * Sounds.standardGain(Sounds.gainMultiples.volcano));
     }
-    for (Rock rock : rocks) {
+    for (var rock : rocks) {
      rock.run();
     }
     cameraShake -= cameraShake > 0 ? U.tick : 0;
@@ -206,7 +209,7 @@ public enum Volcano {
  }
 
  public static void rockVehicleInteract(Vehicle V) {
-  for (Rock rock : rocks) {
+  for (var rock : rocks) {
    double vehicleVolcanoRockDistance = U.distance(V, rock);
    if (vehicleVolcanoRockDistance < (V.collisionRadius + rock.S.getRadius()) * 1.5) {
     V.addDamage(V.durability * .5 + (vehicleVolcanoRockDistance < V.collisionRadius + rock.S.getRadius() ? V.durability : 0));
@@ -217,7 +220,7 @@ public enum Volcano {
   }
  }
 
- public static void setCameraShake(double in) {
+ private static void setCameraShake(double in) {
   cameraShake = Math.max(cameraShake, in);
  }
 
@@ -261,5 +264,9 @@ public enum Volcano {
   rocks.clear();
   cameraShake = 0;
   exists = false;
+ }
+
+ public static void closeSound() {
+  if (sound != null) sound.close();
  }
 }

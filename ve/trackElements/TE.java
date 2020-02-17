@@ -1,13 +1,14 @@
 package ve.trackElements;
 
-import javafx.scene.image.Image;
 import javafx.scene.paint.PhongMaterial;
 import ve.environment.*;
 import ve.instances.Core;
 import ve.instances.I;
 import ve.trackElements.trackParts.TrackPart;
 import ve.ui.*;
+import ve.ui.options.Options;
 import ve.utilities.*;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Physics;
 import ve.vehicles.Vehicle;
 
@@ -41,7 +42,7 @@ public enum TE {//TrackElements
   road, roadshort, roadturn, roadbendL, roadbendR, roadend, roadincline, offroad, offroadshort, offroadturn, offroadbump, offroadrocky, offroadend, offroadincline, mixroad,
   checkpoint, repair,
   ramp, rampcurved, ramptrapezoid, ramptriangle, rampwall, quarterpipe, pyramid, plateau,
-  offramp, offplateau/*todo-Remove 'offPlateau' and switch to mounds?*/, mound, pavedmound,//<-'mound' is needed!
+  offramp, offplateau/*<-todo-Remove 'offPlateau' and switch to mounds?*/, mound, pavedmound,//<-'mound' is needed!
   floor, offfloor, wall, offwall, cube, offcube, spike, spikes, block, blocktower, border, beam, grid, tunnel, lift, speedgate, slowgate, antigravity,
   tree0, tree1, tree2, treepalm, cactus0, cactus1, cactus2, rainbow, crescent//<-Rainbow, crescent, etc. are not really 'track elements' but good enough
  }
@@ -50,17 +51,17 @@ public enum TE {//TrackElements
   ;
   public static final double globalShade = .55;
   public static final PhongMaterial universal = new PhongMaterial();
-  public static final Image[] lowResolution = new Image[2];
 
   static {
-   universal.setDiffuseMap(Images.get(SL.paved));
-   universal.setSpecularMap(Images.get(SL.paved));
-   universal.setBumpMap(Images.getNormalMap(SL.paved));
    Phong.setDiffuseRGB(universal, globalShade);
    Phong.setSpecularRGB(universal, E.Specular.Colors.standard);
    universal.setSpecularPower(E.Specular.Powers.standard);
-   lowResolution[0] = Images.getLowResolution(Images.get(SL.paved));
-   lowResolution[1] = Images.getLowResolution(Images.getNormalMap(SL.paved));
+  }
+
+  public static void setTexture() {
+    universal.setDiffuseMap(Images.get(D.paved));
+    universal.setSpecularMap(Images.get(D.paved));
+    universal.setBumpMap(Images.getNormalMap(D.paved));
   }
  }
 
@@ -74,7 +75,7 @@ public enum TE {//TrackElements
   } catch (RuntimeException ignored) {
    rotation = 0;
   }
-  instanceScale[1] = Maps.name.equals(SL.Maps.ghostCity) && listNumber == getTrackPartIndex(Models.cube.name()) && instanceSize == 10000 ? 1 + U.random(3.) : instanceScale[1];
+  instanceScale[1] = Maps.name.equals(D.Maps.ghostCity) && listNumber == getTrackPartIndex(Models.cube.name()) && instanceSize == 10000 ? 1 + U.random(3.) : instanceScale[1];
   if (Maps.name.equals("Meteor Fields") && listNumber == getTrackPartIndex(Models.ramp.name())) {
    if (rotation == 0) {
     X[0] = U.randomPlusMinus(2500.);
@@ -96,7 +97,7 @@ public enum TE {//TrackElements
    }
   }
   if (listNumber == getTrackPartIndex(Models.checkpoint.name())) {
-   if (Maps.name.equals(SL.Maps.highlands)) {
+   if (Maps.name.equals(D.Maps.highlands)) {
     if (U.random() < .5) {
      if (U.random() < .5) {
       X[0] += U.random() < .5 ? 100000 : -100000;
@@ -106,7 +107,7 @@ public enum TE {//TrackElements
       Y[0] -= 25000;
      }
     }
-   } else if (Maps.name.equals(SL.Maps.ghostCity)) {
+   } else if (Maps.name.equals(D.Maps.ghostCity)) {
     if (U.random() < .5) {
      rotation = 0;
      Z[0] = U.randomPlusMinus(150000.);
@@ -139,7 +140,7 @@ public enum TE {//TrackElements
     boolean inside = true;
     while (inside) {
      inside = Math.abs(X[0]) < 30000 && Math.abs(Z[0]) < 30000;
-     for (TrackPart trackpart : trackParts) {
+     for (var trackpart : trackParts) {
       inside = (trackpart.modelNumber == getTrackPartIndex(Models.pyramid.name()) || trackpart.modelNumber == getTrackPartIndex(Models.cube.name()) || trackpart.modelNumber == getTrackPartIndex(Models.ramptriangle.name())) &&
       Math.abs(X[0] - trackpart.X) <= trackpart.renderRadius && Math.abs(Z[0] - trackpart.Z) <= trackpart.renderRadius || inside;
      }
@@ -160,11 +161,11 @@ public enum TE {//TrackElements
    try {
     mounds.add(new FrustumMound(X[0], Z[0], Y[0],
     U.getValue(s, 4) * instanceSize, U.getValue(s, 5) * instanceSize, U.getValue(s, 6) * instanceSize,
-    false, U.getString(s, 0).contains(SL.paved), true));
+    false, U.getString(s, 0).contains(D.paved), true));
    } catch (RuntimeException E) {
     mounds.add(new FrustumMound(X[0], Z[0], Y[0],
     U.getValue(s, 4) * U.random(instanceSize), U.getValue(s, 4) * U.random(instanceSize), U.getValue(s, 4) * U.random(instanceSize),
-    false, U.getString(s, 0).contains(SL.paved), true));
+    false, U.getString(s, 0).contains(D.paved), true));
    }
   } else {
    trackParts.add(new TrackPart(listNumber, X[0], Y[0], Z[0], rotation, instanceSize, instanceScale));
@@ -215,7 +216,7 @@ public enum TE {//TrackElements
   while (inside) {
    inside = false;
    if (targets != null) {
-    for (TrackPart trackPart : trackParts) {
+    for (var trackPart : trackParts) {
      inside = U.contains(trackPart.modelName, targets) &&
      Math.abs(Y[0] - trackPart.Y) <= trackPart.boundsY * tolerance &&
      Math.abs(X[0] - trackPart.X) <= trackPart.boundsX * tolerance &&
@@ -268,51 +269,51 @@ public enum TE {//TrackElements
     V.X *= V.X < 0 ? -1 : 1;
     V.Z *= V.Z < 0 ? -1 : 1;
    }
-  } else if (Maps.name.equals(SL.Maps.testOfDamage)) {
+  } else if (Maps.name.equals(D.Maps.testOfDamage)) {
    if (!V.dealsMassiveDamage() && !V.isFixed()) {
     V.X = U.random(MapBounds.right);
     V.Z = U.random(MapBounds.backward);
    }
-  } else if (Maps.name.equals(SL.Maps.vehicularFalls)) {
+  } else if (Maps.name.equals(D.Maps.vehicularFalls)) {
    V.Y -= 100000;
    if (!V.isFixed()) {
     V.Z = U.random(-10000.) + U.random(30000.);
     V.X = 0;
    }
-  } else if (Maps.name.equals(SL.Maps.highlands)) {
+  } else if (Maps.name.equals(D.Maps.highlands)) {
    V.X = U.randomPlusMinus(100000);
    V.Z = U.randomPlusMinus(100000);
-  } else if (Maps.name.equals(SL.Maps.circleRaceXL)) {
+  } else if (Maps.name.equals(D.Maps.circleRaceXL)) {
    V.Z += 320000;
-  } else if (Maps.name.equals(SL.Maps.XYLand)) {
+  } else if (Maps.name.equals(D.Maps.XYLand)) {
    V.X = V.isFixed() ? V.X : U.random(23000.) - U.random(25000.);
-  } else if (Maps.name.equals(SL.Maps.matrix2x3)) {
+  } else if (Maps.name.equals(D.Maps.matrix2x3)) {
    if (!V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.isFixed()) {
     V.X = U.randomPlusMinus(14000.);
     V.Z = -U.random(31000.);
    }
   } else if (Maps.name.equals("Cold Fury")) {
    V.Y = -4000;
-  } else if (Maps.name.equals(SL.Maps.tunnelOfDoom)) {
+  } else if (Maps.name.equals(D.Maps.tunnelOfDoom)) {
    if (!V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.isFixed()) {
-    V.X = U.randomPlusMinus(700.);
+    V.X = 0;//<-Zero is best--train was beached against walls at match start
     V.Z = U.random(6000.) - U.random(10000.);
    }
-  } else if (Maps.name.equals(SL.Maps.everybodyEverything)) {
+  } else if (Maps.name.equals(D.Maps.everybodyEverything)) {
    V.X = U.random() < .5 ? -2000 : 2000;
    V.Z = U.randomPlusMinus(20000.);
-  } else if (Maps.name.equals(SL.Maps.theMaze)) {
+  } else if (Maps.name.equals(D.Maps.theMaze)) {
    if (!V.isFixed()) {
     V.X = V.Z = 0;
    }
-  } else if (Maps.name.equals(SL.Maps.volcanicProphecy)) {
+  } else if (Maps.name.equals(D.Maps.volcanicProphecy)) {
    V.X *= 2;
    V.Z *= 2;
-  } else if (Maps.name.equals(SL.Maps.speedway2000000)) {
+  } else if (Maps.name.equals(D.Maps.speedway2000000)) {
    boolean random = U.random() < .5;
    V.XZ = random ? 180 : 0;
    V.Z += random ? 1000000 : -1000000;
-  } else if (Maps.name.equals(SL.Maps.ghostCity)) {
+  } else if (Maps.name.equals(D.Maps.ghostCity)) {
    V.X *= 4;
    V.Z *= 4;
    if (!V.isFixed()) {
@@ -325,7 +326,7 @@ public enum TE {//TrackElements
    if (!V.isFixed()) {
     V.X = U.random() < .5 ? 2000 : -2000;
    }
-  } else if (Maps.name.equals(SL.Maps.summitOfEpic)) {
+  } else if (Maps.name.equals(D.Maps.summitOfEpic)) {
    V.X = !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.isFixed() ? 0 : V.X;
    boolean random = U.random() < .5;
    V.XZ = random ? 180 : 0;
@@ -335,7 +336,7 @@ public enum TE {//TrackElements
    V.Z = 0;
   }
   if (E.gravity == 0) {
-   if (Maps.name.equals(SL.Maps.outerSpace1)) {
+   if (Maps.name.equals(D.Maps.outerSpace1)) {
     V.X = U.randomPlusMinus(500.);
     V.Z = U.random(2000.) - U.random(4000.);
     if (V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name())) {
@@ -371,12 +372,12 @@ public enum TE {//TrackElements
    if (P.type == Point.Type.mustPassAbsolute && V.P.mode != Physics.Mode.fly) {
     V.point += U.distance(V, P) < 500 ? 1 : 0;
    } else if (P.type != Point.Type.checkpoint &&
-   (U.distanceXZ(V, P) < 500 || (V.AI.skipStunts && P.type != Point.Type.mustPassIfClosest) || (!checkpoints.isEmpty() && !Maps.name.equals(SL.Maps.devilsStairwell) && U.distance(V, checkpoints.get(V.checkpointsPassed)) <= U.distance(P, checkpoints.get(V.checkpointsPassed))))) {
+   (U.distanceXZ(V, P) < 500 || (V.AI.skipStunts && P.type != Point.Type.mustPassIfClosest) || (!checkpoints.isEmpty() && !Maps.name.equals(D.Maps.devilsStairwell) && U.distance(V, checkpoints.get(V.checkpointsPassed)) <= U.distance(P, checkpoints.get(V.checkpointsPassed))))) {
     V.point++;
    }
   }
   if (!checkpoints.isEmpty() && !V.phantomEngaged) {
-   double checkSize = Maps.name.equals(SL.Maps.circleRaceXL) ? V.P.speed : 0;
+   double checkSize = Maps.name.equals(D.Maps.circleRaceXL) ? V.P.speed : 0;
    Checkpoint C = checkpoints.get(V.checkpointsPassed);
    if ((C.type == Checkpoint.Type.passZ || C.type == Checkpoint.Type.passAny) &&
    Math.abs(V.Z - C.Z) < (60 + checkSize) + Math.abs(V.speedZ) * U.tick && Math.abs(V.X - C.X) < 700 && Math.abs((V.Y - C.Y) + 350) < 450) {
@@ -384,7 +385,7 @@ public enum TE {//TrackElements
     V.point++;
     if (V.index == I.vehiclePerspective) {
      if (!Match.messageWait) {
-      Match.print = SL.Checkpoint;
+      Match.print = D.Checkpoint;
       Match.printTimer = 10;
      }
      if (Options.headsUpDisplay) {
@@ -403,7 +404,7 @@ public enum TE {//TrackElements
     V.point++;
     if (V.index == I.vehiclePerspective) {
      if (!Match.messageWait) {
-      Match.print = SL.Checkpoint;
+      Match.print = D.Checkpoint;
       Match.printTimer = 10;
      }
      if (Options.headsUpDisplay) {
@@ -427,7 +428,7 @@ public enum TE {//TrackElements
 
  public static void runVehicleRepairPointInteraction(Vehicle V, boolean gamePlay) {
   if (repairPointsExist && V.repairSpheres.get(U.random(V.repairSpheres.size())).stage <= 0 && !V.phantomEngaged) {
-   for (TrackPart part : trackParts) {
+   for (var part : trackParts) {
     if (part.isRepairPoint) {
      if (U.distance(part.sidewaysXZ ? V.Z : V.X, part.sidewaysXZ ? part.Z : part.X, V.Y, part.Y) <= 500 && Math.abs(part.sidewaysXZ ? V.X - part.X : V.Z - part.Z) <= 200 + Math.abs(part.sidewaysXZ ? V.speedX : V.speedZ) * U.tick) {
       V.repair(gamePlay);
@@ -437,7 +438,7 @@ public enum TE {//TrackElements
   }
  }
 
- public static boolean isSidewaysXZ(double angleXZ) {
+ private static boolean isSidewaysXZ(double angleXZ) {
   return Math.abs(U.cos(angleXZ)) < U.sin45;
  }
 

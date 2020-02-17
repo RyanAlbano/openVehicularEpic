@@ -6,7 +6,7 @@ import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.instances.I;
 import ve.utilities.Nodes;
-import ve.utilities.SL;
+import ve.utilities.D;
 import ve.utilities.U;
 
 class Chip extends CoreAdvanced {
@@ -16,7 +16,7 @@ class Chip extends CoreAdvanced {
  private double stage;
  private double gravitySpeed;
  private double speedXZ, speedXY, speedYZ;
- final Core core = new Core();
+ private final Core core = new Core();
 
  Chip(VehiclePart part) {
   VP = part;
@@ -71,7 +71,7 @@ class Chip extends CoreAdvanced {
      X += speedX * U.tick;
      Z += speedZ * U.tick;
      gravitySpeed += E.gravity * U.tick;
-     Y += speedY * U.tick + (VP.V.P.mode.name().startsWith(SL.drive) ? gravitySpeed * U.tick : 0);
+     Y += speedY * U.tick + (VP.V.P.mode.name().startsWith(D.drive) ? gravitySpeed * U.tick : 0);
     }
     core.X = X + VP.X;
     core.Y = Y + VP.Y;

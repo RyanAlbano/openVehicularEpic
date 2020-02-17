@@ -2,7 +2,7 @@ package ve.ui;
 
 import javafx.scene.paint.Color;
 import ve.instances.I;
-import ve.utilities.SL;
+import ve.utilities.D;
 import ve.utilities.U;
 
 public enum DestructionLog {
@@ -17,11 +17,11 @@ public enum DestructionLog {
    double x1 = .4725, x2 = .5275, y1 = .0375, y2 = .05, y3 = .0625, y4 = .075, y5 = .0875;
    U.fillRectangle(.5, .05, .4, .08);
    U.fillRGB(1);
-   U.text(SL.destroyed, y1);
-   U.text(SL.destroyed, y2);
-   U.text(SL.destroyed, y3);
-   U.text(SL.destroyed, y4);
-   U.text(SL.destroyed, y5);
+   U.text(D.destroyed, y1);
+   U.text(D.destroyed, y2);
+   U.text(D.destroyed, y3);
+   U.text(D.destroyed, y4);
+   U.text(D.destroyed, y5);
    //LEFT
    U.fillRGB(nameColors[0][0]);
    U.textR(names[0][0], x1, y1);

@@ -11,7 +11,7 @@ import ve.utilities.Phong;
 import ve.utilities.U;
 
 public class Splash extends CoreAdvanced {
- final Vehicle V;
+ private final Vehicle V;
  private final Cylinder C;
  public static final long defaultQuantity = 384;//<-Too many, maybe?
 

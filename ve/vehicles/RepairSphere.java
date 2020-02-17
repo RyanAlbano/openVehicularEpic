@@ -9,7 +9,7 @@ import ve.utilities.U;
 
 public class RepairSphere extends CoreAdvanced {
 
- static final PhongMaterial repairSpherePM = new PhongMaterial();
+ private static final PhongMaterial repairSpherePM = new PhongMaterial();
  private final Sphere S;
  public double stage;
 

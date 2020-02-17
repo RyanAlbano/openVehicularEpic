@@ -4,6 +4,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import ve.instances.I;
 import ve.trackElements.Arrow;
+import ve.ui.options.Options;
 import ve.utilities.Camera;
 
 public enum Keys {

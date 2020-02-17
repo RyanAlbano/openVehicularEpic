@@ -4,29 +4,35 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 import ve.effects.Effects;
 import ve.environment.E;
-import ve.environment.FrustumMound;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.instances.I;
 import ve.trackElements.TE;
 import ve.ui.Match;
 import ve.utilities.*;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
 import ve.vehicles.explosions.Explosion;
 
 public class Shot extends CoreAdvanced {
- final Vehicle V;
- final Special S;
+ private final Vehicle V;
+ private final Special S;
  public final MeshView MV;
  private MeshView thrust;
- public double behindX, behindY, behindZ;
- public double stage, speed;
- double sinXZ, cosXZ, sinYZ, cosYZ;//<-Performance optimization
+ private double behindX;
+ private double behindY;
+ private double behindZ;
+ public double stage;
+ private double speed;
+ private double sinXZ;
+ private double cosXZ;
+ private double sinYZ;
+ private double cosYZ;//<-Performance optimization
  private double gravityDistance;
- public double homeXZ, homeYZ;
- public long hit;
- public boolean[] doneDamaging;
- final double homingSteerSpeed;
+ private double homeYZ;
+ private long hit;
+ private boolean[] doneDamaging;
+ private final double homingSteerSpeed;
  public static final long defaultQuantity = 96;
 
  Shot(Vehicle vehicle, Special special) {
@@ -100,8 +106,8 @@ public class Shot extends CoreAdvanced {
    thrust.setCullFace(CullFace.NONE);
    U.setMaterialSecurely(thrust, new PhongMaterial());
    thrust.setVisible(false);
+   Nodes.add(thrust);//<-MV added with transparent Nodes (for flamethrower)
   }
-  Nodes.add(thrust);//<-MV added with transparent Nodes (for flamethrower)
   MV.setVisible(false);
   if (S.type == Special.Type.forcefield) {
    doneDamaging = new boolean[I.vehiclesInMatch];
@@ -149,7 +155,7 @@ public class Shot extends CoreAdvanced {
      if (U.outOfBounds(this, 500)) {
       hit = 1;
      } else {
-      for (FrustumMound FM : TE.mounds) {
+      for (var FM : TE.mounds) {
        if (FM.objectInside(this)) {//fixme--Major lag source if there are lots of active shots and lots of mounds!
         hit = 1;
         break;
@@ -163,7 +169,7 @@ public class Shot extends CoreAdvanced {
      behindZ = Z;
      //^behinds getting the last positions of the shot
      runHoming();
-     if (stage != Double.MIN_VALUE) {//<-Prevents shot from 'surging' ahead of vehicle while moving. It may even help fast shots hit close-range targets better
+     if (stage != Double.MIN_VALUE) {//<-Prevents shot from 'surging' ahead of vehicle while moving. It may even help fast shots hit close-range targets better!
       X -= speed * sinXZ * cosYZ * U.tick;
       Z += speed * cosXZ * cosYZ * U.tick;
       Y -= speed * sinYZ * U.tick;
@@ -183,13 +189,13 @@ public class Shot extends CoreAdvanced {
      if (S.type == Special.Type.shell || S.type == Special.Type.missile || S.type == Special.Type.bomb) {
       V.explosions.get(V.currentExplosion).deploy(X, Y, Z, null);
       V.currentExplosion = ++V.currentExplosion >= Explosion.defaultQuantity ? 0 : V.currentExplosion;
-      V.VA.hitExplosive.play(Double.NaN, Math.sqrt(U.distance(this)) * Sound.standardGain(1));
+      V.VA.hitExplosive.play(Double.NaN, Math.sqrt(U.distance(this)) * Sounds.standardGain(1));
      } else if (S.type == Special.Type.powershell || S.type == Special.Type.mine) {
       for (int i = 6; --i >= 0; ) {
        V.explosions.get(V.currentExplosion).deploy(((X + behindX) * .5) + U.randomPlusMinus(2000.), ((Y + behindY) * .5) + U.randomPlusMinus(2000.), ((Z + behindZ) * .5) + U.randomPlusMinus(2000.), null);
        V.currentExplosion = ++V.currentExplosion >= Explosion.defaultQuantity ? 0 : V.currentExplosion;
       }
-      double shotToCameraSoundDistance = Math.sqrt(U.distance(this)) * Sound.standardGain(1);
+      double shotToCameraSoundDistance = Math.sqrt(U.distance(this)) * Sounds.standardGain(1);
       V.VA.hitExplosive.play(Double.NaN, shotToCameraSoundDistance);
       V.VA.hitExplosive.play(Double.NaN, shotToCameraSoundDistance);
       V.VA.hitExplosive.play(Double.NaN, shotToCameraSoundDistance);
@@ -235,25 +241,25 @@ public class Shot extends CoreAdvanced {
   }
  }
 
- void setAngleTable() {
+ private void setAngleTable() {
   sinXZ = U.sin(XZ);
   cosXZ = U.cos(XZ);
   sinYZ = U.sin(YZ);
   cosYZ = U.cos(YZ);
  }
 
- void runHoming() {
+ private void runHoming() {
   if (S.homing) {
    int shotTarget = I.userPlayerIndex;
    double compareDistance = Double.POSITIVE_INFINITY;
-   for (Vehicle vehicle : I.vehicles) {
+   for (var vehicle : I.vehicles) {
     if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(this, vehicle) < compareDistance) {
      shotTarget = vehicle.index;
      compareDistance = U.distance(this, vehicle);
     }
    }
    Vehicle targetV = I.vehicles.get(shotTarget);
-   homeXZ = (targetV.X < X ? 90 : targetV.X > X ? -90 : 0) + U.arcTan((targetV.Z - Z) / (targetV.X - X));
+   double homeXZ = (targetV.X < X ? 90 : targetV.X > X ? -90 : 0) + U.arcTan((targetV.Z - Z) / (targetV.X - X));
    while (Math.abs(XZ - homeXZ) > 180) {
     homeXZ += homeXZ < XZ ? 360 : -360;
    }
@@ -273,12 +279,12 @@ public class Shot extends CoreAdvanced {
   }
  }
 
- public void vehicleInteract(Vehicle vehicle, boolean isThrough, boolean replay, boolean greenTeam) {
+ public void vehicleInteract(Vehicle vehicle, boolean throughWeapon, boolean replay, boolean greenTeam) {
   if (stage > 0 && hit < 1 && (doneDamaging == null || !doneDamaging[vehicle.index]) && (S.type != Special.Type.missile || vehicle.isIntegral()) && !(S.type == Special.Type.mine && (U.distance(this, vehicle) > 2000 || !vehicle.isIntegral()))) {
    if (advancedCollisionCheck(vehicle, (S.type == Special.Type.mine ? vehicle.P.netSpeed : S.diameter) + vehicle.collisionRadius)) {
     V.P.hitCheck(vehicle);
     double shotDamage = S.damageDealt;
-    if (isThrough) {
+    if (throughWeapon) {
      if (S.type == Special.Type.flamethrower) {
       shotDamage /= Math.max(1, stage);
      }
@@ -304,12 +310,12 @@ public class Shot extends CoreAdvanced {
     }
     vehicle.deformParts();
     vehicle.throwChips(speed, true);
-    double shotToCameraSoundDistance = Math.sqrt(U.distance(this)) * Sound.standardGain(1);
+    double shotToCameraSoundDistance = Math.sqrt(U.distance(this)) * Sounds.standardGain(1);
     if (S.useSmallHits) {
      V.VA.hitShot.play(Double.NaN, shotToCameraSoundDistance);
     }
     if (S.type == Special.Type.heavymachinegun || S.type == Special.Type.blaster) {
-     V.VA.hitShot.play(U.random(7), shotToCameraSoundDistance);
+     V.VA.hitShot.play(U.random(7), shotToCameraSoundDistance);//<-May not call effectively on Linux, but it's not so important since there's the default call above anyway
     } else if (S.type == Special.Type.heavyblaster || S.type == Special.Type.thewrath) {//<-These specials don't load 'hitExplosive' audio, so don't call!
      V.VA.crashDestroy.play(Double.NaN, shotToCameraSoundDistance);
     } else if (S.type.name().contains(Special.Type.shell.name()) || S.type == Special.Type.missile || S.type == Special.Type.bomb) {

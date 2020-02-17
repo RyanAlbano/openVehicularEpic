@@ -1,8 +1,8 @@
-package ve.ui;
+package ve.ui.options;
 
 public enum Units {
  ;
- public static Unit units = Unit.VEs;
+ public static Unit units;
 
  public enum Unit {VEs, metric, US}
 

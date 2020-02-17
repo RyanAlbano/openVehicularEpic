@@ -2,12 +2,15 @@ package ve.ui;
 
 import javafx.scene.Cursor;
 import javafx.scene.paint.PhongMaterial;
+import ve.effects.echo.TimerEcho;
 import ve.environment.*;
 import ve.environment.storm.Storm;
 import ve.instances.I;
 import ve.trackElements.*;
 import ve.trackElements.trackParts.TrackPart;
 import ve.utilities.*;
+import ve.utilities.sound.Controlled;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.AI;
 import ve.vehicles.Vehicle;
 
@@ -20,10 +23,11 @@ import java.util.Objects;
 public enum Maps {
  ;
  public static int map;
- public static final List<String> maps = new ArrayList<>(Arrays.asList(SL.basic, "lapsGlory", SL.checkpoint, "gunpowder", "underOver", SL.antigravity, "versus1", "versus2", "versus3", "trackless", "desert", "3DRace", "trip", "raceNowhere", "moonlight", "bottleneck", "railing", "twisted", "deathPit", "falls", "pyramid", "combustion", "darkDivide", "arctic", "scenicRoute", "winterMode", "mountainHop", "damage", "crystalCavern", "southPole", "aerialControl", "matrix", "mist", "vansLand", "dustDevil", "forest", "columns", "zipCross", "highlands", "coldFury", SL.tornado, "volcanic", SL.tsunami, SL.boulder, "sands", SL.meteor, "speedway", "endurance", "tunnel", "circle", "circleXL", "circles", "everything", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "lastStand", "parkingLot", "city", "machine", "military", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "space3", "summit", "portal", "blackHole", "doomsday", "+UserMap & TUTORIAL+"));
+ public static final List<String> maps = new ArrayList<>(Arrays.asList(D.basic, "lapsGlory", D.checkpoint, "gunpowder", "underOver", D.antigravity, "versus1", "versus2", "versus3", "trackless", "desert", "3DRace", "trip", "raceNowhere", "moonlight", "bottleneck", "railing", "twisted", "deathPit", "falls", "pyramid", "combustion", "darkDivide", "arctic", "scenicRoute", "winterMode", "mountainHop", "damage", "crystalCavern", "southPole", "aerialControl", "matrix", "mist", "vansLand", "dustDevil", "forest", "columns", "zipCross", "highlands", "coldFury", D.tornado, "volcanic", D.tsunami, D.boulder, "sands", D.meteor, "speedway", "endurance", "tunnel", "circle", "circleXL", "circles", "everything", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "lastStand", "parkingLot", "city", "machine", "military", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "space3", "summit", "portal", "blackHole", "doomsday", "+UserMap & TUTORIAL+"));
  public static String name = "";
  public static boolean randomVehicleStartAngle, guardCheckpointAI;
  public static double defaultVehicleLightBrightness;
+ private static final String folder = "maps";
 
  public static void load() {
   TE.instanceSize = 1;
@@ -37,6 +41,7 @@ public enum Maps {
    I.vehicles.clear();
    E.reset();
    TE.reset();
+   I.resetWhoIsIn();
    Camera.PC.setFarClip(Camera.clipRange.maximumFar);
    UI.scene3D.setFill(U.getColor(0));
    defaultVehicleLightBrightness = 0;
@@ -49,7 +54,7 @@ public enum Maps {
    for (; (s = BR.readLine()) != null; ) {
     s = s.trim();
     if (UI.status == UI.Status.mapLoadPass2) {
-     name = s.startsWith(SL.name) ? U.getString(s, 0) : name;
+     name = s.startsWith(D.name) ? U.getString(s, 0) : name;
      if (s.startsWith("ambientLight(")) {
       Nodes.setLightRGB(E.ambientLight, U.getValue(s, 0), U.getValue(s, 1), U.getValue(s, 2));
      }
@@ -63,6 +68,12 @@ public enum Maps {
       Camera.PC.setFarClip(U.clamp(Camera.clipRange.normalNear + 1, U.getValue(s, 0), Camera.clipRange.maximumFar));
      } else if (s.startsWith("soundTravel(")) {
       E.soundMultiple = U.getValue(s, 0);
+     } else if (s.startsWith("echo(")) {
+      TimerEcho.presence = Math.round(U.getValue(s, 0));//<-The respective fields represent the same 'delay' property
+      Sounds.echoVolume = Sounds.decibelToLinear(-TimerEcho.presence * .05);
+      if (Sounds.softwareBased && I.vehiclesInMatch > 2) {
+       //TimerEcho.presence = 0;//<-No echo, as this is WAY too much for TinySound to handle!//<-todo-check--will probably need reinstating!
+      }
      }
      E.gravity = s.startsWith("gravity(") ? U.getValue(s, 0) : E.gravity;
      Sun.load(s);
@@ -87,7 +98,7 @@ public enum Maps {
       Wind.speedZ = U.randomPlusMinus(Wind.maxPotency);
      } else if (s.startsWith("windstorm")) {
       Wind.stormExists = true;
-      Wind.storm = new Sound("storm" + U.getString(s, 0));
+      Wind.storm = new Controlled("storm" + U.getString(s, 0));
      }
      Cloud.load(s);
      Storm.load(s);
@@ -108,7 +119,7 @@ public enum Maps {
       }
      } else if (s.startsWith("cacti(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
-       TE.trackParts.add(new TrackPart(TE.getTrackPartIndex(SL.cactus + U.random(3)), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0, .5 + U.random(.5), TE.instanceScale));
+       TE.trackParts.add(new TrackPart(TE.getTrackPartIndex(D.cactus + U.random(3)), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0, .5 + U.random(.5), TE.instanceScale));
       }
      } else if (s.startsWith("mounds(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
@@ -125,12 +136,12 @@ public enum Maps {
       try {
        Bonus.startX = U.getValue(s, 1);
        Bonus.startZ = U.getValue(s, 2);
-      } catch (Exception ignored) {
+      } catch (RuntimeException ignored) {
       }
      }
     }
-    TE.instanceSize = s.startsWith(SL.size + "(") ? U.getValue(s, 0) : TE.instanceSize;
-    if (s.startsWith(SL.scale + "(")) {
+    TE.instanceSize = s.startsWith(D.size + "(") ? U.getValue(s, 0) : TE.instanceSize;
+    if (s.startsWith(D.scale + "(")) {
      try {
       TE.instanceScale[0] = U.getValue(s, 0);
       TE.instanceScale[1] = U.getValue(s, 1);
@@ -144,7 +155,7 @@ public enum Maps {
      TE.randomY = s.startsWith("randomY(") ? U.getValue(s, 0) : TE.randomY;
      TE.randomZ = s.startsWith("randomZ(") ? U.getValue(s, 0) : TE.randomZ;
      Crystal.load(s);//<-Here so it's affected by randomXYZ
-     if (U.startsWith(s, "(", SL.strip + "(", SL.curve + "(")) {
+     if (U.startsWith(s, "(", D.strip + "(", D.curve + "(")) {
       int trackNumber = TE.getTrackPartIndex(U.getString(s, 0));//<-Returns '-1' on exception
       if (trackNumber < 0 && !U.getString(s, 0).isEmpty()) {
        System.out.println("Map Part List Exception (" + name + ")");
@@ -166,7 +177,7 @@ public enum Maps {
       } else if (U.equals(name, "the Linear Accelerator")) {
        random[0] *= 1000;
        random[2] *= 1000;
-      } else if (name.equals(SL.Maps.crystalCavern)) {
+      } else if (name.equals(D.Maps.crystalCavern)) {
        random[0] *= Math.abs(random[0]) > 40000 ? .5 : 1;
        random[2] *= Math.abs(random[2]) > 40000 ? .5 : 1;
        if (random[1] > 0) {
@@ -179,7 +190,7 @@ public enum Maps {
       summedPositionX = U.getValue(s, 1) + random[0],
       summedPositionZ = U.getValue(s, 2) + random[2],
       summedPositionY = U.getValue(s, 3) + random[1];
-      if (s.startsWith(SL.strip + "(")) {
+      if (s.startsWith(D.strip + "(")) {
        double partAngle = Double.NaN;
        try {
         partAngle = U.getValue(s, 7);
@@ -195,7 +206,7 @@ public enum Maps {
         summedPositionZ + (advanceDistance * iteration * U.cos(advanceAngle)),
         Double.isNaN(partAngle) ? -advanceAngle : partAngle);
        }
-      } else if (s.startsWith(SL.curve + "(")) {
+      } else if (s.startsWith(D.curve + "(")) {
        double angle = 90;
        try {
         angle += U.getValue(s, 9);
@@ -229,7 +240,7 @@ public enum Maps {
    E.printStackTrace();
   }
   if (UI.status == UI.Status.mapLoadPass3) {
-   if (name.equals(SL.Maps.ghostCity)) {
+   if (name.equals(D.Maps.ghostCity)) {
     for (n = 5; n < 365; n += 10) {
      TE.instanceSize = 2500 + U.random(2500.);
      TE.instanceScale[0] = 1 + U.random(2.);
@@ -239,7 +250,7 @@ public enum Maps {
      calculatedZ = 112500 * StrictMath.cos(Math.toRadians(n));
      TE.trackParts.add(new TrackPart(TE.getTrackPartIndex(TE.Models.cube.name()), calculatedX, 0, calculatedZ, n - 90, TE.instanceSize, TE.instanceScale));
     }
-   } else if (name.equals("World's Biggest Parking Lot")) {
+   } else if ("World's Biggest Parking Lot".equals(name)) {
     for (n = 0; n < I.vehicleModels.size(); n++) {
      double xRandom = U.randomPlusMinus(30000.), zRandom = U.randomPlusMinus(30000.), randomXZ = U.randomPlusMinus(180.);
      I.userRandomRGB = U.getColor(U.random(), U.random(), U.random());
@@ -263,28 +274,30 @@ public enum Maps {
     }
    }
    if (Pool.type == Pool.Type.lava) {
-    for (Tsunami.Part tsunamiPart : Tsunami.parts) {//Setting the illumination here in case the lava pool gets called AFTER tsunami definition
-     ((PhongMaterial) tsunamiPart.C.getMaterial()).setSelfIlluminationMap(Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
+    for (var part : Tsunami.parts) {//Setting the illumination here in case the lava pool gets called AFTER tsunami definition
+     ((PhongMaterial) part.C.getMaterial()).setSelfIlluminationMap(Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
     }
    }
    Bonus.load();
   } else if (UI.status == UI.Status.mapLoadPass4) {
-   for (TrackPart TP : TE.trackParts) {
+   for (var TP : TE.trackParts) {
     TP.setInitialSit();
    }
-   for (FrustumMound FM : TE.mounds) {
+   for (var FM : TE.mounds) {
     FM.setInitialSit();
    }
    if (!Viewer.inUse) {
+    Sounds.loadSoftwareBasedGlobals();
     for (n = I.vehiclesInMatch; --n >= 0; ) {
      I.vehicles.add(null);
     }
-    I.vehicles.set(I.userPlayerIndex, new Vehicle(VS.chosen[I.userPlayerIndex], I.userPlayerIndex, true));
-    for (n = I.vehiclesInMatch; --n >= 0; ) {
-     if (n != I.userPlayerIndex) {//<-User player set first for Linux sound optimization
+    I.vehicles.set(I.userPlayerIndex, new Vehicle(VS.chosen[I.userPlayerIndex], I.userPlayerIndex, true));//<-User player set first to ensure their vehicle sound's heard (for Linux)
+    for (n = I.vehiclesInMatch; --n >= 0; ) {//<-Reverse loop ideal, as it's more important the user hears red-team vehicles than green
+     if (n != I.userPlayerIndex) {
       I.vehicles.set(n, new Vehicle(VS.chosen[n], n, true));
      }
     }
+    Sounds.removeExtraneousGlobals();
    }
    addTransparentNodes();
    Match.reset();
@@ -312,11 +325,11 @@ public enum Maps {
   E.renderType = E.RenderType.ALL;
  }
 
- static void addTransparentNodes() {
-  for (Boulder.Instance instance : Boulder.instances) {
+ private static void addTransparentNodes() {
+  for (var instance : Boulder.instances) {
    instance.addTransparentNodes();
   }
-  for (Vehicle vehicle : I.vehicles) {
+  for (var vehicle : I.vehicles) {
    vehicle.addTransparentNodes();
   }
   for (int n = Fog.spheres.size(); --n >= 0; ) {//<-Adding spheres in forward order doesn't layer fog correctly
@@ -331,7 +344,7 @@ public enum Maps {
    try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(getMapFile(n)), U.standardChars))) {
     for (String s2; (s2 = BR.readLine()) != null; ) {
      s1 = s2.trim();
-     name = s1.startsWith(SL.name) ? U.getString(s1, 0) : name;
+     name = s1.startsWith(D.name) ? U.getString(s1, 0) : name;
     }
    } catch (IOException e) {
     UI.status = UI.Status.mapError;
@@ -344,14 +357,14 @@ public enum Maps {
   return n;
  }
 
- public static FileInputStream getMapFile(int n) {
-  File F = new File(U.mapFolder + File.separator + maps.get(n));
+ private static FileInputStream getMapFile(int n) {
+  File F = new File(folder + File.separator + maps.get(n));
   if (!F.exists()) {
-   F = new File(U.mapFolder + File.separator + U.userSubmittedFolder + File.separator + maps.get(n));
+   F = new File(folder + File.separator + U.userSubmittedFolder + File.separator + maps.get(n));
   }
   if (!F.exists()) {
    map = 0;
-   F = new File(U.mapFolder + File.separator + maps.get(0));
+   F = new File(folder + File.separator + maps.get(0));
   }
   try {
    return new FileInputStream(F);
@@ -372,7 +385,7 @@ public enum Maps {
    try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(getMapFile(map)), U.standardChars))) {
     for (String s1; (s1 = BR.readLine()) != null; ) {
      s = s1.trim();
-     name = s.startsWith(SL.name) ? U.getString(s, 0) : name;
+     name = s.startsWith(D.name) ? U.getString(s, 0) : name;
      mapMaker = s.startsWith("maker") ? U.getString(s, 0) : mapMaker;
     }
    } catch (IOException e) {
@@ -423,14 +436,14 @@ public enum Maps {
   Camera.runAroundTrack();
   U.rotate(Camera.PC, Camera.YZ, -Camera.XZ);
   E.run(gamePlay);
-  for (Vehicle vehicle : I.vehicles) {
+  for (var vehicle : I.vehicles) {
    vehicle.runRender(gamePlay);
   }
   boolean renderALL = E.renderType == E.RenderType.ALL;
-  for (TrackPart trackPart : TE.trackParts) {
+  for (var trackPart : TE.trackParts) {
    trackPart.runGraphics(renderALL);
   }
-  for (FrustumMound mound : TE.mounds) {
+  for (var mound : TE.mounds) {
    mound.runGraphics();
   }
   UI.scene.setCursor(Cursor.CROSSHAIR);
@@ -461,9 +474,7 @@ public enum Maps {
    }
    UI.status = UI.Status.mapJump;
    UI.sound.play(0, 0);
-   for (Vehicle vehicle : I.vehicles) {
-    vehicle.closeSounds();
-   }
+   Sounds.reset();
   }
   if (Keys.escape) {
    UI.escapeToLast(true);

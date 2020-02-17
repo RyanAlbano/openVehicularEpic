@@ -6,7 +6,7 @@ import ve.environment.*;
 import ve.instances.CoreAdvanced;
 import ve.utilities.Nodes;
 import ve.utilities.Phong;
-import ve.utilities.SL;
+import ve.utilities.D;
 import ve.utilities.U;
 import ve.vehicles.*;
 
@@ -31,7 +31,7 @@ public class Dust extends CoreAdvanced {
   Z = vehicle.Z + (dustSpeed > 0 ? U.randomPlusMinus(vehicle.absoluteRadius * .3) : 0);
   Y = Math.min(vehicle.Y + vehicle.clearanceY, vehicle.P.localGround);//<-So that dust won't deploy underground during a hard ground hit
   speedX = speedZ = vehicle.P.flipped() ? 0 : speedDifference;
-  double presence = vehicle.P.terrainProperties.contains(SL.thick(SL.hard)) ? 1 : 2;
+  double presence = vehicle.P.terrainProperties.contains(D.thick(D.hard)) ? 1 : 2;
   absoluteRadius = .05 * vehicle.absoluteRadius * Math.sqrt(U.random()) * presence;
   duration = 2 * presence;
   U.setScale(C, absoluteRadius);

@@ -3,14 +3,12 @@ package ve.ui;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
 import ve.environment.E;
-import ve.environment.FrustumMound;
 import ve.environment.Ground;
 import ve.environment.Sun;
 import ve.instances.I;
 import ve.trackElements.TE;
-import ve.trackElements.trackParts.TrackPart;
 import ve.utilities.*;
-import ve.vehicles.VehiclePart;
+import ve.utilities.sound.Sounds;
 
 public enum Viewer {
  ;
@@ -82,8 +80,8 @@ public enum Viewer {
     U.text(I.vehicles.get(0).name, .1125);
     U.font(.0125);
     U.fillRGB(1);
-    U.text(SL.Meshes_ + I.vehicles.get(0).parts.size(), .25, .8);
-    U.text(SL.Vertices_ + I.vehicles.get(0).vertexQuantity, .75, .8);
+    U.text(D.Meshes_ + I.vehicles.get(0).parts.size(), .25, .8);
+    U.text(D.Vertices_ + I.vehicles.get(0).vertexQuantity, .75, .8);
     if (showCollisionBounds) {
      U.setTranslate(collisionBounds, I.vehicles.get(0));
      Nodes.add(collisionBounds);
@@ -128,7 +126,7 @@ public enum Viewer {
      }
     } else if (UI.selected == 2) {
      showWireframe = !showWireframe;
-     for (VehiclePart part : I.vehicles.get(0).parts) {
+     for (var part : I.vehicles.get(0).parts) {
       part.setDrawMode(showWireframe);
      }
     } else if (UI.selected == 3) {
@@ -191,10 +189,10 @@ public enum Viewer {
    U.setTranslate(E.mapViewerLight, Camera.C.X, Camera.C.Y, Camera.C.Z);
   }
   E.run(gamePlay);
-  for (TrackPart trackPart : TE.trackParts) {
+  for (var trackPart : TE.trackParts) {
    trackPart.runGraphics(false);
   }
-  for (FrustumMound mound : TE.mounds) {
+  for (var mound : TE.mounds) {
    mound.runGraphics();
   }
   U.fillRGB(0, 0, 0, UI.colorOpacity.minimal);
@@ -215,15 +213,15 @@ public enum Viewer {
   }
   if (Keys.space || Keys.enter) {
    UI.status = UI.selected == 0 ? UI.Status.mapLoadPass0 : UI.Status.mainMenu;
-   UI.sound.play(1, 0);
    Keys.space = Keys.enter = false;
-   Sounds.clear();
+   Sounds.reset();
+   UI.sound.play(1, 0);
   }
   if (Keys.escape) {
    UI.status = UI.Status.mainMenu;
-   UI.sound.play(1, 0);
    Keys.escape = false;
-   Sounds.clear();
+   Sounds.reset();
+   UI.sound.play(1, 0);
   }
   TE.bonus.run();
   if (!Keys.inUse) {

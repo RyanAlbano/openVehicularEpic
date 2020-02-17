@@ -7,21 +7,21 @@ import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.instances.I;
 import ve.ui.Match;
-import ve.ui.Options;
+import ve.ui.options.Options;
 import ve.utilities.*;
+import ve.utilities.sound.Controlled;
 import ve.vehicles.Vehicle;
 
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 
-public class Bonus extends Core {
+public class Bonus extends Core {//<-fixme--balls drifted away from vehicle (om Linux)
  ;
  public static int holder = -1;
  public static final Sphere big = new Sphere(500);
  public static final Collection<Ball> balls = new ArrayList<>();
  public static double startX, startY, startZ;
- public static Sound sound;
+ public static Controlled sound;
 
  static {
   U.setMaterialSecurely(big, new PhongMaterial());
@@ -36,7 +36,7 @@ public class Bonus extends Core {
   TE.bonus.Z = startZ;
   E.setMoundSit(TE.bonus, false);
   Nodes.add(big);
-  for (Ball ball : balls) {
+  for (var ball : balls) {
    Nodes.add(ball.S);
   }
  }
@@ -50,7 +50,7 @@ public class Bonus extends Core {
    } else {
     big.setVisible(false);
    }
-   for (Ball ball : balls) {
+   for (var ball : balls) {
     ball.S.setVisible(false);
    }
   } else {
@@ -58,13 +58,13 @@ public class Bonus extends Core {
    X = I.vehicles.get(holder).X;
    Y = I.vehicles.get(holder).Y;
    Z = I.vehicles.get(holder).Z;
-   for (Ball ball : balls) {
+   for (var ball : balls) {
     ball.run();
    }
   }
   if (Match.started) {
    if (Network.mode == Network.Mode.OFF) {
-    for (Vehicle vehicle : I.vehicles) {
+    for (var vehicle : I.vehicles) {
      if (holder < 0 && vehicle.isIntegral() && !vehicle.phantomEngaged && U.distance(this, vehicle) < vehicle.collisionRadius + big.getRadius()) {
       setHolder(vehicle);
      }
@@ -77,22 +77,22 @@ public class Bonus extends Core {
     if (Network.bonusHolder < 0 && V.isIntegral() && !V.phantomEngaged && U.distance(this, V) < V.collisionRadius + big.getRadius()) {
      Network.bonusHolder = I.userPlayerIndex;
      if (Network.mode == Network.Mode.HOST) {
-      for (PrintWriter PW : Network.out) {
+      for (var PW : Network.out) {
        PW.println("BONUS0");
       }
      } else {
-      Network.out.get(0).println(SL.BONUS);
+      Network.out.get(0).println(D.BONUS);
      }
     }
     int setHolder = Network.bonusHolder < 0 ? Network.bonusHolder : holder;
     if (setHolder > -1 && !I.vehicles.get(setHolder).isIntegral()) {
      Network.bonusHolder = holder = -1;
      if (Network.mode == Network.Mode.HOST) {
-      for (PrintWriter PW : Network.out) {
-       PW.println(SL.BonusOpen);
+      for (var PW : Network.out) {
+       PW.println(D.BonusOpen);
       }
      } else {
-      Network.out.get(0).println(SL.BonusOpen);
+      Network.out.get(0).println(D.BonusOpen);
      }
     }
     if (holder != Network.bonusHolder) {
@@ -107,7 +107,7 @@ public class Bonus extends Core {
 
  public static void setHolder(Vehicle vehicle) {
   holder = vehicle.index;
-  for (Ball ball : balls) {
+  for (var ball : balls) {
    ball.S.setRadius(I.vehicles.get(holder).absoluteRadius * .02);
    ball.X = ball.Y = ball.Z = ball.speedX = ball.speedY = ball.speedZ = 0;
   }
@@ -124,7 +124,7 @@ public class Bonus extends Core {
    U.setMaterialSecurely(S, new PhongMaterial());
   }
 
-  public void run() {
+  void run() {
    speedY += U.randomPlusMinus(6.);
    speedX += U.randomPlusMinus(6.);
    speedZ += U.randomPlusMinus(6.);
@@ -160,5 +160,9 @@ public class Bonus extends Core {
 
  static void reset() {
   startX = startY = startZ = 0;
+ }
+
+ public static void closeSound() {
+  if (sound != null) sound.close();
  }
 }

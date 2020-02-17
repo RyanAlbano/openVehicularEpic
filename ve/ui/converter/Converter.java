@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.scene.paint.Color;
-import ve.utilities.SL;
+import ve.utilities.D;
 import ve.utilities.U;
 
 class Converter {
@@ -66,8 +66,9 @@ class Converter {
   }
   StringBuilder SB = new StringBuilder();
   for (int n = 0; n < faces.size(); ++n) {
-   StringBuilder s2 = new StringBuilder(SL.RGB + "(" + (hasMaterial ? Double.valueOf(modelColor.get(n).getRed()) : "1") + "," + (hasMaterial ? Double.valueOf(modelColor.get(n).getGreen()) : "1") + "," + (hasMaterial ? Double.valueOf(modelColor.get(n).getBlue()) : "1") + U.lineSeparator);
-   for (int n1 = 0; n1 < faces.get(n).length; ++n1) {
+   StringBuilder s2 = new StringBuilder(D.RGB + "(" + (hasMaterial ? Double.valueOf(modelColor.get(n).getRed()) : "1") + "," + (hasMaterial ? Double.valueOf(modelColor.get(n).getGreen()) : "1") + "," + (hasMaterial ? Double.valueOf(modelColor.get(n).getBlue()) : "1") + U.lineSeparator);
+   int length = faces.get(n).length;
+   for (int n1 = 0; n1 < length; ++n1) {
     int n2 = (int) faces.get(n)[n1];
     double y = vertices.get(n2).Y * (invertY ? -1 : 1), z = vertices.get(n2).Z * (invertZ ? -1 : 1);
     s2.append("(").append(vertices.get(n2).X * (invertX ? -1 : 1)).append(",").append(axisSwap ? z : y).append(",").append(axisSwap ? y : z).append(U.lineSeparator);
@@ -94,7 +95,7 @@ class Converter {
     if (s.startsWith("(")) {
      SB.append(s).append(U.lineSeparator);
     }
-    if (s.startsWith(SL.RGB + "(")) {
+    if (s.startsWith(D.RGB + "(")) {
      if (!lastColor.equals(s)) {
       SB.append("><").append(s).append(U.lineSeparator).append("<>").append(U.lineSeparator).append("triangles").append(U.lineSeparator);
      }

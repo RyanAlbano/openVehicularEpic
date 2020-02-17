@@ -5,10 +5,11 @@ import ve.environment.Tsunami;
 import ve.instances.I;
 import ve.ui.Match;
 import ve.ui.Mouse;
-import ve.utilities.Camera;
-import ve.utilities.SL;
-import ve.utilities.Sound;
-import ve.utilities.U;
+import ve.utilities.*;
+import ve.utilities.sound.FireAndForget;
+import ve.utilities.sound.Controlled;
+import ve.utilities.sound.Sound;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.specials.Special;
 
 import java.io.File;
@@ -35,42 +36,43 @@ public class VehicleAudio {
  enum EngineTuning {equalTemperament, harmonicSeries}
 
  //*Keep here so we can make sure everything's being closed at a glance
- Sound burn;
- Sound land;
- Sound repair;
- private Sound grind;
- private Sound boost;
- Sound gate;
- Sound turret;
- private Sound splash;
- private Sound splashOverSurface;
- public Sound tsunamiSplash;
- public Sound mineExplosion;
- private Sound engine;
- private Sound turbineThrust;
- Sound death, deathExplode;
- private Sound fly;
- public Sound crashSoft;
- public Sound crashHard;
- public Sound crashDestroy;
- private Sound skidHard;
- private Sound skidOff;
- private Sound exhaust;
- private Sound force;
- private Sound scrape;
- private Sound chuff;
- public Sound hitShot;
- public Sound hitRicochet;
- public Sound hitExplosive;
- private Sound train;
- public Sound spinner;
- public Sound massiveHit;
- private Sound backUp;
- public Sound nuke;
+ Controlled burn;
+ Sound land;//<-Must be a general Sound class
+ FireAndForget repair;
+ private Controlled grind;
+ private Controlled boost;
+ Controlled gate;
+ Controlled turret;
+ private Controlled splash;
+ private Controlled splashOverSurface;
+ public Controlled tsunamiSplash;
+ public FireAndForget mineExplosion;
+ private Controlled engine;
+ private Controlled turbineThrust;
+ FireAndForget death, deathExplode;
+ private Controlled fly;
+ public FireAndForget crashSoft;
+ public FireAndForget crashHard;
+ public FireAndForget crashDestroy;
+ private Controlled skidHard;
+ private Controlled skidOff;
+ private FireAndForget exhaust;
+ private FireAndForget force;
+ private Controlled scrape;
+ private FireAndForget chuff;
+ public FireAndForget hitShot;
+ public FireAndForget hitRicochet;
+ public FireAndForget hitExplosive;
+ private Sound trainNoise;
+ private Controlled trainDrive;//Separate entities for train engine is better
+ public Controlled spinner;
+ public FireAndForget massiveHit;
+ private Controlled backUp;
+ FireAndForget nuke, nukeMax;//<-Keeping these split, because it's easier
 
  //Keep order identical between declarations and 'close()'!
  public void close() {//*
-  for (Special special : V.specials) {
+  for (var special : V.specials) {
    if (special.sound != null) {
     special.sound.close();
    }
@@ -103,22 +105,27 @@ public class VehicleAudio {
   if (hitShot != null) hitShot.close();
   if (hitRicochet != null) hitRicochet.close();
   if (hitExplosive != null) hitExplosive.close();
-  if (train != null) train.close();
+  if (trainNoise != null) trainNoise.close();
+  if (trainDrive != null) trainDrive.close();
   if (spinner != null) spinner.close();
   if (massiveHit != null) massiveHit.close();
   if (backUp != null) backUp.close();
   if (nuke != null) nuke.close();
+  if (nukeMax != null) nukeMax.close();
+  if (V.MNB != null && V.MNB.travel != null) {
+   V.MNB.travel.close();
+  }
  }
 
  void setDistance() {
   distanceVehicleToCamera =
   V.index == I.vehiclePerspective && Camera.view == Camera.View.driver ? 0 :
-  Math.sqrt(U.distance(V)) * Sound.standardGain(1);
+  Math.sqrt(U.distance(V)) * Sounds.standardGain(1);
  }
 
  void skid() {
   if (V.isIntegral() && !V.P.flipped() && V.contact == Physics.Contact.rubber) {
-   if (V.P.terrainProperties.contains(SL.thick(SL.hard))) {
+   if (V.P.terrainProperties.contains(D.thick(D.hard))) {
     if (!skidHard.running()) {
      skidHard.resume(Double.NaN, distanceVehicleToCamera);
     }
@@ -147,14 +154,21 @@ public class VehicleAudio {
   }
  }
 
- void load() {//Sounds are loaded by order of importance, as not all of them may load on Linux systems. It's not as elegant but should be done.
+ /**
+  * For Linux systems, this loading is designed to skip certain audio of lower priority.
+  * Though the Sound classes get declared as needed, they may not actually load the audio data within. This allows the program to run normally without throwing any nullPointer exceptions.
+  */
+ void load() {
   if (!V.isFixed()) {
+   engine = new Controlled();
    if (engineClipQuantity < 1) {
-    File[] engines = new File(U.soundFolder).listFiles((D, name) -> name.startsWith(V.engine.name() + "-") && name.endsWith(U.soundExtension));
+    File[] engines = new File(Sounds.folder).listFiles((D, name) -> name.startsWith(V.engine.name() + "-") && name.endsWith(Sounds.extension));
     engineClipQuantity = Objects.requireNonNull(engines).length;
-    engine = new Sound(V.engine.name() + "-", engineClipQuantity, enginePitchBase);
+    //Saved in case it's needed again->!U.onLinux || n < 1 || n == engineClipQuantity - 1/*<-Will only load the idle and max rev sounds if on Linux*/
+    for (long n = 0; n < engineClipQuantity; n++) {
+     engine.addClip(V.engine.name() + "-" + n, enginePitchBase);
+    }
    } else {
-    engine = new Sound();
     for (int n = 0; n < engineClipQuantity; n++) {
      engine.addClip(V.engine.name(), enginePitchBase);
      if (engineTuning == EngineTuning.harmonicSeries) {
@@ -165,85 +179,107 @@ public class VehicleAudio {
     }
    }
    if (V.contact == Physics.Contact.rubber) {
-    skidHard = new Sound("skidHard", Double.POSITIVE_INFINITY);
-    skidOff = new Sound("skidOff", Double.POSITIVE_INFINITY);
+    skidHard = new Controlled(D.skidHard, Double.POSITIVE_INFINITY);
+    skidOff = new Controlled(D.skidOff, Double.POSITIVE_INFINITY);
    }
-   scrape = new Sound("scrape", Double.POSITIVE_INFINITY);
-   force = new Sound("force", 5);
+   scrape = new Controlled(D.scrape, Double.POSITIVE_INFINITY);
+   force = Sounds.softwareBased ? Sounds.force : new FireAndForget(D.force, Double.POSITIVE_INFINITY);
   }
-  death = new Sound("death");
-  deathExplode = V.explosionsWhenDestroyed > 0 && !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) ? new Sound("deathExplode", Double.POSITIVE_INFINITY) : null;
-  crashHard = new Sound("crashHard", Double.POSITIVE_INFINITY);
-  crashDestroy = new Sound("crashDestroy", Double.POSITIVE_INFINITY);
-  crashSoft = new Sound("crashSoft", Double.POSITIVE_INFINITY);
+  death = Sounds.softwareBased ? Sounds.death : new FireAndForget(D.death);
+  if (V.explosionsWhenDestroyed > 0 && !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name())) {
+   deathExplode = Sounds.softwareBased ? Sounds.deathExplode : new FireAndForget(D.deathExplode, Double.POSITIVE_INFINITY);
+  }
+  crashHard = Sounds.softwareBased ? Sounds.crashHard : new FireAndForget(D.crashHard, Double.POSITIVE_INFINITY);
+  crashDestroy = Sounds.softwareBased ? Sounds.crashDestroy : new FireAndForget(D.crashDestroy, Double.POSITIVE_INFINITY);
+  crashSoft = Sounds.softwareBased ? Sounds.crashSoft : new FireAndForget(D.crashSoft, Double.POSITIVE_INFINITY);
   if (V.type == Vehicle.Type.aircraft && !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.floats) {
-   fly = new Sound("fly", Double.POSITIVE_INFINITY);
+   fly = new Controlled("fly", Double.POSITIVE_INFINITY);
   }
-  boost = V.speedBoost > 0 && V.engine != Vehicle.Engine.turbine ? new Sound("boost") : boost;
-  land = !V.isFixed() && V.landType != Physics.Landing.crash ? new Sound(V.landType.name(), Double.POSITIVE_INFINITY) : land;
-  grind = V.engine.name().contains("truck") || V.engine == Vehicle.Engine.tank || V.engine == Vehicle.Engine.massive ? new Sound("grind") : grind;
-  repair = new Sound("repair");
+  if (V.speedBoost > 0 && V.engine != Vehicle.Engine.turbine) {
+   boost = new Controlled("boost");
+  }
+  if (!V.isFixed() && V.landType != Physics.Landing.crash) {
+   land = new Sound(V.landType.name(), Double.POSITIVE_INFINITY);
+  }
+  if (V.engine.name().contains("truck") || V.engine == Vehicle.Engine.tank || V.engine == Vehicle.Engine.massive) {
+   grind = new Controlled("grind");
+  }
+  repair = Sounds.softwareBased ? Sounds.repair : new FireAndForget(D.repair);
   if (V.explosionType != Vehicle.ExplosionType.maxnuclear) {
-   burn = new Sound("burn");
+   burn = new Controlled("burn");
   }
-  exhaust = Double.isNaN(V.exhausting) ? exhaust : new Sound("exhaust", Double.POSITIVE_INFINITY);
-  tsunamiSplash = Tsunami.exists ? new Sound("tsunamiSplash") : tsunamiSplash;
+  if (!Double.isNaN(V.exhausting)) {
+   exhaust = Sounds.softwareBased ? Sounds.exhaust : new FireAndForget(D.exhaust, Double.POSITIVE_INFINITY);
+  }
+  if (Tsunami.exists) {
+   tsunamiSplash = new Controlled(D.tsunamiSplash);
+  }
   if (!V.isFixed()) {
    if (Pool.exists) {
-    splash = new Sound("splash");
-    splashOverSurface = new Sound("splashOver");
+    splash = new Controlled("splash");
+    splashOverSurface = new Controlled("splashOver");
     splashing = 0;
    }
-   gate = new Sound("gateSpeed");
-   gate.addClip("gateSlow", 1);
+   gate = new Controlled("gateSpeed");
+   gate.addClip("gateSlow");
   }
   boolean loadHitExplosive = false, loadMineExplosion = false;
-  for (Special special : V.specials) {
+  for (var special : V.specials) {
    loadHitExplosive = special.type.name().contains(Special.Type.shell.name()) || special.type == Special.Type.missile || special.type == Special.Type.bomb || special.type == Special.Type.mine || V.explosionType.name().startsWith(Vehicle.ExplosionType.nuclear.name()) || loadHitExplosive;
    loadMineExplosion = special.type == Special.Type.mine || loadMineExplosion;
   }
-  hitExplosive = loadHitExplosive ? new Sound("hitExplosive", Double.POSITIVE_INFINITY) : hitExplosive;
-  mineExplosion = loadMineExplosion ? new Sound("mineExplode") : mineExplosion;
+  if (loadHitExplosive) {
+   hitExplosive = Sounds.softwareBased ? Sounds.hitExplosive : new FireAndForget(D.hitExplosive, Double.POSITIVE_INFINITY);
+  }
+  if (loadMineExplosion) {
+   mineExplosion = Sounds.softwareBased ? Sounds.mineExplosion : new FireAndForget(D.mineExplode);
+  }
   boolean hasSpinner = V.spinner != null;
   if (hasSpinner) {
-   spinner = new Sound();
+   spinner = new Controlled();
    int spinnerClips = 8, n;
    double equalTemperament = 1, multiple = StrictMath.pow(2, 1 / 3.);
    for (n = spinnerClips - 1; --n >= 0; ) {
     equalTemperament /= multiple;
    }
    for (n = spinnerClips; --n >= 0; ) {
-    spinner.addClip(SL.spinner, equalTemperament);
+    spinner.addClip(D.spinner, equalTemperament);
     equalTemperament *= multiple;
    }
   }
   if (hasSpinner || V.dealsMassiveDamage()) {
-   massiveHit = new Sound("massiveHit", Double.POSITIVE_INFINITY);
+   massiveHit = Sounds.softwareBased ? Sounds.massiveHit : new FireAndForget(D.massiveHit, Double.POSITIVE_INFINITY);
   }
   if (V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name())) {
-   nuke = new Sound("nuke" + (V.explosionType == Vehicle.ExplosionType.maxnuclear ? "Max" : ""), 2);
+   if (V.explosionType == Vehicle.ExplosionType.maxnuclear) {
+    nukeMax = Sounds.softwareBased ? Sounds.nukeMax : new FireAndForget(D.nukeMax);
+    V.MNB.travel = new Controlled("nukeMaxTravel");
+   } else {
+    nuke = Sounds.softwareBased ? Sounds.nuke : new FireAndForget(D.nuke, Double.POSITIVE_INFINITY);
+   }
   }
   if (V.engine == Vehicle.Engine.authentictruck) {
-   chuff = new Sound(SL.chuff, 5);
-   backUp = new Sound("backUp");
+   chuff = new FireAndForget(D.chuff, 5);
+   backUp = new Controlled("backUp");
   } else if (V.engine == Vehicle.Engine.train) {
-   chuff = new Sound(SL.chuff, 4);
-   train = new Sound("train", 11);
+   chuff = new FireAndForget(D.chuff, 4);
+   trainNoise = Sounds.softwareBased ? Sounds.trainNoise : new Sound(D.train, Double.POSITIVE_INFINITY);
+   trainDrive = new Controlled("trainDrive", 2);
   } else if (V.engine == Vehicle.Engine.turbine) {
-   turbineThrust = new Sound("turbineThrust");
+   turbineThrust = new Controlled("turbineThrust");
   }
  }
 
  void run(boolean gamePlay) {
   if (V.engine == Vehicle.Engine.train && gamePlay && Match.started) {
    if (Math.abs(V.P.speed) * U.tick > U.random(5000.)) {
-    train.playIfNotPlaying(U.random(9), distanceVehicleToCamera);
+    trainNoise.playIfNotPlaying(Double.NaN, distanceVehicleToCamera);
    }
-   if (U.startsWith(V.P.mode.name(), SL.drive, Physics.Mode.neutral.name()) && !V.destroyed && (V.drive || V.reverse)) {
-    if (Math.abs(V.P.speed) > V.topSpeeds[1] * .75 && !train.running(9)) {
-     train.playIfNotPlaying(10, distanceVehicleToCamera);
-    } else if (!train.running(10)) {
-     train.playIfNotPlaying(9, distanceVehicleToCamera);
+   if (U.startsWith(V.P.mode.name(), D.drive, Physics.Mode.neutral.name()) && !V.destroyed && (V.drive || V.reverse)) {
+    if (Math.abs(V.P.speed) > V.topSpeeds[1] * .75 && !trainDrive.running(0)) {
+     trainDrive.playIfNotPlaying(1, distanceVehicleToCamera);
+    } else if (!trainDrive.running(1)) {
+     trainDrive.playIfNotPlaying(0, distanceVehicleToCamera);
     }
    }
   }
@@ -273,7 +309,7 @@ public class VehicleAudio {
      reverseGet = !flying && aircraft ? V.reverse || V.reverse2 : flying ? V.reverse2 : V.reverse;
      if (driveGet || reverseGet || V.P.mode == Physics.Mode.fly) {
       n =
-      driveGet && !(V.P.flipped() && V.P.mode.name().startsWith(SL.drive)) && V.P.mode != Physics.Mode.fly &&
+      driveGet && !(V.P.flipped() && V.P.mode.name().startsWith(D.drive)) && V.P.mode != Physics.Mode.fly &&
       U.containsEnum(V.engine, Vehicle.Engine.prop, Vehicle.Engine.jet, Vehicle.Engine.turbine, Vehicle.Engine.rocket) ?
       engineClipQuantity - 1 :
       Math.max((int) (engineClipQuantity * (Math.abs(V.P.speed) / V.topSpeeds[1])), V.floats ? 0 : 1);
@@ -341,7 +377,7 @@ public class VehicleAudio {
    if (!skidding) {
     skidHard.stop();
     skidOff.stop();
-   } else if (!V.P.terrainProperties.contains(SL.thick(SL.hard))) {
+   } else if (!V.P.terrainProperties.contains(D.thick(D.hard))) {
     skidHard.stop();
    } else {
     skidOff.stop();
@@ -376,14 +412,14 @@ public class VehicleAudio {
    }
   }
   if (Match.muteSound || !V.destroyed || !gamePlay) {
-   if (V.explosionType == Vehicle.ExplosionType.maxnuclear) {//<-DO check this, as stopping may cut out blast sound on Tactical Nuke
-    nuke.stop(1);
+   if (V.explosionType == Vehicle.ExplosionType.maxnuclear) {
+    V.MNB.travel.stop();
    } else {
     burn.stop();//<-No burn sound on max nukes
    }
   }
   if (Match.muteSound || !V.isIntegral() || !gamePlay) {
-   for (Special special : V.specials) {
+   for (var special : V.specials) {
     if (special.type == Special.Type.phantom) {
      special.sound.stop();
     }
@@ -394,15 +430,17 @@ public class VehicleAudio {
    if (grind != null) {
     grind.stop();
    }
-   if (train != null) {
-    train.stop(9);
-    train.stop(10);
+   if (trainDrive != null) {
+    trainDrive.stop();
    }
    if (turret != null) {
     turret.stop();
    }
    if (!V.isFixed()) {
     engine.stop();
+   }
+   if (turbineThrust != null) {
+    turbineThrust.stop();
    }
   }
  }
@@ -423,7 +461,8 @@ public class VehicleAudio {
     double thrustGain = Math.max(0, StrictMath.pow(1 / (Math.abs(V.P.netSpeed) / V.topSpeeds[1]), 4));
     turbineThrust.loop(distanceVehicleToCamera + (n >= engineClipQuantity - 1 ? 0 : thrustGain));
    }
-  } else if (V.engine == Vehicle.Engine.turbine) {
+  }
+  if (V.engine == Vehicle.Engine.turbine && n < 1) {//<-Statement split so that echo stops looping when at lowest speed
    turbineThrust.stop();
   }
  }

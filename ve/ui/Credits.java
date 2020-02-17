@@ -1,11 +1,11 @@
 package ve.ui;
 
 import ve.utilities.Images;
-import ve.utilities.SL;
-import ve.utilities.Sounds;
+import ve.utilities.D;
 import ve.utilities.U;
+import ve.utilities.sound.Sounds;
 
-public enum Credits {
+enum Credits {
  ;
  private static boolean direction;
  private static double quantity;
@@ -22,13 +22,13 @@ public enum Credits {
    UI.GC.drawImage(Images.RA, UI.width * .8 - (Images.RA.getWidth() * .5), UI.height * .5 - (Images.RA.getHeight() * .5));
    quantity = Math.round(quantity);
    quantity += direction ? -1 : 1;
-   direction = !(quantity < 2) && (quantity > 12 || direction);
+   direction = !(quantity < 2) && (quantity > 11 || direction);
    U.fillRGB(.5);
    if (quantity == 1) {
     U.fillRGB(1);
    }
    U.font(.075);
-   U.text(SL.OPEN_VEHICULAR_EPIC, .15);
+   U.text(D.OPEN_VEHICULAR_EPIC, .15);
    U.font(.015);
    U.fillRGB(.5);
    if (quantity == 2) {
@@ -56,7 +56,7 @@ public enum Credits {
    if (quantity == 6) {
     U.fillRGB(1);
    }
-   U.text("Max Place--for composing some map soundtracks", .45);
+   U.text("Omar Waly--his Java work (Need for Madness and Radical Aces) have served as a design 'template' for V.E.", .45);
    U.fillRGB(.5);
    if (quantity == 7) {
     U.fillRGB(1);
@@ -66,29 +66,24 @@ public enum Credits {
    if (quantity == 8) {
     U.fillRGB(1);
    }
-   U.text("Omar Waly--his Java work (Need for Madness and Radical Aces) have served as a design 'template' for V.E.", .55);
+   U.text("The OpenJavaFX team/community--for JavaFX, of course", .55);
    U.fillRGB(.5);
    if (quantity == 9) {
     U.fillRGB(1);
    }
-   U.text("The OpenJavaFX team/community--for JavaFX, of course", .6);
+   U.text("The FXyz library--for additional shape/geometry support", .6);
    U.fillRGB(.5);
    if (quantity == 10) {
     U.fillRGB(1);
    }
-   U.text("The FXyz library--for additional shape/geometry support", .65);
+   U.text("JetBrains--for building an awesome IDE", .65);
    U.fillRGB(.5);
    if (quantity == 11) {
     U.fillRGB(1);
    }
-   U.text("JavaZoom--for JLayer (a Java .mp3 player)", .7);
+   U.text("Everyone who suggested or submitted content!", .7);
    U.fillRGB(.5);
    if (quantity == 12) {
-    U.fillRGB(1);
-   }
-   U.text("Everyone who suggested or submitted content!", .75);
-   U.fillRGB(.5);
-   if (quantity == 13) {
     U.fillRGB(1);
    }
    U.font(.04);

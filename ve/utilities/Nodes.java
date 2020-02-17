@@ -15,7 +15,7 @@ public enum Nodes {
 
  public static void add(Node... N) {
   UI.denyExpensiveInGameCall();
-  for (Node n : N) {
+  for (var n : N) {
    if (n != null) {
     denyPointLight(n);
     if (!UI.group.getChildren().contains(n)) {
@@ -27,7 +27,7 @@ public enum Nodes {
 
  public static void remove(Node... N) {
   UI.denyExpensiveInGameCall();
-  for (Node n : N) {
+  for (var n : N) {
    if (n != null) {
     denyPointLight(n);
     UI.group.getChildren().remove(n);
@@ -54,13 +54,13 @@ public enum Nodes {
   }
  }
 
- static void enforcePointLight(Node N) {
+ private static void enforcePointLight(Node N) {
   if (!N.getClass().getName().equals(PointLight.class.getName())) {
    UI.crashGame("PointLight is the only object allowed in or out of this area");
   }
  }
 
- static void denyPointLight(Node N) {
+ private static void denyPointLight(Node N) {
   if (N.getClass().getName().equals(PointLight.class.getName())) {
    UI.crashGame("PointLight is not allowed in or out of this area");
   }

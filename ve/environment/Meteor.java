@@ -8,6 +8,8 @@ import ve.effects.Effects;
 import ve.instances.CoreAdvanced;
 import ve.ui.Match;
 import ve.utilities.*;
+import ve.utilities.sound.Controlled;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
 
 public enum Meteor {
@@ -25,13 +27,13 @@ public enum Meteor {
  }
 
  static void run(boolean update) {
-  for (Meteor.Instance instance : instances) {
+  for (var instance : instances) {
    instance.run(update);
   }
  }
 
  public static void vehicleInteract(Vehicle V) {
-  for (Instance meteor : instances) {
+  for (var meteor : instances) {
    Instance.Part MP = meteor.parts.get(0);
    double vehicleMeteorDistance = U.distance(V, MP);
    if (vehicleMeteorDistance < (V.collisionRadius + MP.S.getRadius()) * 4) {
@@ -54,7 +56,7 @@ public enum Meteor {
 
   double speedX, speedY = globalSpeed, speedZ;
   final List<Part> parts = new ArrayList<>();
-  public final Sound sound;
+  final Controlled sound;
 
   Instance(double inSize) {
    double size = 0;
@@ -62,7 +64,7 @@ public enum Meteor {
     parts.add(new Part(inSize - size));
     size += inSize / 11.;
    }
-   sound = new Sound(SL.meteor + U.random(3));//<-using lists--NO double
+   sound = new Controlled(D.meteor + U.random(3));
   }
 
   void deploy() {
@@ -76,7 +78,7 @@ public enum Meteor {
    speedX = U.random() < .5 ? speedsXZ : -speedsXZ;
    speedsXZ -= globalSpeed * 2;
    speedZ = U.random() < .5 ? speedsXZ : -speedsXZ;
-   for (Part meteorPart : parts) {
+   for (var meteorPart : parts) {
     meteorPart.rotation[0] = U.randomPlusMinus(45.);
     meteorPart.rotation[1] = U.randomPlusMinus(45.);
    }
@@ -104,11 +106,11 @@ public enum Meteor {
    for (int n = parts.size(); --n > 0; ) {
     parts.get(n).onFire = parts.get(n - 1).onFire;
    }
-   for (Part meteorPart : parts) {
+   for (var meteorPart : parts) {
     meteorPart.run();
    }
    if (!Match.muteSound && update) {
-    sound.loop(Math.sqrt(U.distance(parts.get(0))) * Sound.standardGain(1));
+    sound.loop(Math.sqrt(U.distance(parts.get(0))) * Sounds.standardGain(1));
    } else {
     sound.stop();
    }
@@ -138,7 +140,7 @@ public enum Meteor {
      } else {
       Phong.setDiffuseRGB((PhongMaterial) S.getMaterial(), 1);
       Phong.setSpecularRGB((PhongMaterial) S.getMaterial(), 1);
-      ((PhongMaterial) S.getMaterial()).setDiffuseMap(Images.get(SL.rock));
+      ((PhongMaterial) S.getMaterial()).setDiffuseMap(Images.get(D.rock));
       ((PhongMaterial) S.getMaterial()).setSelfIlluminationMap(null);
      }
      U.rotate(S, YZ, XZ);
@@ -148,6 +150,10 @@ public enum Meteor {
      S.setVisible(false);
     }
    }
+  }
+
+  public void closeSound() {
+   if (sound != null) sound.close();
   }
  }
 }

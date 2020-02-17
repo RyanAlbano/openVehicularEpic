@@ -10,14 +10,14 @@ import ve.utilities.Nodes;
 import ve.utilities.Phong;
 import ve.utilities.U;
 
-public class ExplosionPart extends CoreAdvanced {
+class ExplosionPart extends CoreAdvanced {
 
- final Explosion E;
+ private final Explosion E;
  private final MeshView MV;
  private double stage, speed;
- final Core positionSet = new Core();
+ private final Core positionSet = new Core();
 
- public ExplosionPart(Explosion explosion) {
+ ExplosionPart(Explosion explosion) {
   E = explosion;
   TriangleMesh TM = new TriangleMesh();
   absoluteRadius = E.absoluteRadius * .25;
