@@ -49,9 +49,10 @@ public enum Network {
      server = new ServerSocket(port);
      while (runLoadThread) {
       if (out.size() + 1 < I.vehiclesInMatch && !server.isClosed()) {
-       try (Socket S = server.accept(); S) {
-        System.out.println("A client has been accepted");
-        out.add(new PrintWriter(S.getOutputStream(), true, U.standardChars));
+       Socket S = server.accept();//<-IDE suggestion to put this in block fails--DON'T TOUCH THIS
+       System.out.println("A client has been accepted");
+       out.add(new PrintWriter(S.getOutputStream(), true, U.standardChars));
+       try {
         in.add(new BufferedReader(new InputStreamReader(S.getInputStream(), U.standardChars)));
        } catch (IOException E) {
         E.printStackTrace();
@@ -108,11 +109,14 @@ public enum Network {
        UI.playerNames[I.userPlayerIndex] = userName;
       } else if (s.startsWith(D.Name)) {
        for (n = maxPlayers; --n >= 0; ) {
-        UI.playerNames[n] = s.startsWith(D.Name + n) ? U.getString(s, 0) : UI.playerNames[n];
+        if (s.startsWith(D.Name + n)) {//<-Getting player names from the host
+         UI.playerNames[n] = U.getString(s, 0);
+        }
        }
-      } else if (s.startsWith("MatchLength(")) {
+      } else if (s.startsWith(D.MatchLength + "(")) {
        Options.matchLength = Math.round(U.getValue(s, 0));
        out.get(0).println(D.joinerReady);
+       U.printSuccess();
       } else if (s.startsWith(D.HostReady)) {
        UI.status = UI.Status.vehicleSelect;
        VS.index = I.userPlayerIndex;
