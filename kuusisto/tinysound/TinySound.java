@@ -557,12 +557,17 @@ public enum TinySound {
   */
  private static byte[] readAllBytesOneChannel(AudioInputStream stream) {
   //read all the bytes (assuming 1-channel)
-  byte[] data;
-  try (stream) {
+  byte[] data = null;
+  try {
    data = getBytes(stream);
   } catch (IOException e) {
    System.err.println(errorReadingAllBytes);
    return null;
+  } finally {
+   try {
+    stream.close();
+   } catch (IOException ignored) {
+   }
   }
   return data;
  }
@@ -576,7 +581,7 @@ public enum TinySound {
  private static byte[][] readAllBytesTwoChannel(AudioInputStream stream) {
   //read all the bytes (assuming 16-bit, 2-channel)
   byte[][] data;
-  try (stream) {
+  try {
    byte[] allBytes = getBytes(stream);
    byte[] left = new byte[allBytes.length / 2];
    byte[] right = new byte[allBytes.length / 2];
@@ -593,6 +598,11 @@ public enum TinySound {
   } catch (IOException e) {
    System.err.println(errorReadingAllBytes);
    return null;
+  } finally {
+   try {
+    stream.close();
+   } catch (IOException ignored) {
+   }
   }
   return data;
  }
@@ -684,7 +694,7 @@ public enum TinySound {
  private static AudioInputStream convertMono8Bit(AudioInputStream stream) {
   //assuming 8-bit, 1-channel to 16-bit, 1-channel
   byte[] newData;
-  try (stream) {
+  try {
    byte[] data = getBytes(stream);
    int newNumBytes = data.length << 1;
    //check if size overflowed
@@ -711,6 +721,11 @@ public enum TinySound {
   } catch (IOException e) {
    System.err.println(errorReadingAllBytes);
    return null;
+  } finally {
+   try {
+    stream.close();
+   } catch (IOException ignored) {
+   }
   }
   AudioFormat mono16 = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
   44100, 16, 1, 2, 44100, false);
@@ -728,7 +743,7 @@ public enum TinySound {
  private static AudioInputStream convertStereo8Bit(AudioInputStream stream) {
   //assuming 8-bit, 2-channel to 16-bit, 2-channel
   byte[] newData;
-  try (stream) {
+  try {
    byte[] data = getBytes(stream);
    int newNumBytes = data.length * 2 * 2;
    //check if size overflowed
@@ -766,6 +781,11 @@ public enum TinySound {
   } catch (IOException e) {
    System.err.println(errorReadingAllBytes);
    return null;
+  } finally {
+   try {
+    stream.close();
+   } catch (IOException ignored) {
+   }
   }
   AudioFormat stereo16 = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
   44100, 16, 2, 4, 44100, false);
@@ -825,8 +845,7 @@ public enum TinySound {
   //we have the file, now we want to be able to write to it
   OutputStream out;
   try {
-   out = new BufferedOutputStream(new FileOutputStream(temp),
-   (512 << 10)); //buffer 512kb
+   out = new BufferedOutputStream(new FileOutputStream(temp), 512 << 10); //buffer 512kb
   } catch (FileNotFoundException e) {
    System.err.println("Failed to open stream file for writing!");
    return null;

@@ -1,15 +1,14 @@
 package ve.utilities.sound;
 
 import kuusisto.tinysound.TinySound;
-import ve.effects.echo.TimerEcho;
+import ve.effects.Echo;
 
 import javax.sound.sampled.*;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 
-class ClipVE {
+class ClipHolder {
 
  Clip sampled, sampledEcho;
  FloatControl gain, echoBalance;
@@ -19,7 +18,7 @@ class ClipVE {
  kuusisto.tinysound.Sound tinySingleEcho;
  kuusisto.tinysound.Music tinyLoopEcho;
 
- ClipVE(String sound, double ratio, Sound.Support support) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
+ ClipHolder(String sound, double ratio, Sound.Support support) throws Exception {
   try (AudioInputStream AIS = AudioSystem.getAudioInputStream(new BufferedInputStream(new FileInputStream(new File(sound))))) {
    AudioFormat AF = AIS.getFormat();
    AudioInputStream AIS2 = AudioSystem.getAudioInputStream(
@@ -34,7 +33,7 @@ class ClipVE {
     AudioSystem.write(convertedAIS, AudioFileFormat.Type.WAVE, F);
     tinySingle = support == Sound.Support.loop ? null : TinySound.loadSound(F);
     tinyLoop = support == Sound.Support.fireAndForget ? null : TinySound.loadMusic(F);
-    if (TimerEcho.presence > 0) {
+    if (Echo.presence > 0) {
      tinySingleEcho = support == Sound.Support.loop ? null : TinySound.loadSound(F);
      if (support != Sound.Support.fireAndForget) {
       tinyLoopEcho = TinySound.loadMusic(F);
@@ -47,7 +46,7 @@ class ClipVE {
     gain = (FloatControl) sampled.getControl(FloatControl.Type.MASTER_GAIN);
    }
   }
-  if (TimerEcho.presence > 0 && !Sounds.softwareBased) {
+  if (Echo.presence > 0 && !Sounds.softwareBased) {
    try (AudioInputStream AIS = AudioSystem.getAudioInputStream(new BufferedInputStream(new FileInputStream(new File(sound))))) {
     AudioFormat AF = AIS.getFormat();
     AudioInputStream AIS2 = AudioSystem.getAudioInputStream(
@@ -60,7 +59,7 @@ class ClipVE {
     sampledEcho.open(convertedAIS);
     FloatControl gainEcho = (FloatControl) sampledEcho.getControl(FloatControl.Type.MASTER_GAIN);
     echoBalance = (FloatControl) sampledEcho.getControl(FloatControl.Type.BALANCE);
-    gainEcho.setValue(-TimerEcho.presence * .05f);
+    gainEcho.setValue(-Echo.presence * .05f);
    }
   }
  }

@@ -20,7 +20,7 @@ public enum Lightning {
  ;
  public static boolean exists;
  public static double X, Z;
- public static long strikeStage;
+ public static double strikeStage;
  static final MeshView MV = new MeshView();
  private static final PointLight[] light = new PointLight[2];
  public static final List<GroundBurst> groundBursts = new ArrayList<>();
@@ -66,7 +66,7 @@ public enum Lightning {
     if (strikeStage < 4) {
      U.setTranslate(light[0], X, 0, Z);
      Nodes.addPointLight(light[0]);
-     if (strikeStage < 1) {//<-May call more than once if strikeStage progresses using 'tick'!
+     if (strikeStage <= 0) {//<-May call more than once if strikeStage progresses using 'tick'!
       MV.setVisible(true);
       for (int n = 25; --n >= 0; ) {
        groundBursts.get(currentBurst).deploy(X, Z);
@@ -85,12 +85,12 @@ public enum Lightning {
     MV.setVisible(false);
     Nodes.removePointLight(light[1]);
    }
-   if (UI.status != UI.Status.replay && ++strikeStage > U.random(13000.)) {//<-Progress strikeStage using tick?
+   if (UI.status != UI.Status.replay && (strikeStage += U.tick) > U.random(13000.)) {
     X = Camera.C.X + U.randomPlusMinus(200000.);
     Z = Camera.C.Z + U.randomPlusMinus(200000.);
     strikeStage = 0;
    }
-   for (var burst : groundBursts) {
+   for (GroundBurst burst : groundBursts) {
     burst.run();
    }
   }

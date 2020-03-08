@@ -12,11 +12,13 @@ import ve.utilities.*;
 import ve.utilities.sound.Controlled;
 import ve.vehicles.Vehicle;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 
-public class Bonus extends Core {//<-fixme--balls drifted away from vehicle (om Linux)
+public enum Bonus {//<-fixme--balls drifted away from vehicle (on Linux)
  ;
+ public static final Core C = new Core();
  public static int holder = -1;
  public static final Sphere big = new Sphere(500);
  public static final Collection<Ball> balls = new ArrayList<>();
@@ -31,41 +33,41 @@ public class Bonus extends Core {//<-fixme--balls drifted away from vehicle (om 
  }
 
  public static void load() {//<-Must be called AFTER all map parts are loaded, since a moundSit is performed
-  TE.bonus.X = startX;
-  TE.bonus.Y = startY;
-  TE.bonus.Z = startZ;
-  E.setMoundSit(TE.bonus, false);
+  C.X = startX;
+  C.Y = startY;
+  C.Z = startZ;
+  E.setMoundSit(C, false);
   Nodes.add(big);
-  for (var ball : balls) {
+  for (Ball ball : balls) {
    Nodes.add(ball.S);
   }
  }
 
- public void run() {
+ public static void run() {
   if (holder < 0) {
-   if (U.getDepth(this) > -big.getRadius()) {
-    U.setTranslate(big, this);
+   if (U.getDepth(C) > -big.getRadius()) {
+    U.setTranslate(big, C);
     Phong.setDiffuseRGB((PhongMaterial) big.getMaterial(), U.random(), U.random(), U.random());
     big.setVisible(true);
    } else {
     big.setVisible(false);
    }
-   for (var ball : balls) {
+   for (Ball ball : balls) {
     ball.S.setVisible(false);
    }
   } else {
    big.setVisible(false);
-   X = I.vehicles.get(holder).X;
-   Y = I.vehicles.get(holder).Y;
-   Z = I.vehicles.get(holder).Z;
-   for (var ball : balls) {
+   C.X = I.vehicles.get(holder).X;
+   C.Y = I.vehicles.get(holder).Y;
+   C.Z = I.vehicles.get(holder).Z;
+   for (Ball ball : balls) {
     ball.run();
    }
   }
   if (Match.started) {
    if (Network.mode == Network.Mode.OFF) {
-    for (var vehicle : I.vehicles) {
-     if (holder < 0 && vehicle.isIntegral() && !vehicle.phantomEngaged && U.distance(this, vehicle) < vehicle.collisionRadius + big.getRadius()) {
+    for (Vehicle vehicle : I.vehicles) {
+     if (holder < 0 && vehicle.isIntegral() && !vehicle.phantomEngaged && U.distance(C, vehicle) < vehicle.collisionRadius + big.getRadius()) {
       setHolder(vehicle);
      }
     }
@@ -74,10 +76,10 @@ public class Bonus extends Core {//<-fixme--balls drifted away from vehicle (om 
     }
    } else {
     Vehicle V = I.vehicles.get(I.userPlayerIndex);
-    if (Network.bonusHolder < 0 && V.isIntegral() && !V.phantomEngaged && U.distance(this, V) < V.collisionRadius + big.getRadius()) {
+    if (Network.bonusHolder < 0 && V.isIntegral() && !V.phantomEngaged && U.distance(C, V) < V.collisionRadius + big.getRadius()) {
      Network.bonusHolder = I.userPlayerIndex;
      if (Network.mode == Network.Mode.HOST) {
-      for (var PW : Network.out) {
+      for (PrintWriter PW : Network.out) {
        PW.println("BONUS0");
       }
      } else {
@@ -88,7 +90,7 @@ public class Bonus extends Core {//<-fixme--balls drifted away from vehicle (om 
     if (setHolder > -1 && !I.vehicles.get(setHolder).isIntegral()) {
      Network.bonusHolder = holder = -1;
      if (Network.mode == Network.Mode.HOST) {
-      for (var PW : Network.out) {
+      for (PrintWriter PW : Network.out) {
        PW.println(D.BonusOpen);
       }
      } else {
@@ -107,7 +109,7 @@ public class Bonus extends Core {//<-fixme--balls drifted away from vehicle (om 
 
  public static void setHolder(Vehicle vehicle) {
   holder = vehicle.index;
-  for (var ball : balls) {
+  for (Ball ball : balls) {
    ball.S.setRadius(I.vehicles.get(holder).absoluteRadius * .02);
    ball.X = ball.Y = ball.Z = ball.speedX = ball.speedY = ball.speedZ = 0;
   }

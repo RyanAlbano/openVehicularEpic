@@ -20,7 +20,7 @@ public class FrustumMound extends Core {//NOTE: Small mounds follow the vehicles
   while (majorRadius > 0 && minorRadius > majorRadius) {
    minorRadius *= .5;
   }
-  //mound = new MeshView(getMesh(majorRadius, minorRadius, height, wraps ? 16 : 24));//<-32 is too much, no support for 64-cylindric exists yet. todo--add 64-cylindric support?
+  //mound = new MeshView(getMesh(majorRadius, minorRadius, height, wraps ? 16 : 24));//<-Non-FXyz based frustum as a backup
   mound = new FrustumMesh(majorRadius, minorRadius, height, wraps ? 0 : 1);
   X = x;
   Z = z;

@@ -4,6 +4,7 @@ import javafx.scene.paint.PhongMaterial;
 import ve.environment.*;
 import ve.instances.Core;
 import ve.instances.I;
+import ve.trackElements.trackParts.RepairPoint;
 import ve.trackElements.trackParts.TrackPart;
 import ve.ui.*;
 import ve.ui.options.Options;
@@ -24,12 +25,10 @@ public enum TE {//TrackElements
  public static final long wrapDistance = 40000;
  public static long currentCheckpoint;
  public static boolean lapCheckpoint;
- private static boolean repairPointsExist;
  public static final List<TrackPart> trackParts = new ArrayList<>();
  public static final Collection<FrustumMound> mounds = new ArrayList<>();
  public static final List<Point> points = new ArrayList<>();
  public static final List<Checkpoint> checkpoints = new ArrayList<>();
- public static final Bonus bonus = new Bonus();
 
  public enum MS {//MapSelect
   ;
@@ -42,7 +41,7 @@ public enum TE {//TrackElements
   road, roadshort, roadturn, roadbendL, roadbendR, roadend, roadincline, offroad, offroadshort, offroadturn, offroadbump, offroadrocky, offroadend, offroadincline, mixroad,
   checkpoint, repair,
   ramp, rampcurved, ramptrapezoid, ramptriangle, rampwall, quarterpipe, pyramid, plateau,
-  offramp, offplateau/*<-todo-Remove 'offPlateau' and switch to mounds?*/, mound, pavedmound,//<-'mound' is needed!
+  offramp, offplateau/*<-todo-Remove 'offPlateau' and switch to mounds?*/, mound, pavedmound,//<-'(paved)mound' is needed!
   floor, offfloor, wall, offwall, cube, offcube, spike, spikes, block, blocktower, border, beam, grid, tunnel, lift, speedgate, slowgate, antigravity,
   tree0, tree1, tree2, treepalm, cactus0, cactus1, cactus2, rainbow, crescent//<-Rainbow, crescent, etc. are not really 'track elements' but good enough
  }
@@ -59,13 +58,13 @@ public enum TE {//TrackElements
   }
 
   public static void setTexture() {
-    universal.setDiffuseMap(Images.get(D.paved));
-    universal.setSpecularMap(Images.get(D.paved));
-    universal.setBumpMap(Images.getNormalMap(D.paved));
+   universal.setDiffuseMap(Images.get(D.paved));
+   universal.setSpecularMap(Images.get(D.paved));
+   universal.setBumpMap(Images.getNormalMap(D.paved));
   }
  }
 
- public static void addTrackPart(String s, int listNumber, double summedPositionX, double summedPositionY, double summedPositionZ, double optionalRotation) {
+ public static void addTrackPart(String s, Enum model, double summedPositionX, double summedPositionY, double summedPositionZ, double optionalRotation) {
   double[] X = {summedPositionX};
   double[] Y = {summedPositionY};
   double[] Z = {summedPositionZ};
@@ -75,8 +74,10 @@ public enum TE {//TrackElements
   } catch (RuntimeException ignored) {
    rotation = 0;
   }
-  instanceScale[1] = Maps.name.equals(D.Maps.ghostCity) && listNumber == getTrackPartIndex(Models.cube.name()) && instanceSize == 10000 ? 1 + U.random(3.) : instanceScale[1];
-  if (Maps.name.equals("Meteor Fields") && listNumber == getTrackPartIndex(Models.ramp.name())) {
+  if (Maps.name.equals(D.Maps.ghostCity) && model == Models.cube && instanceSize == 10000) {
+   instanceScale[1] = 1 + U.random(3.);
+  }
+  if (Maps.name.equals("Meteor Fields") && model == Models.ramp) {
    if (rotation == 0) {
     X[0] = U.randomPlusMinus(2500.);
     Z[0] = 5000 + U.random(20000.);
@@ -88,7 +89,7 @@ public enum TE {//TrackElements
    }
    rotation += U.random() < .5 ? 180 : 0;
   }
-  if (listNumber == getTrackPartIndex(Models.checkpoint.name()) || listNumber == getTrackPartIndex(Models.repair.name())) {
+  if (model == Models.checkpoint || model == Models.repair) {
    forceTrackPartOutsideExistingParts(s, X, Y, Z, (String[]) null);//<-Always call, since in this case it's only used to set the mound sit
    if (Maps.name.equals("Pyramid Paradise")) {
     forceTrackPartOutsideExistingParts(s, X, Y, Z, Models.pyramid.name());
@@ -96,16 +97,11 @@ public enum TE {//TrackElements
     forceTrackPartOutsideExistingParts(s, X, Y, Z, Models.cube.name(), Models.ramptriangle.name());
    }
   }
-  if (listNumber == getTrackPartIndex(Models.checkpoint.name())) {
+  if (model == Models.checkpoint) {
    if (Maps.name.equals(D.Maps.highlands)) {
     if (U.random() < .5) {
-     if (U.random() < .5) {
-      X[0] += U.random() < .5 ? 100000 : -100000;
-      Y[0] -= 25000;
-     } else {
-      Z[0] += U.random() < .5 ? 100000 : -100000;
-      Y[0] -= 25000;
-     }
+     (U.random() < .5 ? X : Z)[0] += U.random() < .5 ? 100000 : -100000;
+     Y[0] -= 25000;
     }
    } else if (Maps.name.equals(D.Maps.ghostCity)) {
     if (U.random() < .5) {
@@ -137,12 +133,12 @@ public enum TE {//TrackElements
      Z[0] = randomPosition == 2 ? 150000 : Z[0];
     }
    } else if (Maps.name.equals("the Machine is Out of Control")) {
-    boolean inside = true;
+    boolean inside = true;//todo--should use force existing void if possible
     while (inside) {
      inside = Math.abs(X[0]) < 30000 && Math.abs(Z[0]) < 30000;
-     for (var trackpart : trackParts) {
-      inside = (trackpart.modelNumber == getTrackPartIndex(Models.pyramid.name()) || trackpart.modelNumber == getTrackPartIndex(Models.cube.name()) || trackpart.modelNumber == getTrackPartIndex(Models.ramptriangle.name())) &&
-      Math.abs(X[0] - trackpart.X) <= trackpart.renderRadius && Math.abs(Z[0] - trackpart.Z) <= trackpart.renderRadius || inside;
+     for (TrackPart trackPart : trackParts) {
+      inside = U.equals(trackPart.modelName, Models.pyramid.name(), Models.cube.name(), Models.ramptriangle.name()) &&
+      Math.abs(X[0] - trackPart.X) <= trackPart.renderRadius && Math.abs(Z[0] - trackPart.Z) <= trackPart.renderRadius || inside;
      }
      if (inside) {
       X[0] = U.getValue(s, 1) + U.randomPlusMinus(randomX);
@@ -167,14 +163,20 @@ public enum TE {//TrackElements
     U.getValue(s, 4) * U.random(instanceSize), U.getValue(s, 4) * U.random(instanceSize), U.getValue(s, 4) * U.random(instanceSize),
     false, U.getString(s, 0).contains(D.paved), true));
    }
-  } else {
-   trackParts.add(new TrackPart(listNumber, X[0], Y[0], Z[0], rotation, instanceSize, instanceScale));
+  } else if (model == Models.repair) {
+   try {
+    RepairPoint.instances.add(new RepairPoint.Instance(X[0], Y[0], Z[0], U.getValue(s, 4)));
+   } catch (Exception E) {
+    RepairPoint.instances.add(new RepairPoint.Instance(X[0], Y[0], Z[0], 500));
+   }
+  } else if (model != null) {
+   trackParts.add(new TrackPart(model.name(), X[0], Y[0], Z[0], rotation, instanceSize, instanceScale));
   }
-  if (listNumber == getTrackPartIndex(Models.rainbow.name())) {
+  if (model == Models.rainbow) {
    trackParts.get(trackParts.size() - 1).rainbow = true;
-  } else if (listNumber == getTrackPartIndex(Models.crescent.name())) {
+  } else if (model == Models.crescent) {
    Sun.enforceCrescent();
-  } else if (listNumber == getTrackPartIndex(Models.checkpoint.name())) {
+  } else if (model == Models.checkpoint) {
    points.add(new Point());
    points.get(points.size() - 1).X = X[0];
    points.get(points.size() - 1).Y = Y[0];
@@ -198,7 +200,6 @@ public enum TE {//TrackElements
     points.get(points.size() - 1).type = Point.Type.mustPassIfClosest;
    }
   }
-  repairPointsExist = listNumber == getTrackPartIndex(Models.repair.name()) || repairPointsExist;
  }
 
  /**
@@ -211,17 +212,19 @@ public enum TE {//TrackElements
   X[0] = set.X;
   Y[0] = set.Y;
   Z[0] = set.Z;
-  boolean inside = true;
   double tolerance = 1.05;//<-Not a sufficient distance away otherwise
+  boolean inside = true;
   while (inside) {
    inside = false;
    if (targets != null) {
-    for (var trackPart : trackParts) {
-     inside = U.contains(trackPart.modelName, targets) &&
+    for (TrackPart trackPart : trackParts) {
+     if (U.contains(trackPart.modelName, targets) &&
      Math.abs(Y[0] - trackPart.Y) <= trackPart.boundsY * tolerance &&
      Math.abs(X[0] - trackPart.X) <= trackPart.boundsX * tolerance &&
-     Math.abs(Z[0] - trackPart.Z) <= trackPart.boundsZ * tolerance ||
-     inside;
+     Math.abs(Z[0] - trackPart.Z) <= trackPart.boundsZ * tolerance) {
+      inside = true;
+      break;
+     }
     }
    }
    if (inside) {
@@ -248,7 +251,7 @@ public enum TE {//TrackElements
   V.Y = V.XY = V.YZ = 0;
   V.X = U.random(Math.min(50000., MapBounds.right)) + U.random(Math.max(-50000., MapBounds.left));
   V.Z = U.random(Math.min(50000., MapBounds.forward)) + U.random(Math.max(-50000., MapBounds.backward));
-  V.XZ = !V.isFixed() && Maps.randomVehicleStartAngle ? U.randomPlusMinus(180.) : 0;//<-Fixed units ALWAYS face forward for less confusing placement
+  V.XZ = !V.isFixed()/*<-Fixed units face forward for less confusing placement*/ && Maps.randomVehicleStartAngle ? U.randomPlusMinus(180.) : 0;
   if (Maps.name.equals("Vicious Versus V3") && I.vehiclesInMatch > 1) {
    boolean green = V.index < I.vehiclesInMatch >> 1;
    if (green) {
@@ -427,12 +430,10 @@ public enum TE {//TrackElements
  }
 
  public static void runVehicleRepairPointInteraction(Vehicle V, boolean gamePlay) {
-  if (repairPointsExist && V.repairSpheres.get(U.random(V.repairSpheres.size())).stage <= 0 && !V.phantomEngaged) {
-   for (var part : trackParts) {
-    if (part.isRepairPoint) {
-     if (U.distance(part.sidewaysXZ ? V.Z : V.X, part.sidewaysXZ ? part.Z : part.X, V.Y, part.Y) <= 500 && Math.abs(part.sidewaysXZ ? V.X - part.X : V.Z - part.Z) <= 200 + Math.abs(part.sidewaysXZ ? V.speedX : V.speedZ) * U.tick) {
-      V.repair(gamePlay);
-     }
+  if (V.repairSpheres.get(U.random(V.repairSpheres.size())).stage <= 0 && !V.phantomEngaged) {
+   for (RepairPoint.Instance part : RepairPoint.instances) {
+    if (Physics.advancedCollisionCheck(V, part, part.absoluteRadius)) {
+     V.repair(gamePlay);
     }
    }
   }
@@ -447,7 +448,7 @@ public enum TE {//TrackElements
   mounds.clear();
   points.clear();
   checkpoints.clear();
-  repairPointsExist = false;
+  RepairPoint.instances.clear();
   Bonus.reset();
  }
 }

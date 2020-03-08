@@ -3,12 +3,17 @@ package ve.ui;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
 import ve.environment.E;
+import ve.environment.FrustumMound;
 import ve.environment.Ground;
 import ve.environment.Sun;
 import ve.instances.I;
+import ve.trackElements.Bonus;
 import ve.trackElements.TE;
+import ve.trackElements.trackParts.RepairPoint;
+import ve.trackElements.trackParts.TrackPart;
 import ve.utilities.*;
 import ve.utilities.sound.Sounds;
+import ve.vehicles.VehiclePart;
 
 public enum Viewer {
  ;
@@ -103,14 +108,21 @@ public enum Viewer {
    if (UI.selectionReady()) {
     if (Keys.up) {
      UI.selected = --UI.selected < 0 ? 4 : UI.selected;
-     Keys.inUse = true;
      UI.sound.play(0, 0);
     }
     if (Keys.down) {
      UI.selected = ++UI.selected > 4 ? 0 : UI.selected;
-     Keys.inUse = true;
      UI.sound.play(0, 0);
     }
+   }
+   if (!Keys.inUse) {
+    UI.selected =
+    Math.abs(.8 - Mouse.Y) < UI.clickRangeY ? 0 :
+    Math.abs(.825 - Mouse.Y) < UI.clickRangeY ? 1 :
+    Math.abs(.85 - Mouse.Y) < UI.clickRangeY ? 2 :
+    Math.abs(.875 - Mouse.Y) < UI.clickRangeY ? 3 :
+    Math.abs(.9 - Mouse.Y) < UI.clickRangeY ? 4 :
+    UI.selected;
    }
    if (Keys.space || Keys.enter) {
     if (UI.selected == 0) {
@@ -126,7 +138,7 @@ public enum Viewer {
      }
     } else if (UI.selected == 2) {
      showWireframe = !showWireframe;
-     for (var part : I.vehicles.get(0).parts) {
+     for (VehiclePart part : I.vehicles.get(0).parts) {
       part.setDrawMode(showWireframe);
      }
     } else if (UI.selected == 3) {
@@ -149,15 +161,6 @@ public enum Viewer {
     I.removeVehicleModel();
     I.userRandomRGB = U.getColor(U.random(), U.random(), U.random());
     I.addVehicleModel(VS.chosen[0], true);
-   }
-   if (!Keys.inUse) {
-    UI.selected =
-    Math.abs(.8 - Mouse.Y) < UI.clickRangeY ? 0 :
-    Math.abs(.825 - Mouse.Y) < UI.clickRangeY ? 1 :
-    Math.abs(.85 - Mouse.Y) < UI.clickRangeY ? 2 :
-    Math.abs(.875 - Mouse.Y) < UI.clickRangeY ? 3 :
-    Math.abs(.9 - Mouse.Y) < UI.clickRangeY ? 4 :
-    UI.selected;
    }
    UI.gameFPS = Double.POSITIVE_INFINITY;
    E.renderType = E.RenderType.fullDistance;
@@ -189,10 +192,13 @@ public enum Viewer {
    U.setTranslate(E.mapViewerLight, Camera.C.X, Camera.C.Y, Camera.C.Z);
   }
   E.run(gamePlay);
-  for (var trackPart : TE.trackParts) {
+  for (TrackPart trackPart : TE.trackParts) {
    trackPart.runGraphics(false);
   }
-  for (var mound : TE.mounds) {
+  for (RepairPoint.Instance repairPoint : RepairPoint.instances) {
+   repairPoint.run();
+  }
+  for (FrustumMound mound : TE.mounds) {
    mound.runGraphics();
   }
   U.fillRGB(0, 0, 0, UI.colorOpacity.minimal);
@@ -208,8 +214,13 @@ public enum Viewer {
   U.text("Move Camera with the T, G, U, and J Keys. Rotate with the Arrow Keys", .9 + UI.textOffset);
   if (UI.selectionReady() && (Keys.up || Keys.down)) {
    UI.selected = UI.selected < 1 ? 1 : 0;
-   Keys.inUse = true;
    UI.sound.play(0, 0);
+  }
+  if (!Keys.inUse) {
+   UI.selected =
+   Math.abs(.825 - Mouse.Y) < UI.clickRangeY ? 0 :
+   Math.abs(.85 - Mouse.Y) < UI.clickRangeY ? 1 :
+   UI.selected;
   }
   if (Keys.space || Keys.enter) {
    UI.status = UI.selected == 0 ? UI.Status.mapLoadPass0 : UI.Status.mainMenu;
@@ -223,10 +234,7 @@ public enum Viewer {
    Sounds.reset();
    UI.sound.play(1, 0);
   }
-  TE.bonus.run();
-  if (!Keys.inUse) {
-   UI.selected = Math.abs(.825 - Mouse.Y) < UI.clickRangeY ? 0 : Math.abs(.85 - Mouse.Y) < UI.clickRangeY ? 1 : UI.selected;
-  }
+  Bonus.run();
   UI.gameFPS = Double.POSITIVE_INFINITY;
   E.renderType = E.RenderType.fullDistance;
  }

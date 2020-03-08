@@ -27,13 +27,13 @@ public enum Meteor {
  }
 
  static void run(boolean update) {
-  for (var instance : instances) {
+  for (Instance instance : instances) {
    instance.run(update);
   }
  }
 
  public static void vehicleInteract(Vehicle V) {
-  for (var meteor : instances) {
+  for (Instance meteor : instances) {
    Instance.Part MP = meteor.parts.get(0);
    double vehicleMeteorDistance = U.distance(V, MP);
    if (vehicleMeteorDistance < (V.collisionRadius + MP.S.getRadius()) * 4) {
@@ -78,7 +78,7 @@ public enum Meteor {
    speedX = U.random() < .5 ? speedsXZ : -speedsXZ;
    speedsXZ -= globalSpeed * 2;
    speedZ = U.random() < .5 ? speedsXZ : -speedsXZ;
-   for (var meteorPart : parts) {
+   for (Part meteorPart : parts) {
     meteorPart.rotation[0] = U.randomPlusMinus(45.);
     meteorPart.rotation[1] = U.randomPlusMinus(45.);
    }
@@ -106,7 +106,7 @@ public enum Meteor {
    for (int n = parts.size(); --n > 0; ) {
     parts.get(n).onFire = parts.get(n - 1).onFire;
    }
-   for (var meteorPart : parts) {
+   for (Part meteorPart : parts) {
     meteorPart.run();
    }
    if (!Match.muteSound && update) {

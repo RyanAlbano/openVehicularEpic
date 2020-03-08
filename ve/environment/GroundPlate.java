@@ -24,7 +24,7 @@ enum GroundPlate {
    }
    double baseX = -30000, baseZ = -30000;
    boolean shift = false;
-   for (var groundPlate : instances) {
+   for (Instance groundPlate : instances) {
     groundPlate.X = baseX;
     groundPlate.Z = baseZ;
     baseZ += 3000;
@@ -50,7 +50,7 @@ enum GroundPlate {
  static void run() {
   if (!instances.isEmpty()) {
    double radius = Pool.C[0].getRadius() - instances.get(0).C.getRadius();
-   for (var groundPlate : instances) {
+   for (Instance groundPlate : instances) {
     groundPlate.run(radius);
    }
   }

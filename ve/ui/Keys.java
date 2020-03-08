@@ -14,10 +14,11 @@ public enum Keys {
  public static boolean boost, passBonus, amphibious = true;//<-Vehicle's 'amphibious' syncs to this, so defaulting true is desired
  public static boolean enter;
  public static boolean escape;
- public static boolean inUse;
+ public static boolean inUse;//<-todo--VERIFY--now only controlled in Keys/Mouse.java--check working
 
  static {
   UI.scene.setOnKeyPressed((KeyEvent keyEvent) -> {
+   inUse = true;
    KeyCode KC = keyEvent.getCode();
    if (KC == KeyCode.UP || KC == KeyCode.LEFT || KC == KeyCode.RIGHT || KC == KeyCode.DOWN || KC == KeyCode.SPACE) {
     if (Match.cursorDriving) {
@@ -35,11 +36,11 @@ public enum Keys {
    } else if (KC == KeyCode.Z) {
     Camera.lookAround = 1;
     Camera.lookForward[1] = true;
-    Camera.view = Camera.view == Camera.View.flow && !Match.started ? Camera.lastViewWithLookAround : Camera.view;
+    Camera.disablePreMatchFlow();
    } else if (KC == KeyCode.X) {
     Camera.lookAround = -1;
     Camera.lookForward[0] = true;
-    Camera.view = Camera.view == Camera.View.flow && !Match.started ? Camera.lastViewWithLookAround : Camera.view;
+    Camera.disablePreMatchFlow();
    } else if (KC == KeyCode.DIGIT1) {
     Camera.view = Camera.View.docked;
     Camera.lastView = Camera.view;
@@ -88,9 +89,11 @@ public enum Keys {
    } else if (KC == KeyCode.COMMA) {
     I.vehiclePerspective = --I.vehiclePerspective < 0 ? I.vehiclesInMatch - 1 : I.vehiclePerspective;
     Camera.toUserPerspective[1] = true;
+    Camera.disablePreMatchFlow();
    } else if (KC == KeyCode.PERIOD) {
     I.vehiclePerspective = ++I.vehiclePerspective >= I.vehiclesInMatch ? 0 : I.vehiclePerspective;
     Camera.toUserPerspective[0] = true;
+    Camera.disablePreMatchFlow();
    } else if (KC == KeyCode.H) {
     Options.headsUpDisplay = !Options.headsUpDisplay;
    } else if (KC == KeyCode.L) {

@@ -14,7 +14,7 @@ class Converter {
  static final String /*.*/obj = ".obj", triangulationError = ".OBJ must be fully Triangulated";
 
  static void saveFile(File file, CharSequence content) {
-  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(MainFrame.convertedFileFolder + File.separator + file.getName().replace(obj, "")), U.standardChars))) {
+  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(MainFrame.convertedFileFolder + File.separator + file.getName().replace(obj, ""))))) {
    bufferedWriter.write(content.toString());
   } catch (IOException e) {
    e.printStackTrace();
@@ -29,7 +29,7 @@ class Converter {
   List<Vector3<Double>> vertices = new ArrayList<>();
   List<double[]> faces = new ArrayList<>();
   boolean hasMaterial = true;
-  try (BufferedReader reader = new BufferedReader(new FileReader(file.getAbsolutePath().replace(obj, ".mtl"), U.standardChars))) {
+  try (BufferedReader reader = new BufferedReader(new FileReader(file.getAbsolutePath().replace(obj, ".mtl")))) {
    for (String line; (line = reader.readLine()) != null; ) {
     String[] split = line.split(" ");
     if (split[0].startsWith("newmtl")) {
@@ -41,7 +41,7 @@ class Converter {
   } catch (IOException e) {
    hasMaterial = false;
   }
-  try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file, U.standardChars))) {
+  try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file))) {
    int materialIndex = 0;
    for (String S; (S = bufferedReader.readLine()) != null; ) {
     if (S.startsWith("v ")) {
@@ -79,7 +79,7 @@ class Converter {
    SB.append(s2);
   }
   File newFile = new File(MainFrame.convertedFileFolder + File.separator + file.getName().replace(obj, ""));
-  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(newFile, U.standardChars))) {
+  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(newFile))) {
    bufferedWriter.write(SB.toString());
   } catch (IOException e) {
    e.printStackTrace(System.err);
@@ -90,7 +90,7 @@ class Converter {
  private static StringBuilder optimize(File file) {
   StringBuilder SB = new StringBuilder();
   String lastColor = "";
-  try (BufferedReader BR = new BufferedReader(new FileReader(file, U.standardChars))) {
+  try (BufferedReader BR = new BufferedReader(new FileReader(file))) {
    for (String s; (s = BR.readLine()) != null; ) {
     if (s.startsWith("(")) {
      SB.append(s).append(U.lineSeparator);

@@ -31,7 +31,7 @@ public enum Crystal {
    if (Maps.defaultVehicleLightBrightness > 0) {
     int closest = -1;
     double compareDistance = Double.POSITIVE_INFINITY;
-    for (var crystal : instances) {
+    for (Instance crystal : instances) {
      Nodes.removePointLight(crystal.light);
      if (U.distance(crystal) < compareDistance) {
       closest = instances.indexOf(crystal);
@@ -39,11 +39,11 @@ public enum Crystal {
      }
     }
     instances.get(closest).addLight();//<-fixme--'closest' can be -1 (incorrect) for some reason
-    for (var crystal : instances) {
+    for (Instance crystal : instances) {
      crystal.addLight();
     }
    }
-   for (var crystal : instances) {
+   for (Instance crystal : instances) {
     crystal.run();
    }
   }

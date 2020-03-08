@@ -6,6 +6,7 @@ import ve.ui.UI;
 import ve.utilities.Camera;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
+import ve.vehicles.Wheel;
 
 public class Spinner {
  private final Vehicle V;
@@ -26,7 +27,7 @@ public class Spinner {
     }
    } else {
     boolean runSpinner = false;
-    for (var special : V.specials) {
+    for (Special special : V.specials) {
      if (special.fire) {
       runSpinner = true;
       break;
@@ -43,7 +44,7 @@ public class Spinner {
   while (XZ < -180) XZ += 360;
   speed = U.clamp(-1, speed, 1);
   int spinSound = (int) (Math.round(Math.abs(speed) * 9) - 2);
-  for (int n = V.VA.spinner.clips.size(); --n >= 0; ) {
+  for (int n = V.VA.spinner.clipHolders.size(); --n >= 0; ) {
    if (n != spinSound) {
     V.VA.spinner.stop(n);
    }
@@ -68,7 +69,7 @@ public class Spinner {
      vehicle.addDamage(damageAmount);
      Match.scoreDamage[V.index < I.vehiclesInMatch >> 1 ? 0 : 1] += UI.status == UI.Status.replay ? 0 : damageAmount;
      if (absSpeed > .5) {
-      for (var wheel : vehicle.wheels) {
+      for (Wheel wheel : vehicle.wheels) {
        wheel.sparks(false);
       }
      }
@@ -86,7 +87,7 @@ public class Spinner {
    speed -= speed * speedReduction;
    if (absSpeed > .125) {
     if (speedReduction >= 1) {
-     V.setCameraShake(Camera.shakePresets.maxSpinnerHit);
+     V.setCameraShake(Camera.shakeIntensity.maxSpinnerHit);
      V.VA.massiveHit.play(Double.NaN, V.VA.distanceVehicleToCamera);
     } else if (absSpeed > .25) {
      V.setCameraShake(15);

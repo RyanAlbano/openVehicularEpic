@@ -1,5 +1,6 @@
 package ve.vehicles.explosions;
 
+import javafx.scene.PointLight;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
 import ve.effects.Effects;
@@ -18,6 +19,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 public class MaxNukeBlast extends Core {//fixme--there's still a slight delay in the sphere/blast placement, but this is probably only due to the logic being run in runMiscellaneous()
+ private static final PointLight[] light = new PointLight[2];//<-todo--List is probably cleaner than array
+ public static int whoIsLit;
  private final Vehicle V;
  private final Sphere sphere;
  private double sphereSize;
@@ -26,6 +29,11 @@ public class MaxNukeBlast extends Core {//fixme--there's still a slight delay in
  private final Collection<BlastPart> parts = new ArrayList<>();
  private static final double blastSpeed = 6000;
  public Controlled travel;
+
+ static {
+  light[0] = new PointLight();
+  light[1] = new PointLight();
+ }
 
  public MaxNukeBlast(Vehicle vehicle) {
   V = vehicle;
@@ -49,7 +57,7 @@ public class MaxNukeBlast extends Core {//fixme--there's still a slight delay in
   X = V.X;
   Y = V.Y;
   Z = V.Z;
-  for (var part : parts) {
+  for (BlastPart part : parts) {
    part.X = X;
    part.Y = Y;
    part.Z = Z;
@@ -79,8 +87,8 @@ public class MaxNukeBlast extends Core {//fixme--there's still a slight delay in
    travel.stop();
   }
   ((PhongMaterial) sphere.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
-  for (var blastPart : parts) {
-   blastPart.runLogic(gamePlay, speed);
+  for (BlastPart part : parts) {
+   part.runLogic(gamePlay, speed);
   }
  }
 
@@ -92,14 +100,14 @@ public class MaxNukeBlast extends Core {//fixme--there's still a slight delay in
    sphere.setVisible(false);
   }
   ((PhongMaterial) sphere.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
-  for (var part : parts) {
+  for (BlastPart part : parts) {
    part.runRender();
   }
  }
 
  public void runHitOthers(boolean greenTeam) {
   boolean replay = UI.status == UI.Status.replay;
-  for (var vehicle : I.vehicles) {
+  for (Vehicle vehicle : I.vehicles) {
    if (!U.sameTeam(V, vehicle) && !othersBlasted[vehicle.index] && !vehicle.reviveImmortality && U.distance(V.MNB, vehicle) < V.MNB.sphereSize + vehicle.collisionRadius && !vehicle.phantomEngaged) {
     V.P.hitCheck(vehicle);
     vehicle.setDamage(vehicle.damageCeiling());
@@ -116,6 +124,23 @@ public class MaxNukeBlast extends Core {//fixme--there's still a slight delay in
     vehicle.VA.crashDestroy.play(Double.NaN, soundDistance);
     vehicle.VA.crashDestroy.play(Double.NaN, soundDistance);
     othersBlasted[vehicle.index] = true;
+   }
+  }
+ }
+
+ public static void runLighting() {
+  if (whoIsLit > -1) {
+   Vehicle lastDetonated = I.vehicles.get(whoIsLit);
+   if (lastDetonated.screenFlash > 0) {
+    U.setTranslate(light[0], lastDetonated);
+    U.setTranslate(light[1], lastDetonated);
+    Nodes.setLightRGB(light[0], lastDetonated.screenFlash);
+    Nodes.setLightRGB(light[1], lastDetonated.screenFlash);
+    Nodes.addPointLight(light[0]);
+    Nodes.addPointLight(light[1]);
+   } else {
+    Nodes.removePointLight(light[0]);
+    Nodes.removePointLight(light[1]);
    }
   }
  }

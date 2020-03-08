@@ -52,7 +52,7 @@ public class Texture {
      TE.Paved.universal.setBumpMap(Images.pavedN.lowResolution);
     }
     adapted = true;
-   } else if (adapted && U.maxedFPS(true)) {//Don't create any 'new' images while setting the universals--or RAM will be killed!
+   } else if (adapted && U.goodFPS(true)) {//Don't create any 'new' images while setting the universals--or RAM will be killed!
     if (!Terrain.terrain.equals(D.thick(D.ground))) {//<-'ground' string will crash if checked in getter, thus skipped
      Terrain.universal.setDiffuseMap(Images.get(Terrain.terrain.trim()));
      Terrain.universal.setSpecularMap(Images.get(Terrain.terrain.trim()));

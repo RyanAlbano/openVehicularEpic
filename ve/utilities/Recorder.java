@@ -2,7 +2,6 @@ package ve.utilities;
 
 import ve.instances.I;
 import ve.trackElements.Bonus;
-import ve.trackElements.TE;
 import ve.ui.Keys;
 import ve.ui.UI;
 
@@ -11,7 +10,7 @@ import java.util.List;
 
 public enum Recorder {
  ;
- public static final int totalFrames = 500;
+ public static final int totalFrames = U.refreshRate * 10;//<-When the user FPS matches the refresh rate, game replays should be ~10 seconds long
  public static int recordFrame;
  public static int gameFrame;
  public static long recordingsCount;
@@ -51,7 +50,7 @@ public enum Recorder {
  enum Lightning {
   ;
   static final double[] X = recDouble(), Z = recDouble();
-  static final long[] strikeStage = recLong();
+  static final double[] strikeStage = recDouble();
  }
 
  public static void updateFrame() {
@@ -63,9 +62,9 @@ public enum Recorder {
 
  public static void recordGeneral() {
   bonusHolder[gameFrame] = Bonus.holder;
-  bonusX[gameFrame] = TE.bonus.X;
-  bonusY[gameFrame] = TE.bonus.Y;
-  bonusZ[gameFrame] = TE.bonus.Z;
+  bonusX[gameFrame] = Bonus.C.X;
+  bonusY[gameFrame] = Bonus.C.Y;
+  bonusZ[gameFrame] = Bonus.C.Z;
   if (ve.environment.Tsunami.exists) {
    Tsunami.tsunamiX[gameFrame] = ve.environment.Tsunami.X;
    Tsunami.tsunamiZ[gameFrame] = ve.environment.Tsunami.Z;
@@ -90,9 +89,9 @@ public enum Recorder {
     Keys.up = Keys.down = Keys.enter = Keys.space = Keys.escape = false;
    }
    Bonus.holder = bonusHolder[recordFrame];
-   TE.bonus.X = bonusX[recordFrame];
-   TE.bonus.Y = bonusY[recordFrame];
-   TE.bonus.Z = bonusZ[recordFrame];
+   Bonus.C.X = bonusX[recordFrame];
+   Bonus.C.Y = bonusY[recordFrame];
+   Bonus.C.Z = bonusZ[recordFrame];
    if (ve.environment.Tsunami.exists) {
     ve.environment.Tsunami.X = Tsunami.tsunamiX[recordFrame];
     ve.environment.Tsunami.Z = Tsunami.tsunamiZ[recordFrame];

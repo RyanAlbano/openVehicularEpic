@@ -67,7 +67,7 @@ public class Explosion extends Core {
   for (int n = I.vehiclesInMatch; --n >= 0; ) {
    doneDamaging[n] = false;
   }
-  for (var explosionPart : explosionParts) {
+  for (ExplosionPart explosionPart : explosionParts) {
    explosionPart.deploy();
   }
  }
@@ -97,7 +97,7 @@ public class Explosion extends Core {
     }
    }
   }
-  for (var explosionPart : explosionParts) {
+  for (ExplosionPart explosionPart : explosionParts) {
    explosionPart.run(gamePlay);
   }
  }

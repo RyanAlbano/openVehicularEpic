@@ -9,6 +9,7 @@ import ve.instances.Core;
 import ve.instances.I;
 import ve.trackElements.Arrow;
 import ve.trackElements.TE;
+import ve.ui.Match;
 import ve.ui.UI;
 import ve.ui.options.Options;
 import ve.vehicles.Vehicle;
@@ -18,8 +19,7 @@ public enum Camera {//*No need to extend core--a Core for calling location is de
  public static final Core C = new Core();//*
  public static final PerspectiveCamera PC = new PerspectiveCamera(true);
  public static final Rotate rotateXY = new Rotate();
- public static double XY;
- public static double XZ, YZ;
+ public static double XY, XZ, YZ;
  public static double sinXZ, cosXZ, sinYZ, cosYZ;
  public static final double defaultFOV = 75;
  public static double FOV = defaultFOV;
@@ -45,14 +45,14 @@ public enum Camera {//*No need to extend core--a Core for calling location is de
   public static final double maximumFar = Double.MAX_VALUE * .125;
  }
 
- public enum shakePresets {//<-Only useful at vehicle's positions--not for explosive shots, mines etc.
+ public enum shakeIntensity {//<-Only useful at vehicle's positions--not for explosive shots, mines etc.
   ;
   public static final long vehicleDeath = 20, vehicleExplode = 30,
   massiveHit = 30, maxSpinnerHit = 30,
   normalNuclear = 50, maxNuclear = 100, volcano = 100;
  }
 
- public enum View {docked, near, distant, driver, flow, watchMove, watch}
+ public enum View {docked, near, driver, distant, flow, watchMove, watch}
 
  static {
   PC.getTransforms().add(rotateXY);
@@ -157,8 +157,13 @@ public enum Camera {//*No need to extend core--a Core for calling location is de
     boolean syncToTurret = playerV.VT != null && !playerV.VT.hasAutoAim;
     if (syncToTurret) {
      aroundVehicleXZ = 0;
-    } else if (Math.abs(lookAround) > 0 && !(lookForward[0] && lookForward[1])) {
-     aroundVehicleXZ += lookAround > 0 ? 10 : -10;
+    } else {
+     if (Math.abs(lookAround) > 0 && !(lookForward[0] && lookForward[1])) {
+      aroundVehicleXZ += 30 * U.tick * (lookAround > 0 ? 1 : -1);
+     }
+     if (lookAround == 0 && 180 - Math.abs(aroundVehicleXZ) < 10) {//<-Snaps the camera correctly to view vehicle directly from the front
+      aroundVehicleXZ = 180;
+     }
     }
     double sourceCameraXZ = playerV.P.cameraXZ + aroundVehicleXZ + (syncToTurret ? playerV.VT.XZ : 0);
     XZ = -sourceCameraXZ;
@@ -193,8 +198,14 @@ public enum Camera {//*No need to extend core--a Core for calling location is de
   }
   runShake();
   setAngleTable();
-  U.rotate(PC, YZ, -XZ);//<-Not trying optimized rotate because passed XZ is negative
+  U.rotate(PC, YZ, -XZ);//<-Not trying optimized rotate because passed XZ is NEGATIVE
   rotateXY.setAngle(-XY);
+ }
+
+ public static void disablePreMatchFlow() {
+  if (view == Camera.View.flow && !Match.started) {
+   view = lastViewWithLookAround;
+  }
  }
 
  public static void runAroundTrack() {
@@ -226,7 +237,7 @@ public enum Camera {//*No need to extend core--a Core for calling location is de
  private static void runShake() {
   if (shake) {
    double shakeXZ = 0, shakeYZ = 0;
-   for (var vehicle : I.vehicles) {
+   for (Vehicle vehicle : I.vehicles) {
     if (vehicle.cameraShake > 0) {
      double distance = Math.max(1, U.distance(vehicle) * .1);
      shakeXZ += U.randomPlusMinus(vehicle.cameraShake * vehicle.cameraShake) / distance;

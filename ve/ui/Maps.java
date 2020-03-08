@@ -2,11 +2,12 @@ package ve.ui;
 
 import javafx.scene.Cursor;
 import javafx.scene.paint.PhongMaterial;
-import ve.effects.echo.TimerEcho;
+import ve.effects.Echo;
 import ve.environment.*;
 import ve.environment.storm.Storm;
 import ve.instances.I;
 import ve.trackElements.*;
+import ve.trackElements.trackParts.RepairPoint;
 import ve.trackElements.trackParts.TrackPart;
 import ve.utilities.*;
 import ve.utilities.sound.Controlled;
@@ -69,8 +70,8 @@ public enum Maps {
      } else if (s.startsWith("soundTravel(")) {
       E.soundMultiple = U.getValue(s, 0);
      } else if (s.startsWith("echo(")) {
-      TimerEcho.presence = Math.round(U.getValue(s, 0));//<-The respective fields represent the same 'delay' property
-      Sounds.echoVolume = Sounds.decibelToLinear(-TimerEcho.presence * .05);
+      Echo.presence = Math.round(U.getValue(s, 0));//<-The respective fields represent the same 'delay' property
+      Sounds.echoVolume = Sounds.decibelToLinear(-Echo.presence * .05);
       if (Sounds.softwareBased && I.vehiclesInMatch > 2) {
        //TimerEcho.presence = 0;//<-No echo, as this is WAY too much for TinySound to handle!//<-todo-check--will probably need reinstating!
       }
@@ -90,7 +91,7 @@ public enum Maps {
      guardCheckpointAI = s.startsWith("guardCheckpoint") || guardCheckpointAI;
      if (s.startsWith("snow(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
-       Snowball.instances.add(new Snowball.Instance());
+       Snow.instances.add(new Snow.Ball());
       }
      } else if (s.startsWith("wind(")) {
       Wind.maxPotency = U.getValue(s, 0);
@@ -109,17 +110,17 @@ public enum Maps {
       for (n = 0; n < U.getValue(s, 0); n++) {
        TE.trackParts.add(
        U.random() < .5 ?
-       new TrackPart(TE.getTrackPartIndex("tree0"), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0, 1 + Math.sqrt(U.random(16.)), TE.instanceScale)
+       new TrackPart(TE.Models.tree0.name(), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0, 1 + Math.sqrt(U.random(16.)), TE.instanceScale)
        :
-       new TrackPart(TE.getTrackPartIndex(U.random() < .5 ? "tree1" : "tree2"), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0));
+       new TrackPart(U.random() < .5 ? TE.Models.tree1.name() : TE.Models.tree2.name(), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0));
       }
      } else if (s.startsWith("palmTrees(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
-       TE.trackParts.add(new TrackPart(TE.getTrackPartIndex("treepalm"), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0, 1 + U.random(.6), TE.instanceScale));
+       TE.trackParts.add(new TrackPart(TE.Models.treepalm.name(), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0, 1 + U.random(.6), TE.instanceScale));
       }
      } else if (s.startsWith("cacti(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
-       TE.trackParts.add(new TrackPart(TE.getTrackPartIndex(D.cactus + U.random(3)), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0, .5 + U.random(.5), TE.instanceScale));
+       TE.trackParts.add(new TrackPart(TE.Models.valueOf(D.cactus + U.random(3)).name(), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0, .5 + U.random(.5), TE.instanceScale));
       }
      } else if (s.startsWith("mounds(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
@@ -156,13 +157,18 @@ public enum Maps {
      TE.randomZ = s.startsWith("randomZ(") ? U.getValue(s, 0) : TE.randomZ;
      Crystal.load(s);//<-Here so it's affected by randomXYZ
      if (U.startsWith(s, "(", D.strip + "(", D.curve + "(")) {
-      int trackNumber = TE.getTrackPartIndex(U.getString(s, 0));//<-Returns '-1' on exception
-      if (trackNumber < 0 && !U.getString(s, 0).isEmpty()) {
-       System.out.println("Map Part List Exception (" + name + ")");
-       System.out.println(UI.At_Line_ + s);
+      Enum model = null;
+      try {
+       model = TE.Models.valueOf(U.getString(s, 0));
+      } catch (Exception E) {//<-Don't bother
+       if (!U.getString(s, 0).isEmpty()) {
+        System.out.println("Map Part List Exception (" + name + ")");
+        System.out.println(UI.At_Line_ + s);
+        throw E;//<-Throw it again if not empty and name of part does not exist in V.E.
+       }
       }
       long[] random = {Math.round(U.randomPlusMinus(TE.randomX)), Math.round(U.randomPlusMinus(TE.randomY)), Math.round(U.randomPlusMinus(TE.randomZ))};
-      if (trackNumber == TE.getTrackPartIndex(TE.Models.checkpoint.name())) {
+      if (model == TE.Models.checkpoint) {
        long cornerDisplace = name.equals("Death Pit") ? 12000 : name.equals("Arctic Slip") ? 4500 : 0;
        random[0] += U.random() < .5 ? cornerDisplace : -cornerDisplace;
        random[2] += U.random() < .5 ? cornerDisplace : -cornerDisplace;
@@ -170,10 +176,6 @@ public enum Maps {
       if (U.equals(name, "Columns Condemn")) {
        random[0] *= 5000;
        random[2] *= 5000;
-       //while (random[0] > 47500) random[0] -= 47500;
-       //while (random[0] < -47500) random[0] += 47500;
-       //while (random[2] > 47500) random[2] -= 47500;
-       //while (random[2] < -47500) random[2] += 47500;
       } else if (U.equals(name, "the Linear Accelerator")) {
        random[0] *= 1000;
        random[2] *= 1000;
@@ -200,7 +202,7 @@ public enum Maps {
        advanceDistance = U.getValue(s, 5),
        advanceAngle = U.getValue(s, 6);
        for (double iteration = 0; iteration < stripEnd; iteration++) {
-        TE.addTrackPart(s, trackNumber,
+        TE.addTrackPart(s, model,
         summedPositionX + (advanceDistance * iteration * U.sin(advanceAngle)),
         summedPositionY,
         summedPositionZ + (advanceDistance * iteration * U.cos(advanceAngle)),
@@ -216,7 +218,7 @@ public enum Maps {
        iterationRate = U.getValue(s, 6), curveRadius = U.getValue(s, 7),
        curveHeight = U.getValue(s, 8) / Math.abs(curveStart - curveEnd);
        for (double iteration = curveStart; ; iteration += iteration < curveEnd ? iterationRate : -iterationRate) {
-        TE.addTrackPart(s, trackNumber,
+        TE.addTrackPart(s, model,
         summedPositionX + curveRadius * U.sin(iteration),
         summedPositionY + curveHeight * Math.abs(iteration - curveStart),
         summedPositionZ + curveRadius * U.cos(iteration),
@@ -226,10 +228,10 @@ public enum Maps {
         }
        }
       } else {
-       TE.addTrackPart(s, trackNumber, summedPositionX, summedPositionY, summedPositionZ, Double.NaN);
+       TE.addTrackPart(s, model, summedPositionX, summedPositionY, summedPositionZ, Double.NaN);
       }
      } else if (s.startsWith("vehicleModel")) {
-      TE.trackParts.add(new TrackPart(I.getVehicleIndex(U.getString(s, 0)), U.getValue(s, 1), U.getValue(s, 3), U.getValue(s, 2), U.getValue(s, 4), true));
+      TE.trackParts.add(new TrackPart(I.vehicleModels.get(I.getVehicleIndex(U.getString(s, 0))), U.getValue(s, 1), U.getValue(s, 3), U.getValue(s, 2), U.getValue(s, 4), true));
      }
     }
    }
@@ -246,21 +248,21 @@ public enum Maps {
      TE.instanceScale[0] = 1 + U.random(2.);
      TE.instanceScale[1] = 1 + U.random(2.);
      TE.instanceScale[2] = 1 + U.random(2.);
-     double calculatedX = 112500 * -StrictMath.sin(Math.toRadians(n)),
-     calculatedZ = 112500 * StrictMath.cos(Math.toRadians(n));
-     TE.trackParts.add(new TrackPart(TE.getTrackPartIndex(TE.Models.cube.name()), calculatedX, 0, calculatedZ, n - 90, TE.instanceSize, TE.instanceScale));
+     double calculatedX = 112500 * -U.sin(n),
+     calculatedZ = 112500 * U.cos(n);
+     TE.trackParts.add(new TrackPart(TE.Models.cube.name(), calculatedX, 0, calculatedZ, n - 90, TE.instanceSize, TE.instanceScale));
     }
-   } else if ("World's Biggest Parking Lot".equals(name)) {
+   } else if (name.equals("World's Biggest Parking Lot")) {
     for (n = 0; n < I.vehicleModels.size(); n++) {
      double xRandom = U.randomPlusMinus(30000.), zRandom = U.randomPlusMinus(30000.), randomXZ = U.randomPlusMinus(180.);
      I.userRandomRGB = U.getColor(U.random(), U.random(), U.random());
      /*{//<-This block's used to get the V.E. logo image on the World's Biggest Parking Lot
-      double vehicleCircle = 360 * n / (double) vehicleModels.size();
+      double vehicleCircle = 360 * n / (double) I.vehicleModels.size();
       xRandom = 4000 * U.sin(vehicleCircle);
       zRandom = 4000 * U.cos(vehicleCircle);
       randomXZ = -vehicleCircle + 180;
      }*/
-     TE.trackParts.add(new TrackPart(n, xRandom, 0, zRandom, randomXZ, true));
+     TE.trackParts.add(new TrackPart(I.vehicleModels.get(n), xRandom, 0, zRandom, randomXZ, true));
      TE.points.add(new Point());
      TE.points.get(TE.points.size() - 1).X = xRandom;
      TE.points.get(TE.points.size() - 1).Z = zRandom;
@@ -274,16 +276,17 @@ public enum Maps {
     }
    }
    if (Pool.type == Pool.Type.lava) {
-    for (var part : Tsunami.parts) {//Setting the illumination here in case the lava pool gets called AFTER tsunami definition
+    for (Tsunami.Part part : Tsunami.parts) {//Setting the illumination here in case the lava pool gets called AFTER tsunami definition
      ((PhongMaterial) part.C.getMaterial()).setSelfIlluminationMap(Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
     }
    }
    Bonus.load();
   } else if (UI.status == UI.Status.mapLoadPass4) {
-   for (var TP : TE.trackParts) {
+   for (TrackPart TP : TE.trackParts) {
     TP.setInitialSit();
    }
-   for (var FM : TE.mounds) {
+   RepairPoint.notifyDuplicates();
+   for (FrustumMound FM : TE.mounds) {
     FM.setInitialSit();
    }
    if (!Viewer.inUse) {
@@ -302,17 +305,17 @@ public enum Maps {
    addTransparentNodes();
    Match.reset();
   }
-  String loadText =
-  UI.status == UI.Status.mapLoadPass0 ? "Removing Previous Content" :
-  UI.status == UI.Status.mapLoadPass1 ? "Loading Properties & Scenery" :
-  UI.status == UI.Status.mapLoadPass2 ? "Adding Track Parts" :
-  "Adding " + I.vehiclesInMatch + " Vehicle(s)";
   U.fillRGB(0, 0, 0, UI.colorOpacity.maximal);
   U.fillRectangle(.5, .5, 1, 1);
   U.font(.025);
   U.fillRGB(1);
   U.text(Tournament.stage > 0 ? "Round " + Tournament.stage + (Tournament.stage > 5 ? "--Overtime!" : "") : "", .425);
   U.text(name, .475);
+  String loadText =
+  UI.status == UI.Status.mapLoadPass0 ? "Removing Previous Content" :
+  UI.status == UI.Status.mapLoadPass1 ? "Loading Properties & Scenery" :
+  UI.status == UI.Status.mapLoadPass2 ? "Adding Track Parts" :
+  "Adding " + I.vehiclesInMatch + " Vehicle(s)";//<-Vehicle names can't be displayed here because this is at least one frame ahead of vehicles actually getting loaded
   U.text(".." + loadText + "..", .525);
   if (UI.status != UI.Status.mapError) {
    UI.status =
@@ -326,10 +329,13 @@ public enum Maps {
  }
 
  private static void addTransparentNodes() {
-  for (var instance : Boulder.instances) {
+  for (Boulder.Instance instance : Boulder.instances) {
    instance.addTransparentNodes();
   }
-  for (var vehicle : I.vehicles) {
+  for (RepairPoint.Instance repairPoint : RepairPoint.instances) {
+   Nodes.add(repairPoint.pulse);
+  }
+  for (Vehicle vehicle : I.vehicles) {
    vehicle.addTransparentNodes();
   }
   for (int n = Fog.spheres.size(); --n >= 0; ) {//<-Adding spheres in forward order doesn't layer fog correctly
@@ -436,14 +442,17 @@ public enum Maps {
   Camera.runAroundTrack();
   U.rotate(Camera.PC, Camera.YZ, -Camera.XZ);
   E.run(gamePlay);
-  for (var vehicle : I.vehicles) {
+  for (Vehicle vehicle : I.vehicles) {
    vehicle.runRender(gamePlay);
   }
   boolean renderALL = E.renderType == E.RenderType.ALL;
-  for (var trackPart : TE.trackParts) {
+  for (TrackPart trackPart : TE.trackParts) {
    trackPart.runGraphics(renderALL);
   }
-  for (var mound : TE.mounds) {
+  for (RepairPoint.Instance repairPoint : RepairPoint.instances) {
+   repairPoint.run();
+  }
+  for (FrustumMound mound : TE.mounds) {
    mound.runGraphics();
   }
   UI.scene.setCursor(Cursor.CROSSHAIR);
@@ -479,7 +488,7 @@ public enum Maps {
   if (Keys.escape) {
    UI.escapeToLast(true);
   }
-  TE.bonus.run();
+  Bonus.run();
   UI.gameFPS = Double.POSITIVE_INFINITY;
   E.renderType = E.RenderType.standard;
  }

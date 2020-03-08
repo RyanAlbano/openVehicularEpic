@@ -6,11 +6,14 @@ import ve.instances.I;
 import ve.trackElements.Bonus;
 import ve.trackElements.Checkpoint;
 import ve.trackElements.TE;
+import ve.trackElements.trackParts.RepairPoint;
 import ve.ui.Maps;
 import ve.ui.Match;
 import ve.ui.options.Options;
 import ve.utilities.D;
 import ve.utilities.U;
+import ve.vehicles.explosions.Explosion;
+import ve.vehicles.specials.Shot;
 import ve.vehicles.specials.Special;
 
 public class AI {
@@ -48,7 +51,7 @@ public class AI {
   nukeWait = V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) ? U.random(Options.matchLength) : nukeWait;
   waitPoint = U.random(TE.checkpoints.size());
   boolean supportInfrastructure = V.type == Vehicle.Type.supportInfrastructure;
-  for (var special : V.specials) {
+  for (Special special : V.specials) {
    if (special.type == Special.Type.particlereintegrator) {
     supportInfrastructure = true;
     break;
@@ -60,14 +63,14 @@ public class AI {
  public void run() {
   if (V.index == I.userPlayerIndex) {//*Should ensure that this is only called for auto-aiming turrets, though it's a messy approach
    if (V.VT != null && V.VT.hasAutoAim) {
-    for (var special : V.specials) {
+    for (Special special : V.specials) {
      if (special.aimType == Special.AimType.auto) {//*
       special.fire = false;
      }
     }
     runAutoAim();
     engagingOthers = true;
-    for (var special : V.specials) {
+    for (Special special : V.specials) {
      if (special.aimType == Special.AimType.auto) {//*
       runAimAndShoot(special);
      }
@@ -75,7 +78,7 @@ public class AI {
    }
   } else {
    V.drive = V.drive2 = V.reverse = V.reverse2 = V.turnL = V.turnR = V.handbrake = V.boost = false;
-   for (var special : V.specials) {
+   for (Special special : V.specials) {
     special.fire = false;
    }
    boolean needRace =
@@ -121,7 +124,7 @@ public class AI {
     aimAheadTarget = aimAheadTarget < 0 || aimAheadTarget > 10 ? U.random(10.) : aimAheadTarget;
    }
    shooting = false;
-   for (var special : V.specials) {//<-'shooting' gets engaged within block
+   for (Special special : V.specials) {//<-'shooting' gets engaged within block
     if (special.type == Special.Type.forcefield) {
      runForcefieldStrike(special);
     } else if (special.type == Special.Type.mine) {
@@ -203,12 +206,12 @@ public class AI {
     V.drive = V.drive2 = V.reverse = V.reverse2 = false;
     nukeWait -= U.tick;
    }
-   for (var special : V.specials) {
+   for (Special special : V.specials) {
     if (special.type == Special.Type.phantom) {
-     for (var vehicle : I.vehicles) {
+     for (Vehicle vehicle : I.vehicles) {
       if (!U.sameTeam(V, vehicle)) {
-       for (var otherSpecial : vehicle.specials) {
-        for (var shot : otherSpecial.shots) {
+       for (Special otherSpecial : vehicle.specials) {
+        for (Shot shot : otherSpecial.shots) {
          if (shot.stage > 0 && U.distance(shot, V) < 2000 + shot.absoluteRadius) {
           special.fire = true;
           break;
@@ -216,7 +219,7 @@ public class AI {
         }
         special.fire = (otherSpecial.fire && otherSpecial.type == Special.Type.particledisintegrator) || special.fire;
        }
-       for (var explosion : vehicle.explosions) {
+       for (Explosion explosion : vehicle.explosions) {
         if (explosion.stage > 0 && U.distance(explosion, V) < 2000 + explosion.absoluteRadius) {
          special.fire = true;
          break;
@@ -262,7 +265,7 @@ public class AI {
    if (target == V.index || targetV.destroyed || !U.sameTeam(V.index, target)) {
     engagingOthers = true;//<-Always run it--why not?
     target = U.random(I.vehiclesInMatch);
-    for (var vehicle : I.vehicles) {
+    for (Vehicle vehicle : I.vehicles) {
      if (!U.sameVehicle(V, vehicle) && U.sameTeam(V, vehicle) &&
      vehicle.isIntegral() && vehicle.getDamage(true) > I.vehicles.get(target).getDamage(true)) {
       target = vehicle.index;
@@ -278,7 +281,7 @@ public class AI {
     engagingOthers = false;
     target = U.random(I.vehiclesInMatch);
     if (U.random() < .5) {
-     for (var vehicle : I.vehicles) {
+     for (Vehicle vehicle : I.vehicles) {
       if (!U.sameTeam(V, vehicle) && Bonus.holder == vehicle.index) {
        target = vehicle.index;
       }
@@ -368,97 +371,97 @@ public class AI {
      V.handbrake = Math.abs(V.XY) > 30 || Math.abs(V.YZ) > 30;
     }
    }
-   if (V.getDamage(false) > 0 && V.airPush > 0 && !vehicularFalls) {
-    for (var trackPart : TE.trackParts) {
-     if (trackPart.isRepairPoint && U.distance(V, trackPart) < 10000) {
+   if (V.getDamage(false) > 0 && V.airPush > 0 && !vehicularFalls) {//Really old, RaR-era code block. Could probably be chucked
+    for (RepairPoint.Instance repairPoint : RepairPoint.instances) {
+     if (U.distance(V, repairPoint) < 10000) {
       V.handbrake = V.Y + V.clearanceY < -300 - V.P.localGround && V.P.mode != Physics.Mode.stunt;
-      if (Math.abs(V.speedZ) > Math.abs(V.speedX) && ((V.speedZ > 0 && trackPart.Z > V.Z) || (V.speedZ < 0 && trackPart.Z < V.Z))) {
+      if (Math.abs(V.speedZ) > Math.abs(V.speedX) && ((V.speedZ > 0 && repairPoint.Z > V.Z) || (V.speedZ < 0 && repairPoint.Z < V.Z))) {
        V.drive = false;
-       V.reverse = trackPart.Y < V.Y - Math.min(Math.abs(V.P.speed), 500);
+       V.reverse = repairPoint.Y < V.Y - Math.min(Math.abs(V.P.speed), 500);
        if (Math.abs(V.YZ) < 90) {
         if (Math.abs(V.XZ) < 90) {
-         V.turnR = trackPart.X > V.X;
-         V.turnL = trackPart.X < V.X;
+         V.turnR = repairPoint.X > V.X;
+         V.turnL = repairPoint.X < V.X;
         }
         if (V.XZ > 90 || V.XZ < -90) {
-         V.turnR = trackPart.X < V.X;
-         V.turnL = trackPart.X > V.X;
+         V.turnR = repairPoint.X < V.X;
+         V.turnL = repairPoint.X > V.X;
         }
        } else {
         if (Math.abs(V.XZ) < 90) {
-         V.turnR = trackPart.X < V.X;
-         V.turnL = trackPart.X > V.X;
+         V.turnR = repairPoint.X < V.X;
+         V.turnL = repairPoint.X > V.X;
         }
         if (V.XZ > 90 || V.XZ < -90) {
-         V.turnR = trackPart.X > V.X;
-         V.turnL = trackPart.X < V.X;
+         V.turnR = repairPoint.X > V.X;
+         V.turnL = repairPoint.X < V.X;
         }
        }
       }
-      if (Math.abs(V.speedX) > Math.abs(V.speedZ) && ((V.speedX > 0 && trackPart.X > V.X) || (V.speedX < 0 && trackPart.X < V.X))) {
+      if (Math.abs(V.speedX) > Math.abs(V.speedZ) && ((V.speedX > 0 && repairPoint.X > V.X) || (V.speedX < 0 && repairPoint.X < V.X))) {
        V.drive = false;
-       V.reverse = trackPart.Y < V.Y;
+       V.reverse = repairPoint.Y < V.Y;
        if (Math.abs(V.YZ) < 90) {
         if (V.XZ < 0) {
-         V.turnR = trackPart.Z < V.Z;
-         V.turnL = trackPart.Z > V.Z;
+         V.turnR = repairPoint.Z < V.Z;
+         V.turnL = repairPoint.Z > V.Z;
         } else if (V.XZ > 0) {
-         V.turnR = trackPart.Z > V.Z;
-         V.turnL = trackPart.Z < V.Z;
+         V.turnR = repairPoint.Z > V.Z;
+         V.turnL = repairPoint.Z < V.Z;
         }
        } else if (V.XZ < 0) {
-        V.turnR = trackPart.Z > V.Z;
-        V.turnL = trackPart.Z < V.Z;
+        V.turnR = repairPoint.Z > V.Z;
+        V.turnL = repairPoint.Z < V.Z;
        } else if (V.XZ > 0) {
-        V.turnR = trackPart.Z < V.Z;
-        V.turnL = trackPart.Z > V.Z;
+        V.turnR = repairPoint.Z < V.Z;
+        V.turnL = repairPoint.Z > V.Z;
        }
       }
      }
     }
    }
-   if (Bonus.holder != V.index && U.distance(V, TE.bonus) < 10000) {
+   if (Bonus.holder != V.index && U.distance(V, Bonus.C) < 10000) {
     V.handbrake = V.Y + V.clearanceY < -300 - V.P.localGround && V.P.mode != Physics.Mode.stunt;
-    if (Math.abs(V.speedZ) > Math.abs(V.speedX) && ((V.speedZ > 0 && TE.bonus.Z > V.Z) || (V.speedZ < 0 && TE.bonus.Z < V.Z))) {
+    if (Math.abs(V.speedZ) > Math.abs(V.speedX) && ((V.speedZ > 0 && Bonus.C.Z > V.Z) || (V.speedZ < 0 && Bonus.C.Z < V.Z))) {
      V.drive = false;
-     V.reverse = TE.bonus.Y < V.Y - Math.min(Math.abs(V.P.speed), 500);
+     V.reverse = Bonus.C.Y < V.Y - Math.min(Math.abs(V.P.speed), 500);
      if (Math.abs(V.YZ) < 90) {
       if (Math.abs(V.XZ) < 90) {
-       V.turnR = TE.bonus.X > V.X;
-       V.turnL = TE.bonus.X < V.X;
+       V.turnR = Bonus.C.X > V.X;
+       V.turnL = Bonus.C.X < V.X;
       }
       if (V.XZ > 90 || V.XZ < -90) {
-       V.turnR = TE.bonus.X < V.X;
-       V.turnL = TE.bonus.X > V.X;
+       V.turnR = Bonus.C.X < V.X;
+       V.turnL = Bonus.C.X > V.X;
       }
      } else {
       if (Math.abs(V.XZ) < 90) {
-       V.turnR = TE.bonus.X < V.X;
-       V.turnL = TE.bonus.X > V.X;
+       V.turnR = Bonus.C.X < V.X;
+       V.turnL = Bonus.C.X > V.X;
       }
       if (V.XZ > 90 || V.XZ < -90) {
-       V.turnR = TE.bonus.X > V.X;
-       V.turnL = TE.bonus.X < V.X;
+       V.turnR = Bonus.C.X > V.X;
+       V.turnL = Bonus.C.X < V.X;
       }
      }
     }
-    if (Math.abs(V.speedX) > Math.abs(V.speedZ) && ((V.speedX > 0 && TE.bonus.X > V.X) || (V.speedX < 0 && TE.bonus.X < V.X))) {
+    if (Math.abs(V.speedX) > Math.abs(V.speedZ) && ((V.speedX > 0 && Bonus.C.X > V.X) || (V.speedX < 0 && Bonus.C.X < V.X))) {
      V.drive = false;
-     V.reverse = TE.bonus.Y < V.Y;
+     V.reverse = Bonus.C.Y < V.Y;
      if (Math.abs(V.YZ) < 90) {
       if (V.XZ < 0) {
-       V.turnR = TE.bonus.Z < V.Z;
-       V.turnL = TE.bonus.Z > V.Z;
+       V.turnR = Bonus.C.Z < V.Z;
+       V.turnL = Bonus.C.Z > V.Z;
       } else if (V.XZ > 0) {
-       V.turnR = TE.bonus.Z > V.Z;
-       V.turnL = TE.bonus.Z < V.Z;
+       V.turnR = Bonus.C.Z > V.Z;
+       V.turnL = Bonus.C.Z < V.Z;
       }
      } else if (V.XZ < 0) {
-      V.turnR = TE.bonus.Z > V.Z;
-      V.turnL = TE.bonus.Z < V.Z;
+      V.turnR = Bonus.C.Z > V.Z;
+      V.turnL = Bonus.C.Z < V.Z;
      } else if (V.XZ > 0) {
-      V.turnR = TE.bonus.Z < V.Z;
-      V.turnL = TE.bonus.Z > V.Z;
+      V.turnR = Bonus.C.Z < V.Z;
+      V.turnL = Bonus.C.Z > V.Z;
      }
     }
    }
@@ -508,8 +511,8 @@ public class AI {
      if (engagingOthers) {
       double altitudeFloor = V.P.localGround -
       Math.max(I.vehicles.get(target).absoluteRadius, (Boulder.instances.isEmpty() ? 0 : (Boulder.instances.get(0).S.getRadius() * 2) + (V.collisionRadius * 2)));
-      for (var trackPart : TE.trackParts) {
-       altitudeFloor = trackPart.isRepairPoint && altitudeFloor > trackPart.Y ? trackPart.Y : altitudeFloor;
+      for (RepairPoint.Instance repairPoint : RepairPoint.instances) {
+       altitudeFloor = Math.min(altitudeFloor, repairPoint.Y);
       }
       if (V.Y > altitudeFloor) {
        if (Math.abs(V.XY) < 90) {
@@ -570,7 +573,7 @@ public class AI {
  private void runJuke() {
   if (!V.isFixed() && !U.equals(Maps.name, D.Maps.XYLand, D.Maps.devilsStairwell, D.Maps.tunnelOfDoom) && !V.dealsMassiveDamage()) {
    boolean racingSafely = !Maps.name.equals(D.Maps.summitOfEpic) && !engagingOthers;
-   for (var vehicle : I.vehicles) {
+   for (Vehicle vehicle : I.vehicles) {
     double avoidDistance = V.collisionRadius + vehicle.collisionRadius + vehicle.othersAvoidAt;
     boolean theyHaveSpinner = vehicle.spinner != null,
     notWorthCrashing = V.damageDealt < 4 && (V.fragility > .5 || vehicle.durability > V.durability);
@@ -583,7 +586,7 @@ public class AI {
       V.reverse = V.handbrake = false;
      }
      boolean usePhantom = false;
-     for (var special : V.specials) {
+     for (Special special : V.specials) {
       if (special.type == Special.Type.phantom) {
        special.fire = usePhantom = true;
        break;
@@ -657,7 +660,7 @@ public class AI {
    accuracyRangeYZ = special.aimType == Special.AimType.auto ? Math.abs(V.VT.YZ - vehicleTurretDirectionYZ) : 0;
    boolean shoot = false;
    if (accuracyRangeXZ < special.AIAimPrecision && accuracyRangeYZ < special.AIAimPrecision) {
-    for (var vehicle : I.vehicles) {
+    for (Vehicle vehicle : I.vehicles) {
      if (!vehicle.destroyed && (supportInfrastructure ? !U.sameVehicle(V, vehicle) && U.sameTeam(V, vehicle) : !U.sameTeam(V, vehicle))) {
       shoot = true;
       break;
@@ -682,7 +685,7 @@ public class AI {
 
  private void runMineDeploy(Special special) {
   special.fire = false;
-  for (var checkpoint : TE.checkpoints) {
+  for (Checkpoint checkpoint : TE.checkpoints) {
    if (U.distance(V, checkpoint) < 500) {
     special.fire = true;
     break;
@@ -691,7 +694,7 @@ public class AI {
  }
 
  private void runForcefieldStrike(Special special) {
-  for (var vehicle : I.vehicles) {
+  for (Vehicle vehicle : I.vehicles) {
    if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) <= special.diameter + vehicle.collisionRadius) {//<-Don't skimp on bounds--Lightning Rod wouldn't fire at MarcoPolo bus, for example
     special.fire = true;
     break;
@@ -746,7 +749,7 @@ public class AI {
   if (I.vehiclesInMatch > 2) {//<-Otherwise there's no teammate to pass to, obviously
    V.passBonus = false;
    double yourDamage = V.getDamage(true);
-   for (var otherV : I.vehicles) {
+   for (Vehicle otherV : I.vehicles) {
     if (!U.sameVehicle(otherV, V) && U.sameTeam(V, otherV) && !otherV.destroyed && U.distance(V, otherV) < V.collisionRadius + otherV.collisionRadius &&
     otherV.durability > V.durability && V.fragility > otherV.fragility && (yourDamage > otherV.getDamage(true) || V.selfRepair < otherV.selfRepair)) {//<-Trying to guess what's the best reasoning for an AI passing the bonus to another teammate
      V.passBonus = true;

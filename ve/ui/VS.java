@@ -9,6 +9,8 @@ import ve.utilities.*;
 import ve.vehicles.Vehicle;
 import ve.vehicles.specials.Special;
 
+import java.io.PrintWriter;
+
 public enum VS {//VehicleSelect
  ;
  public static int index;
@@ -28,7 +30,7 @@ public enum VS {//VehicleSelect
    }
    if (Network.mode == Network.Mode.HOST) {
     if (U.timerBase20 <= 0) {
-     for (var PW : Network.out) {
+     for (PrintWriter PW : Network.out) {
       PW.println(D.Vehicle + "0" + "(" + I.vehicles.get(0).name);
      }
     }
@@ -39,7 +41,7 @@ public enum VS {//VehicleSelect
      } else if (s.startsWith(D.Vehicle + "(")) {
       chosen[n] = I.getVehicleIndex(U.getString(s, 0));
       if (I.vehiclesInMatch > 2) {
-       for (var out : Network.out) {
+       for (PrintWriter out : Network.out) {
         out.println(D.Vehicle + n + "(" + U.getString(s, 0));
        }
       }
@@ -145,6 +147,13 @@ public enum VS {//VehicleSelect
    }
    runDrawProperties(V);
    U.font(.01);
+   if (!Keys.inUse) {
+    UI.selected =
+    Math.abs(.85 - Mouse.Y) < UI.clickRangeY ? 0 :
+    Math.abs(.875 - Mouse.Y) < UI.clickRangeY ? 1 :
+    Math.abs(.9 - Mouse.Y) < UI.clickRangeY ? 2 :
+    UI.selected;
+   }
    if (UI.selectionReady()) {
     if (Keys.up || Keys.down) {
      if (Keys.down) {
@@ -153,7 +162,6 @@ public enum VS {//VehicleSelect
       UI.selected = --UI.selected < 0 ? (singleSelection ? 1 : 2) : UI.selected;
      }
      UI.sound.play(0, 0);
-     Keys.inUse = true;
     }
     if (Keys.right) {
      I.removeVehicleModel();
@@ -219,13 +227,6 @@ public enum VS {//VehicleSelect
   if (Keys.escape) {
    UI.escapeToLast(true);
   }
-  if (!Keys.inUse) {
-   UI.selected =
-   Math.abs(.85 - Mouse.Y) < UI.clickRangeY ? 0 :
-   Math.abs(.875 - Mouse.Y) < UI.clickRangeY ? 1 :
-   Math.abs(.9 - Mouse.Y) < UI.clickRangeY ? 2 :
-   UI.selected;
-  }
   U.rotate(Camera.PC, Camera.YZ, -Camera.XZ);
   UI.gameFPS = Double.POSITIVE_INFINITY;
  }
@@ -255,7 +256,7 @@ public enum VS {//VehicleSelect
    if (V.type != Vehicle.Type.turret) {
     U.textR("Top Speed:", lineLL, Y1);
     boolean hasWrath = false;
-    for (var special : V.specials) {
+    for (Special special : V.specials) {
      if (special.type == Special.Type.thewrath) {
       hasWrath = true;
       break;
@@ -281,7 +282,7 @@ public enum VS {//VehicleSelect
   if (!V.specials.isEmpty()) {
    U.textR("Special(s):", lineLL, Y5);
    StringBuilder specials = new StringBuilder();
-   for (var special : V.specials) {
+   for (Special special : V.specials) {
     specials.append(special.type.name()).append(", ");
     hasForceField = special.type == Special.Type.forcefield || hasForceField;
    }

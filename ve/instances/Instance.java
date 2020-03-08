@@ -31,7 +31,7 @@ public class Instance extends CoreAdvanced {
  protected Color wheelRGB = U.getColor(.1875), rimRGB = U.getColor(0);
  public Color theRandomColor = U.getColor(0);
  public boolean flicker = U.random() < .5;
- public int modelNumber;
+ //public int modelNumber;
  public String modelName = "";
  public Quaternion rotation;
 
@@ -52,7 +52,7 @@ public class Instance extends CoreAdvanced {
  }
 
  protected static void append(StringBuilder SB, String s, boolean useContains, String... prefixes) {
-  for (var s1 : prefixes) {
+  for (String s1 : prefixes) {
    if (useContains ? s.contains(s1) : s.startsWith(s1)) {
     SB.append(" ").append(s1).append(" ");
    }

@@ -20,7 +20,8 @@ public enum Phong {
  }
 
  public static void setDiffuseRGB(PhongMaterial PM, double shade) {
-  setDiffuseRGB(PM, shade, shade, shade);
+  shade = U.clamp(shade);
+  PM.setDiffuseColor(Color.color(shade, shade, shade));
  }
 
  public static void setDiffuseRGB(PhongMaterial PM, double R, double G, double B) {
@@ -36,7 +37,8 @@ public enum Phong {
  }
 
  public static void setSpecularRGB(PhongMaterial PM, double shade) {
-  setSpecularRGB(PM, shade, shade, shade);
+  shade = U.clamp(shade);
+  PM.setSpecularColor(Color.color(shade, shade, shade));
  }
 
  public static void setSpecularRGB(PhongMaterial PM, double R, double G, double B) {

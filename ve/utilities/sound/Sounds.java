@@ -1,6 +1,7 @@
 package ve.utilities.sound;
 
 import kuusisto.tinysound.TinySound;
+import ve.effects.Echo;
 import ve.environment.*;
 import ve.environment.storm.Lightning;
 import ve.environment.storm.Rain;
@@ -8,13 +9,14 @@ import ve.instances.I;
 import ve.trackElements.Bonus;
 import ve.ui.UI;
 import ve.utilities.D;
+import ve.vehicles.Vehicle;
 
 public enum Sounds {
  ;
  public static final String folder = "sounds";
  public static final String extension = ".wav";
  public static final String exception = "Sound-loading Exception: ";
- public static int channels;
+ public static int channels;//<-fixme--or remove if stereo's the only good way for TinySound
  public static int bitDepth;
  public static double sampleRate;
  public static boolean softwareBased;
@@ -36,7 +38,7 @@ public enum Sounds {
  public static FireAndForget hitExplosive;
  public static FireAndForget mineExplosion;
  public static FireAndForget massiveHit;
- public static Sound trainNoise;//<-todo--controlled or fireAndForget?
+ public static FireAndForget trainNoise;//<-FireAndForget is preferred because it prevents having to store trainNoise copies per train when softwareBased
  public static FireAndForget nuke;
  public static FireAndForget nukeMax;
  //
@@ -57,24 +59,25 @@ public enum Sounds {
    hitExplosive = new FireAndForget(D.hitExplosive, Double.POSITIVE_INFINITY);
    mineExplosion = new FireAndForget(D.mineExplode);
    massiveHit = new FireAndForget(D.massiveHit, Double.POSITIVE_INFINITY);
-   trainNoise = new Sound(D.train, Double.POSITIVE_INFINITY);
+   trainNoise = new FireAndForget(D.train, Double.POSITIVE_INFINITY);
    nuke = new FireAndForget(D.nuke, Double.POSITIVE_INFINITY);
    nukeMax = new FireAndForget(D.nukeMax);
   }
  }
 
- public static void removeExtraneousGlobals() {
+ public static void removeExtraneousGlobals() {//todo--anything else here worth closing?
   if (!I.trainEngineInMatch && trainNoise != null) trainNoise.close();
   if (!I.nukeInMatch && nuke != null) nuke.close();
   if (!I.maxNukeInMatch && nukeMax != null) nukeMax.close();
  }
 
  public static void reset() {
+  Echo.presence = 0;//<-Always reset first, so that echo is not picked up undesirably on UI sounds, etc.
   if (TinySound.mixer != null) {
    TinySound.mixer.clearMusic();
    TinySound.mixer.clearSounds();
   }
-  for (var vehicle : I.vehicles) {
+  for (Vehicle vehicle : I.vehicles) {
    if (vehicle != null) {//<-This is likely needed--there's a brief period on map-load where null 'placeholder' Vehicles are added to the list. A crash there would cause a nullPointer here as well
     vehicle.VA.close();
    }
@@ -82,13 +85,13 @@ public enum Sounds {
   Rain.closeSound();
   Tornado.closeSound();
   Tsunami.closeSound();
-  for (var fire : Fire.instances) {
+  for (Fire.Instance fire : Fire.instances) {
    fire.closeSound();
   }
-  for (var boulder : Boulder.instances) {
+  for (Boulder.Instance boulder : Boulder.instances) {
    boulder.closeSound();
   }
-  for (var meteor : Meteor.instances) {
+  for (Meteor.Instance meteor : Meteor.instances) {
    meteor.closeSound();
   }
   Lightning.closeSound();

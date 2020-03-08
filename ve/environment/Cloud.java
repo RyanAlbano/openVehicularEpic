@@ -36,7 +36,7 @@ public enum Cloud {
  }
 
  public static void run() {
-  for (var cloud : instances) {
+  for (Instance cloud : instances) {
    cloud.run();
   }
  }

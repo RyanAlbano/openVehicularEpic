@@ -28,13 +28,13 @@ public enum Boulder {
  }
 
  static void run(boolean updateIfMatchBegan) {
-  for (var boulder : instances) {
+  for (Instance boulder : instances) {
    boulder.run(updateIfMatchBegan);
   }
  }
 
  public static void vehicleInteract(Vehicle V) {
-  for (var boulder : instances) {
+  for (Instance boulder : instances) {
    if (U.distanceXZ(V, boulder) < V.collisionRadius + boulder.S.getRadius() && V.Y > boulder.Y - V.collisionRadius - boulder.S.getRadius()) {//<-Will call incorrectly in the unlikely event a vehicle is underground and the boulder rolls directly overhead
     V.setDamage(V.damageCeiling());
     V.deformParts();
@@ -81,7 +81,7 @@ public enum Boulder {
     dusts.get(currentDust).deploy(this);
     currentDust = ++currentDust >= Dust.defaultQuantity ? 0 : currentDust;
    }
-   for (var otherBoulder : instances) {
+   for (Instance otherBoulder : instances) {
     if (U.random() < .5 && otherBoulder != this && U.distance(this, otherBoulder) < S.getRadius() + otherBoulder.S.getRadius()) {
      XZ = U.random(360.);
     }
@@ -106,7 +106,7 @@ public enum Boulder {
    } else {
     sound.stop();
    }
-   for (var dust : dusts) {
+   for (Dust dust : dusts) {
     dust.run();
    }
   }

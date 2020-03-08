@@ -39,7 +39,7 @@ public enum U {//Low-level utilities, such as math functions
  public static double FPSTime;
  public static final double sin45 = .70710678118654752440084436210485;
  public static final double minimumAccurateLayeredOpacity = .05;
- public static final long refreshRate = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode().getRefreshRate();
+ public static final int refreshRate = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode().getRefreshRate();
  public static final Dimension dimension = Toolkit.getDefaultToolkit().getScreenSize();
  public static final String modelFolder = "models";
  public static final String userSubmittedFolder = "User-Submitted";
@@ -164,7 +164,7 @@ public enum U {//Low-level utilities, such as math functions
  }
 
  public static boolean equals(String in, String... prefixes) {
-  for (var s : prefixes) {
+  for (String s : prefixes) {
    if (in.equals(s)) {
     return true;
    }
@@ -173,7 +173,7 @@ public enum U {//Low-level utilities, such as math functions
  }
 
  public static boolean startsWith(String in, String... prefixes) {
-  for (var s : prefixes) {
+  for (String s : prefixes) {
    if (in.startsWith(s)) {
     return true;
    }
@@ -182,7 +182,7 @@ public enum U {//Low-level utilities, such as math functions
  }
 
  public static boolean contains(String in, String... prefixes) {
-  for (var s : prefixes) {
+  for (String s : prefixes) {
    if (in.contains(s)) {
     return true;
    }
@@ -192,7 +192,7 @@ public enum U {//Low-level utilities, such as math functions
 
  public static boolean containsEnum(Enum in, Enum... prefixes) {
   String name = in.name();
-  for (var e : prefixes) {
+  for (Enum e : prefixes) {
    if (name.contains(e.name())) {
     return true;
    }
@@ -214,7 +214,7 @@ public enum U {//Low-level utilities, such as math functions
 
  static List<Double> arrayToList(double[] source) {//<-Keep in case it's needed later
   List<Double> d = new ArrayList<>();
-  for (var v : source) {
+  for (double v : source) {
    d.add(v);
   }
   return d;
@@ -461,13 +461,13 @@ public enum U {//Low-level utilities, such as math functions
 
  public static void setFPS() {
   double time = System.currentTimeMillis();
-  FPS = StrictMath.pow(Math.min(1000 / (time - FPSTime), refreshRate), 1.005);//<-Flat algorithm not as accurate
+  FPS = 1000 / Math.max(time - FPSTime, 1);//<-Math.max call is important--division by zero kills averageFPS calibration
   averageFPS += (FPS - averageFPS) * .03125;
   FPSTime = time;
  }
 
- public static boolean maxedFPS(boolean useAverage) {
-  return (useAverage ? averageFPS : FPS) > 59;//<-'59' is more reliable
+ public static boolean goodFPS(boolean useAverage) {
+  return (useAverage ? averageFPS : FPS) > 59;//<-'59' allows reaching 'true' on standard 60-Hz devices
  }
 
  /*public static void cache(Node N) {

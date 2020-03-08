@@ -1,14 +1,22 @@
 package ve.instances;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
 import javafx.scene.paint.Color;
 import ve.ui.Maps;
 import ve.ui.Viewer;
-import ve.utilities.*;
+import ve.utilities.D;
+import ve.utilities.Network;
+import ve.utilities.Nodes;
+import ve.utilities.U;
 import ve.vehicles.Vehicle;
+import ve.vehicles.VehiclePart;
 
 public enum I {//<-handles Instances
  ;
@@ -78,7 +86,7 @@ public enum I {//<-handles Instances
   vehicles.clear();
   vehicles.add(new Vehicle(v, 0, false, show));
   vehicles.get(0).lightBrightness = Maps.defaultVehicleLightBrightness;
-  for (var part : vehicles.get(0).parts) {
+  for (VehiclePart part : vehicles.get(0).parts) {
    Nodes.add(part.MV);
    part.MV.setVisible(true);
    part.setDrawMode(Viewer.Vehicle.showWireframe);
@@ -87,7 +95,7 @@ public enum I {//<-handles Instances
 
  public static void removeVehicleModel() {
   if (!vehicles.isEmpty() && vehicles.get(0) != null) {
-   for (var part : vehicles.get(0).parts) {
+   for (VehiclePart part : vehicles.get(0).parts) {
     Nodes.remove(part.MV);
     Nodes.removePointLight(part.pointLight);
    }

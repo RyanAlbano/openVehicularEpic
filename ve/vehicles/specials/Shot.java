@@ -4,6 +4,7 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
 import ve.effects.Effects;
 import ve.environment.E;
+import ve.environment.FrustumMound;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.instances.I;
@@ -155,7 +156,7 @@ public class Shot extends CoreAdvanced {
      if (U.outOfBounds(this, 500)) {
       hit = 1;
      } else {
-      for (var FM : TE.mounds) {
+      for (FrustumMound FM : TE.mounds) {
        if (FM.objectInside(this)) {//fixme--Major lag source if there are lots of active shots and lots of mounds!
         hit = 1;
         break;
@@ -252,7 +253,7 @@ public class Shot extends CoreAdvanced {
   if (S.homing) {
    int shotTarget = I.userPlayerIndex;
    double compareDistance = Double.POSITIVE_INFINITY;
-   for (var vehicle : I.vehicles) {
+   for (Vehicle vehicle : I.vehicles) {
     if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(this, vehicle) < compareDistance) {
      shotTarget = vehicle.index;
      compareDistance = U.distance(this, vehicle);

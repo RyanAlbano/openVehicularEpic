@@ -28,7 +28,7 @@ public enum Options {
   U.fillRGB(1);
   U.text("DriverSeat [" + (driverSeat > 0 ? "RIGHT->" : driverSeat < 0 ? "<-LEFT" : "CENTER") + "]", .3 + UI.textOffset);
   U.text("Units [" + (Units.units == Units.Unit.metric ? "METRIC" : Units.units == Units.Unit.US ? "U.S." : Units.Unit.VEs.name()) + "]", .35 + UI.textOffset);
-  U.text("Limit FPS to [" + (UI.userFPS > U.refreshRate ? "JavaFX Default" : Long.valueOf(UI.userFPS)) + "]", .4 + UI.textOffset);
+  U.text("Limit FPS to [" + UI.userFPS + (UI.userFPS == U.refreshRate ? " (system refresh rate--recommended)" : "") + "]", .4 + UI.textOffset);
   U.text("Camera-Shake Effects [" + (Camera.shake ? UI.ON : UI.OFF) + "]", .45 + UI.textOffset);
   if (fromMenu) {
    U.text("Match Length [" + matchLength + "]", .5 + UI.textOffset);
@@ -42,12 +42,10 @@ public enum Options {
     if (--UI.selected < 0) {
      UI.selected = fromMenu ? 9 : 4;
     }
-    Keys.inUse = true;
     UI.sound.play(0, 0);
    }
    if (Keys.down) {
     UI.selected = ++UI.selected > 9 || (!fromMenu && UI.selected > 4) ? 0 : UI.selected;
-    Keys.inUse = true;
     UI.sound.play(0, 0);
    }
   }
@@ -78,11 +76,11 @@ public enum Options {
    isAdjustFunction = true;
    if (UI.selectionReady()) {
     if (Keys.left && UI.userFPS > 1) {
-     UI.userFPS = UI.userFPS > U.refreshRate ? U.refreshRate - 1 : --UI.userFPS;
+     UI.userFPS--;
      UI.sound.play(0, 0);
     }
     if (Keys.right && UI.userFPS < Long.MAX_VALUE) {
-     UI.userFPS = ++UI.userFPS >= U.refreshRate ? Long.MAX_VALUE : UI.userFPS;
+     UI.userFPS++;
      UI.sound.play(0, 0);
     }
    }
@@ -157,24 +155,6 @@ public enum Options {
   }
   U.fillRGB(1);
   U.text(UI.selected > 0 ? isAdjustFunction ? notifyAdjustFunction : notifyEnterSpaceChangeFunction : "", .8 + UI.textOffset);
-  if ((Keys.enter || Keys.space) && UI.selectionReady()) {
-   if (UI.selected == 0) {
-    UI.status = fromMenu ? UI.Status.mainMenu : UI.Status.paused;
-    Keys.enter = Keys.space = false;
-   } else if (UI.status == UI.Status.optionsGraphics || UI.status == UI.Status.optionsSound) {
-    Keys.enter = Keys.space = false;
-    UI.selected = 0;
-   }
-   UI.sound.play(1, 0);
-  }
-  if (Keys.escape) {
-   UI.status = fromMenu ? UI.Status.mainMenu : UI.Status.paused;
-   UI.sound.play(1, 0);
-   Keys.escape = false;
-  }
-  if (Tournament.stage > 0) {
-   I.vehiclesInMatch = Math.max(2, I.vehiclesInMatch);
-  }
   if (!Keys.inUse) {
    UI.selected =
    Math.abs(.825 + UI.baseClickOffset - Mouse.Y) < UI.clickRangeY ? 0 :
@@ -192,6 +172,24 @@ public enum Options {
     Math.abs(.65 + UI.baseClickOffset - Mouse.Y) < UI.clickRangeY ? 9 :
     UI.selected;
    }
+  }
+  if ((Keys.enter || Keys.space) && UI.selectionReady()) {
+   if (UI.selected == 0) {
+    UI.status = fromMenu ? UI.Status.mainMenu : UI.Status.paused;
+    Keys.enter = Keys.space = false;
+   } else if (UI.status == UI.Status.optionsGraphics || UI.status == UI.Status.optionsSound) {
+    Keys.enter = Keys.space = false;
+    UI.selected = 0;
+   }
+   UI.sound.play(1, 0);
+  }
+  if (Keys.escape) {
+   UI.status = fromMenu ? UI.Status.mainMenu : UI.Status.paused;
+   UI.sound.play(1, 0);
+   Keys.escape = false;
+  }
+  if (Tournament.stage > 0) {
+   I.vehiclesInMatch = Math.max(2, I.vehiclesInMatch);
   }
   UI.gameFPS = Double.POSITIVE_INFINITY;
  }

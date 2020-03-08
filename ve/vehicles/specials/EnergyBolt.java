@@ -46,7 +46,7 @@ public class EnergyBolt extends MeshView {
   } else {
    target = V.index;
    double compareDistance1 = Double.POSITIVE_INFINITY;
-   for (var vehicle : I.vehicles) {//<-Direct energy towards fellow support infrastructure
+   for (Vehicle vehicle : I.vehicles) {//<-Direct energy towards fellow support infrastructure
     if (vehicle.index != V.index && U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) < compareDistance1 &&
     vehicle.type == Vehicle.Type.supportInfrastructure) {//*
      target = vehicle.index;
@@ -55,7 +55,7 @@ public class EnergyBolt extends MeshView {
    }
    //*May need to be changed if more infrastructure types get added later!
    double compareDistance = Double.POSITIVE_INFINITY;
-   for (var vehicle : I.vehicles) {//<-Redirect energy towards fellow non-support-infrastructure teammates if they're alive or exist
+   for (Vehicle vehicle : I.vehicles) {//<-Redirect energy towards fellow non-support-infrastructure teammates if they're alive or exist
     if (vehicle.index != V.index && U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) < compareDistance &&
     vehicle.type != Vehicle.Type.supportInfrastructure) {//*
      target = vehicle.index;

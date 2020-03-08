@@ -233,6 +233,9 @@ public class VehiclePart extends InstancePart {
   } else {
    MV.getTransforms().setAll(damage);
   }
+  if (vertexQuantity == 2) {
+   System.out.println("Vehicle part with 2 vertices detected on " + V.name + ". 2-vertex meshes serve no known useful function in V.E., and should probably be removed.");
+  }
  }
 
  private void setBrightness() {
@@ -266,7 +269,7 @@ public class VehiclePart extends InstancePart {
    placementY[0] += V.absoluteRadius * U.randomPlusMinus(.001);
    placementZ[0] += V.absoluteRadius * U.randomPlusMinus(.001);
   }
-  if (nullPhysics || !V.P.inWrath) {//<-'nullPhysics' is only called to prevent nullPointer due to null Physics
+  if (nullPhysics/*<-only called to prevent nullPointer due to null Physics->*/ || !V.P.inWrath) {
    if (!nullPhysics && (pivotZ != 0 || pivotX != 0 || (!controller && V.VT != null))) {//<-May need to be further amended later so things don't rotate unintentionally
     if (steer.contains(D.thick(D.YZ)) || vehicleTurretBarrel) {
      U.rotateWithPivot(placementZ, placementY,
@@ -297,8 +300,7 @@ public class VehiclePart extends InstancePart {
  void runRender(boolean nullPhysics, double distanceCameraVehicle, boolean renderALL) {
   if (renderALL || ((E.renderType == E.RenderType.fullDistance || (size * E.renderLevel >= distanceCameraVehicle * Camera.FOV)) &&
   (!(exterior && V.inDriverView) && !(flickPolarity == 1 && V.flicker) && !(flickPolarity == 2 && !V.flicker) &&
-  !(landingGear && !nullPhysics && V.P.mode == Physics.Mode.fly) &&
-  (thrust == null || (V.thrusting && !V.destroyed))))) {
+  !(landingGear && !nullPhysics && V.P.mode == Physics.Mode.fly) && (thrust == null || (V.thrusting && !V.destroyed))))) {
    boolean render = true;
    if (!Double.isNaN(fastCull) && !renderALL) {
     long shiftedAxis = Math.round(fastCull);

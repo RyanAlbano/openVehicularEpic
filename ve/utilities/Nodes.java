@@ -15,7 +15,7 @@ public enum Nodes {
 
  public static void add(Node... N) {
   UI.denyExpensiveInGameCall();
-  for (var n : N) {
+  for (Node n : N) {
    if (n != null) {
     denyPointLight(n);
     if (!UI.group.getChildren().contains(n)) {
@@ -27,7 +27,7 @@ public enum Nodes {
 
  public static void remove(Node... N) {
   UI.denyExpensiveInGameCall();
-  for (var n : N) {
+  for (Node n : N) {
    if (n != null) {
     denyPointLight(n);
     UI.group.getChildren().remove(n);
@@ -48,7 +48,7 @@ public enum Nodes {
  public static void removePointLight(Node N) {
   if (N != null) {
    enforcePointLight(N);
-   //if (E.lights.getChildren().contains(N)) {//<-Doesn't seem to help with performance
+   //if (E.lights.getChildren().contains(N)) {//<-Doesn't seem to help with performance--the IDE says it's pointless anyway
    E.lights.getChildren().remove(N);
    //}
   }
@@ -64,6 +64,11 @@ public enum Nodes {
   if (N.getClass().getName().equals(PointLight.class.getName())) {
    UI.crashGame("PointLight is not allowed in or out of this area");
   }
+ }
+
+ public static void setLightRGB(LightBase LB, double shade) {
+  shade = U.clamp(shade);
+  LB.setColor(Color.color(shade, shade, shade));
  }
 
  public static void setLightRGB(LightBase LB, double R, double G, double B) {

@@ -25,12 +25,10 @@ public enum GraphicsOptions {
     if (--UI.selected < 0) {
      UI.selected = 3;
     }
-    Keys.inUse = true;
     UI.sound.play(0, 0);
    }
    if (Keys.down) {
     UI.selected = ++UI.selected > 3 ? 0 : UI.selected;
-    Keys.inUse = true;
     UI.sound.play(0, 0);
    }
   }
@@ -72,6 +70,14 @@ public enum GraphicsOptions {
   }
   U.fillRGB(1);
   U.text(UI.selected > 0 ? isAdjustFunction ? Options.notifyAdjustFunction : Options.notifyEnterSpaceChangeFunction : "", .8 + UI.textOffset);
+  if (!Keys.inUse) {
+   UI.selected =
+   Math.abs(.825 + UI.baseClickOffset - Mouse.Y) < UI.clickRangeY ? 0 :
+   Math.abs(.25 + UI.baseClickOffset - Mouse.Y) < UI.clickRangeY ? 1 :
+   Math.abs(.3 + UI.baseClickOffset - Mouse.Y) < UI.clickRangeY ? 2 :
+   Math.abs(.35 + UI.baseClickOffset - Mouse.Y) < UI.clickRangeY ? 3 :
+   UI.selected;
+  }
   if ((Keys.enter || Keys.space) && UI.selectionReady()) {
    if (UI.selected == 0) {
     UI.status = UI.Status.optionsMenu;
@@ -86,14 +92,6 @@ public enum GraphicsOptions {
   }
   if (Tournament.stage > 0) {
    I.vehiclesInMatch = Math.max(2, I.vehiclesInMatch);
-  }
-  if (!Keys.inUse) {
-   UI.selected =
-   Math.abs(.825 + UI.baseClickOffset - Mouse.Y) < UI.clickRangeY ? 0 :
-   Math.abs(.25 + UI.baseClickOffset - Mouse.Y) < UI.clickRangeY ? 1 :
-   Math.abs(.3 + UI.baseClickOffset - Mouse.Y) < UI.clickRangeY ? 2 :
-   Math.abs(.35 + UI.baseClickOffset - Mouse.Y) < UI.clickRangeY ? 3 :
-   UI.selected;
   }
   UI.gameFPS = Double.POSITIVE_INFINITY;
  }

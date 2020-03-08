@@ -6,21 +6,24 @@ import javafx.scene.PointLight;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.*;
-import ve.effects.echo.TimerEcho;
+import ve.effects.Echo;
 import ve.environment.storm.Storm;
 import ve.instances.Core;
 import ve.instances.I;
 import ve.trackElements.TE;
+import ve.trackElements.trackParts.TrackPart;
 import ve.trackElements.trackParts.TrackPlane;
 import ve.ui.Maps;
 import ve.ui.Match;
 import ve.ui.UI;
 import ve.utilities.*;
+import ve.vehicles.Vehicle;
+import ve.vehicles.explosions.MaxNukeBlast;
 
 import java.util.Random;
 
 public enum E {//<-Static game-environment content
- ;
+ ;//todo--Attempt layered 'atmosphere rings'? (similar to what was built for RaR in Graphics2D)
 
  public static Canvas canvas;
  public static GraphicsContext GC;
@@ -45,7 +48,7 @@ public enum E {//<-Static game-environment content
   Nodes.setLightRGB(mapViewerLight, 1, 1, 1);
  }
 
- public enum RenderType {standard, fullDistance, ALL}
+ public enum RenderType {standard, fullDistance, ALL}//<-'ALL' is only used when loading a map, so that all meshes are force-rendered at least once. This prevents later frame spikes due to unloaded meshes being shown for the first time in their life-cycle.
 
  public enum Specular {
   ;
@@ -153,7 +156,7 @@ public enum E {//<-Static game-environment content
    }
   }
   Tornado.run(gamePlay || mapViewer);
-  Snowball.run();
+  Snow.run();
   Tsunami.run(gamePlay || mapViewer, updateIfMatchBegan);
   Fire.run(gamePlay || mapViewer);
   Boulder.run(updateIfMatchBegan);
@@ -162,7 +165,7 @@ public enum E {//<-Static game-environment content
   //*Draw order is windstorm, poolVision, screenFlashes
   Wind.runStorm(gamePlay || mapViewer);//*
   Pool.runVision();//*
-  for (var vehicle : I.vehicles) {//*
+  for (Vehicle vehicle : I.vehicles) {//*
    if (vehicle.screenFlash > 0) {
     U.fillRGB(GC, 1, 1, 1, vehicle.screenFlash);
     U.fillRectangle(GC, .5, .5, 1, 1);
@@ -176,9 +179,9 @@ public enum E {//<-Static game-environment content
    double volcanoDistance = U.distanceXZ(core, Volcano.C);
    core.Y = volcanoDistance < Volcano.radiusBottom && volcanoDistance > Volcano.radiusTop && core.Y > -Volcano.radiusBottom + volcanoDistance ? Math.min(core.Y, -Volcano.radiusBottom + volcanoDistance) : core.Y;
   }
-  for (var trackPart : TE.trackParts) {
+  for (TrackPart trackPart : TE.trackParts) {
    if ((!trackPart.wraps || vehicle) && !trackPart.trackPlanes.isEmpty() && U.distanceXZ(core, trackPart) < trackPart.renderRadius + core.absoluteRadius) {//<-Not sure how much this section helps optimize in actuality
-    for (var trackPlane : trackPart.trackPlanes) {
+    for (TrackPlane trackPlane : trackPart.trackPlanes) {
      if (!trackPlane.type.contains(D.gate)) {
       double trackX = trackPlane.X + trackPart.X, trackZ = trackPlane.Z + trackPart.Z;
       if (Math.abs(core.X - trackX) <= trackPlane.radiusX && Math.abs(core.Z - trackZ) <= trackPlane.radiusZ) {
@@ -205,7 +208,7 @@ public enum E {//<-Static game-environment content
  }
 
  public static void setMoundSit(Core core, boolean vehicle) {
-  for (var FM : TE.mounds) {
+  for (FrustumMound FM : TE.mounds) {
    if (!FM.wraps || vehicle) {
     double distance = U.distanceXZ(core, FM), radiusBottom = FM.majorRadius;
     if (distance < radiusBottom) {
@@ -251,7 +254,7 @@ public enum E {//<-Static game-environment content
   Cloud.instances.clear();
   Star.instances.clear();
   Crystal.instances.clear();
-  Snowball.instances.clear();
+  Snow.instances.clear();
   Fire.instances.clear();
   Boulder.instances.clear();
   Volcano.reset();
@@ -267,9 +270,13 @@ public enum E {//<-Static game-environment content
   viewableMapDistance = Double.POSITIVE_INFINITY;
   gravity = 7;
   soundMultiple = 1;
-  TimerEcho.presence = 0;
+  Echo.presence = 0;
+  MaxNukeBlast.whoIsLit = -1;
   Terrain.reset();
-  Nodes.setLightRGB(ambientLight, 0, 0, 0);
-  centerShiftOffAt = Maps.name.equals(D.Maps.speedway2000000) ? 2000 : Maps.name.equals(D.Maps.volcanicProphecy) ? 1000 : Double.NEGATIVE_INFINITY;
+  Nodes.setLightRGB(ambientLight, 0);
+  centerShiftOffAt =
+  Maps.name.equals(D.Maps.speedway2000000) ? 2000 :
+  Maps.name.equals(D.Maps.volcanicProphecy) ? 1000 :
+  Double.NEGATIVE_INFINITY;
  }
 }

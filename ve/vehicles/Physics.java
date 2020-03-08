@@ -8,10 +8,12 @@ import ve.instances.CoreAdvanced;
 import ve.instances.I;
 import ve.trackElements.Bonus;
 import ve.trackElements.TE;
+import ve.trackElements.trackParts.TrackPart;
 import ve.trackElements.trackParts.TrackPlane;
 import ve.ui.*;
 import ve.utilities.*;
 import ve.vehicles.explosions.Explosion;
+import ve.vehicles.specials.Shot;
 import ve.vehicles.specials.Special;
 
 public class Physics {
@@ -115,7 +117,7 @@ public class Physics {
   boolean replay = UI.status == UI.Status.replay, greenTeam = V.index < I.vehiclesInMatch >> 1;
   if (!V.phantomEngaged) {
    if (!V.destroyed && !V.reviveImmortality) {
-    for (var otherV : I.vehicles) {
+    for (Vehicle otherV : I.vehicles) {
      if (!U.sameTeam(V, otherV) && !otherV.destroyed && !otherV.reviveImmortality && !otherV.phantomEngaged) {
       if (advancedCollisionCheck(V, otherV, V.collisionRadius + otherV.collisionRadius)) {//<-There's no reason for 'collideAt' to be any other value. Change the default value if needed
        if (V.getsLifted > 0 && V.Y < otherV.Y) {
@@ -166,7 +168,7 @@ public class Physics {
         V.setDamage(V.damageCeiling());
         otherV.setDamage(otherV.damageCeiling());
         Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : otherV.durability;
-        V.setCameraShake(Camera.shakePresets.normalNuclear);
+        V.setCameraShake(Camera.shakeIntensity.normalNuclear);
        }
        if (V.dealsMassiveDamage() && (massiveHitTimer <= 0 || otherV.isIntegral())) {
         otherV.setDamage(otherV.damageCeiling());
@@ -175,7 +177,7 @@ public class Physics {
         massiveHitTimer = U.random(5.);
         otherV.deformParts();
         otherV.throwChips(netSpeed - otherV.P.getNetSpeed()/*<-Get it again because netSpeed field won't be updated with velocities from a KILL-O-MATIC slam*/, false);
-        V.setCameraShake(Camera.shakePresets.massiveHit);
+        V.setCameraShake(Camera.shakeIntensity.massiveHit);
        }
       }
       if (V.spinner != null && U.distance(V, otherV) < V.renderRadius + otherV.collisionRadius) {//<-'renderRadius' ideal if spinner has largest diameter of the vehicle
@@ -184,17 +186,17 @@ public class Physics {
      }
     }
    }
-   for (var special : V.specials) {
-    for (var vehicle : I.vehicles) {
+   for (Special special : V.specials) {
+    for (Vehicle vehicle : I.vehicles) {
      if (!U.sameTeam(V, vehicle) && (!vehicle.destroyed || wrathEngaged) && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
       boolean throughWeapon = special.throughWeapon();
-      for (var shot : special.shots) {
+      for (Shot shot : special.shots) {
        shot.vehicleInteract(vehicle, throughWeapon, replay, greenTeam);
       }
       if (V.isFixed() && Bonus.holder < 0 && V.isIntegral()) {
        double collideAt = special.diameter + Bonus.big.getRadius();
-       for (var shot : special.shots) {
-        if (shot.stage > 0 && shot.advancedCollisionCheck(TE.bonus, collideAt)) {
+       for (Shot shot : special.shots) {
+        if (shot.stage > 0 && shot.advancedCollisionCheck(Bonus.C, collideAt)) {
          Bonus.setHolder(V);
         }
        }
@@ -207,7 +209,7 @@ public class Physics {
         vehicle.speedX = V.speedX;
         vehicle.speedY = V.speedY;
         vehicle.speedZ = V.speedZ;
-        for (var part : vehicle.parts) {
+        for (VehiclePart part : vehicle.parts) {
          part.X = V.X + U.randomPlusMinus(V.absoluteRadius);
          part.Y = V.Y + U.randomPlusMinus(V.absoluteRadius);
          part.Z = V.Z + U.randomPlusMinus(V.absoluteRadius);
@@ -224,9 +226,9 @@ public class Physics {
      explosionDiameter = U.random(20000.);
      explosionDamage = 2500 + U.random(5000.);
     }
-    for (var vehicle : I.vehicles) {
+    for (Vehicle vehicle : I.vehicles) {
      if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
-      for (var explosion : V.explosions) {
+      for (Explosion explosion : V.explosions) {
        explosion.vehicleInteract(vehicle, replay, greenTeam);
       }
      }
@@ -234,7 +236,7 @@ public class Physics {
    }
    if (!V.destroyed) {
     if (V.isFixed()) {
-     for (var vehicle : I.vehicles) {
+     for (Vehicle vehicle : I.vehicles) {
       if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && U.distance(V.X, vehicle.X, V.Y + (V.turretBaseY * .5), vehicle.Y, V.Z, vehicle.Z) < V.collisionRadius * .5 + vehicle.collisionRadius && !vehicle.phantomEngaged) {
        hitCheck(vehicle);
        if (vehicle.fragility > 0) {
@@ -255,10 +257,10 @@ public class Physics {
      }
     }
     if (!V.reviveImmortality) {
-     for (var special : V.specials) {
+     for (Special special : V.specials) {
       if (special.type.name().contains(D.particle) && special.fire) {
        boolean disintegrate = special.type == Special.Type.particledisintegrator;
-       for (var vehicle : I.vehicles) {
+       for (Vehicle vehicle : I.vehicles) {
         if ((disintegrate ? !U.sameTeam(V, vehicle) : !U.sameVehicle(V, vehicle) && U.sameTeam(V, vehicle)) &&
         !vehicle.destroyed && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
          if (
@@ -296,7 +298,7 @@ public class Physics {
    if (V.death == Vehicle.Death.none) {
     String s = Network.mode == Network.Mode.OFF ? V.name : UI.playerNames[V.index];
     V.death = Vehicle.Death.diedAlone;
-    for (var vehicle : I.vehicles) {
+    for (Vehicle vehicle : I.vehicles) {
      if (!U.sameTeam(V, vehicle) && vehicleHit == vehicle.index && vehicle.P.vehicleHit == V.index) {
       V.death = Vehicle.Death.killedByAnother;
       DestructionLog.update();
@@ -317,7 +319,7 @@ public class Physics {
   }
  }
 
- private static boolean advancedCollisionCheck(CoreAdvanced moving, Core stationary, double collideAt) {//<-Stationary core may not always be stationary in actuality, but good enough
+ public static boolean advancedCollisionCheck(CoreAdvanced moving, Core stationary, double collideAt) {//<-Stationary core may not always be stationary in actuality, but good enough
   if (U.distance(moving, stationary) < collideAt) {
    return true;
   }
@@ -356,7 +358,7 @@ public class Physics {
     V.explosions.get(V.currentExplosion).deploy(U.randomPlusMinus(V.absoluteRadius), U.randomPlusMinus(V.absoluteRadius), U.randomPlusMinus(V.absoluteRadius), V);
     V.currentExplosion = ++V.currentExplosion >= Explosion.defaultQuantity ? 0 : V.currentExplosion;
    }
-   V.setCameraShake(Camera.shakePresets.vehicleExplode);
+   V.setCameraShake(Camera.shakeIntensity.vehicleExplode);
    if (V.isFixed()) {//<-For Missile Turret, basically
     V.VA.crashDestroy.play(Double.NaN, V.VA.distanceVehicleToCamera);
    }
@@ -366,7 +368,7 @@ public class Physics {
   V.Y = U.clamp(MapBounds.Y, V.Y, -MapBounds.Y);
  }
 
- private void runVehiclesAircraft() {
+ private void runVehiclesAircraft() {//The order of methods within this void is utmost critical. Use extreme caution if editing!
   if (!V.isFixed()) {
    boolean replay = UI.status == UI.Status.replay;
    netSpeed = getNetSpeed();
@@ -402,18 +404,18 @@ public class Physics {
      airSpinXZ = speedXZ * turnSpeed * angleToSteerVelocity * (V.handbrake ? 1 : .5);//<-Reduction needed for non-handbrake air jumps, or airborne vehicles like Over=drivn will become difficult to control!
      V.XZ += speedXZ * turnSpeed * angleToSteerVelocity * U.tick;
     }
-   } else if (mode != Mode.fly) {//airSpinXZ gets zeroed in runAerialControl() if aerial control is enhanced
-    V.XZ += airSpinXZ * U.tick;
-    stuntXZ += airSpinXZ * U.tick;
+   } else if (mode != Mode.fly) {
+    V.XZ += airSpinXZ * U.tick;//*airSpinXZ gets zeroed in runAerialControl() if aerial control is enhanced
+    stuntXZ += airSpinXZ * U.tick;//*
    }
    runFlight(maxTurn, turnSpeed);
    if (!V.phantomEngaged && !inTornado && !V.floats) {
     V.speedY += E.gravity * (V.amphibious == Vehicle.Amphibious.ON && inPool && V.Y > 0 ? -1 : 1) * U.tick;
    }//There IS better ground traction if the gravity is applied before setting wheel XYZ
    runSetWheelXYZ();
+   Tornado.vehicleInteract(V);//<-Up here because Mode.fly gets cancelled below. Must also precede runSetCorePosition() to have any effect
    runSetCorePosition(onBouncy);
-   //*Must come AFTER position-setting or wall hits are ineffective!
-   runDriveVelocity();//*
+   runDriveVelocity();//*Must come AFTER position-setting or wall hits are ineffective!
    runSpeedBoost();//*
    if (mode.name().startsWith(D.drive) || V.phantomEngaged) {
     runBouncyTerrain(onBouncy);
@@ -422,7 +424,7 @@ public class Physics {
    driftXZ = V.XZ;//<-Best spot for assigning this
    boolean crashLand = (Math.abs(V.YZ) > 30 || Math.abs(V.XY) > 30) && !(Math.abs(V.YZ) > 150 && Math.abs(V.XY) > 150);
    double gravityCompensation = E.gravity * 2 * U.tick;
-   for (var wheel : V.wheels) {//<-Best place for this?
+   for (Wheel wheel : V.wheels) {//<-Best place for this?
     wheel.againstWall = wheel.angledSurface = false;
     wheel.minimumSkidmarkY = localGround;
    }
@@ -441,7 +443,6 @@ public class Physics {
     runSkidsAndDust();//<-Must come AFTER 'mode' is handled by all other voids!
    }
    runAngleSet();
-   Tornado.vehicleInteract(V);
    runHitOther();
    runLandInvert();
    runDriveEffects();
@@ -578,7 +579,7 @@ public class Physics {
  private void runDriveEffects() {
   boolean shockAbsorb = !Double.isNaN(V.shockAbsorb);
   if (shockAbsorb) {
-   for (var wheel : V.wheels) {
+   for (Wheel wheel : V.wheels) {
     wheel.vibrateY -= wheel.vibrateY * valueAdjustSmoothing * U.tick;
    }
   }
@@ -588,7 +589,7 @@ public class Physics {
     V.XY += lean;
     if (shockAbsorb) {
      lean *= .25;
-     for (var wheel : V.wheels) {
+     for (Wheel wheel : V.wheels) {
       wheel.vibrateY -= wheel.pointX * U.sin(lean) * V.shockAbsorb;
      }
     }
@@ -636,7 +637,7 @@ public class Physics {
    boolean connected = false;
    //significantDown = V.speedY > -E.gravity * U.tick;//<-Should prevent vehicles from 'hugging' mounds instead of taking off fully
    boolean flipped = flipped();
-   for (var wheel : V.wheels) {
+   for (Wheel wheel : V.wheels) {
     if (wheel.beneathLocalGround) {
      connected = true;
      wheel.XY -= wheel.XY * valueAdjustSmoothing * U.tick;
@@ -719,7 +720,7 @@ public class Physics {
      V.speedZ = velocityZ;
     }
     if (mode == Mode.driveSolid || V.phantomEngaged) {
-     if (Math.abs(V.speedY - velocityY) > setGrip && !onMoundSlope && !angledSurface()) {//fixme--angledSurface check can cause hugging on some standard ramps
+     if (Math.abs(V.speedY - velocityY) > setGrip && !onMoundSlope && (!angledSurface() || velocityDown())) {//<-Not sure if ramp-hugging is completely resolved, but velocityDown seems to have helped
       V.speedY += setGrip * Double.compare(velocityY, V.speedY);
      } else {
       V.speedY = velocityY;
@@ -734,7 +735,7 @@ public class Physics {
    int n;
    boolean markedSnow = false;
    if (terrainProperties.contains(D.thick(D.snow))) {
-    for (var wheel : V.wheels) {
+    for (Wheel wheel : V.wheels) {
      wheel.skidmark(true);
     }
     markedSnow = true;
@@ -743,7 +744,7 @@ public class Physics {
    driveEngine = !U.containsEnum(V.engine, Vehicle.Engine.prop, Vehicle.Engine.jet, Vehicle.Engine.rocket);
    if (((driveEngine && kineticFriction) || speedXZ * speedXZ > 300000 / netSpeed) && (kineticFriction || Math.abs(speed) > V.topSpeeds[1] * .9)) {
     if (terrainProperties.contains(D.thick(D.hard)) && V.contact == Contact.metal) {
-     for (var wheel : V.wheels) {
+     for (Wheel wheel : V.wheels) {
       wheel.sparks(true);
      }
     }
@@ -754,7 +755,7 @@ public class Physics {
     }
     if (!terrainProperties.contains(D.thick(D.ice))) {
      if (!markedSnow && V.contact == Contact.rubber) {//<-Contact check is so that skidmarks don't misfire due to being preloaded on snow-terrain maps
-      for (var wheel : V.wheels) {
+      for (Wheel wheel : V.wheels) {
        wheel.skidmark(false);
       }
      }
@@ -780,7 +781,7 @@ public class Physics {
   if (V.type == Vehicle.Type.vehicle && V.handbrake && mode == Mode.neutral) {
    mode = Mode.stunt;
   }
-  if (V.type == Vehicle.Type.aircraft && V.drive2) {
+  if (V.type == Vehicle.Type.aircraft && (V.drive2 || V.reverse2)) {//<-todo--take note whether allowing reverse2 will cause AI trouble
    boolean engageFly = mode == Mode.neutral;
    if (mode.name().startsWith(D.drive) && V.reverse) {
     V.Y -= 10;
@@ -956,10 +957,10 @@ public class Physics {
  }
 
  private void runPoolInteract() {
-  if (inPool && !onFlatTrackPlane) {//<-onFlatTrackPlane check is risky, but should work for now
+  if (inPool) {
    if (netSpeed > 0) {
     for (int n = 3; --n >= 0; ) {
-     for (var wheel : V.wheels) {
+     for (Wheel wheel : V.wheels) {
       V.splashes.get(V.currentSplash).deploy(wheel, V.absoluteRadius * .0125 + U.random(V.absoluteRadius * .0125),
       V.speedX + U.randomPlusMinus(Math.max(speed, netSpeed)),
       V.speedY + U.randomPlusMinus(Math.max(speed, netSpeed)),
@@ -969,19 +970,21 @@ public class Physics {
     }
    }
    V.VA.splashing = netSpeed;
-   if (!V.reviveImmortality) {
-    if (Pool.type == Pool.Type.lava) {
-     V.addDamage(30 * U.tick);
-     V.deformParts();
-    } else {
-     V.addDamage(Pool.type == Pool.Type.acid ? .0025 * V.durability * U.tick : 0);
+   if (!onFlatTrackPlane) {//<-Why was this checked?
+    if (!V.reviveImmortality) {
+     if (Pool.type == Pool.Type.lava) {
+      V.addDamage(30 * U.tick);
+      V.deformParts();
+     } else {
+      V.addDamage(Pool.type == Pool.Type.acid ? .0025 * V.durability * U.tick : 0);
+     }
     }
-   }
-   V.speedX -= V.speedX * .01 * U.tick;
-   V.speedY -= V.speedY * .1 * U.tick;
-   V.speedZ -= V.speedZ * .01 * U.tick;
-   if (V.amphibious == Vehicle.Amphibious.ON) {
-    mode = Mode.drivePool;
+    V.speedX -= V.speedX * .01 * U.tick;
+    V.speedY -= V.speedY * .1 * U.tick;
+    V.speedZ -= V.speedZ * .01 * U.tick;
+    if (V.amphibious == Vehicle.Amphibious.ON) {
+     mode = Mode.drivePool;
+    }
    }
   }
  }
@@ -992,9 +995,9 @@ public class Physics {
   wallPlaneBounce = Math.min(Math.abs(cosXY) + Math.abs(cosYZ), 1),//<-Not the best, but still probably better than a flat value
   crashPower = 0;
   boolean spinnerHit = inWall = false, flipped = flipped();
-  for (var trackPart : TE.trackParts) {
+  for (TrackPart trackPart : TE.trackParts) {
    if (!trackPart.trackPlanes.isEmpty() && U.distanceXZ(V, trackPart) <= trackPart.renderRadius + V.renderRadius) {//<-NEEDED--large maps get performance overhead without it!
-    for (var trackPlane : trackPart.trackPlanes) {
+    for (TrackPlane trackPlane : trackPart.trackPlanes) {
      double trackX = trackPlane.X + trackPart.X, trackY = trackPlane.Y + trackPart.Y, trackZ = trackPlane.Z + trackPart.Z,
      velocityXZ = Math.abs(sinXZ),
      radiusX = trackPlane.radiusX + (trackPlane.addSpeed && velocityXZ > U.sin45 ? netSpeed * U.tick : 0),
@@ -1029,7 +1032,7 @@ public class Physics {
       angleAdjustForYZ = criterion || Math.abs((cosXZ > 0 ? -V.YZ : V.YZ) - trackPlane.YZ) < 30,
       angleAdjustForXY = criterion || Math.abs((sinXZ < 0 ? -V.YZ : V.YZ) - trackPlane.XY) < 30;
       //WHEEL BASED
-      for (var wheel : V.wheels) {
+      for (Wheel wheel : V.wheels) {
        if (Math.abs(wheel.Y - (trackY + gravityCompensation)) <= trackPlane.radiusY) {
         boolean wheelInX = Math.abs(wheel.X - trackX) <= radiusX, wheelInZ = Math.abs(wheel.Z - trackZ) <= radiusZ;
         if (wheelInX && wheelInZ) {
@@ -1170,9 +1173,9 @@ public class Physics {
  }
 
  private void runSetTerrainFromTrackPlanes(double gravityCompensation) {
-  for (var trackPart : TE.trackParts) {
+  for (TrackPart trackPart : TE.trackParts) {
    if (!trackPart.trackPlanes.isEmpty() && U.distanceXZ(V, trackPart) <= trackPart.renderRadius + V.renderRadius) {//<-NEEDED--large maps get performance overhead without it!
-    for (var trackPlane : trackPart.trackPlanes) {
+    for (TrackPlane trackPlane : trackPart.trackPlanes) {
      if (trackPlane.wall == TrackPlane.Wall.none && !trackPlane.type.contains(D.thick(D.tree)) && !trackPlane.type.contains(D.gate)) {
       double trackX = trackPlane.X + trackPart.X, trackY = trackPlane.Y + trackPart.Y, trackZ = trackPlane.Z + trackPart.Z;
       if (Math.abs(V.X - trackX) <= trackPlane.radiusX && Math.abs(V.Z - trackZ) <= trackPlane.radiusZ &&
@@ -1205,7 +1208,7 @@ public class Physics {
   onMoundSlope = atOrAboveAndWithinMoundTopRadius = false;
   if (!V.phantomEngaged) {
    boolean flipped = flipped();
-   for (var FM : TE.mounds) {
+   for (FrustumMound FM : TE.mounds) {
     if (!V.bumpIgnore || !FM.wraps) {
      double distanceXZ = U.distanceXZ(V, FM), radiusBottom = FM.majorRadius;
      if (distanceXZ < radiusBottom) {
@@ -1289,10 +1292,10 @@ public class Physics {
  }
 
  private boolean moundHugPrevent() {
-  return (onMoundSlope || atOrAboveAndWithinMoundTopRadius) && V.speedY < -E.gravity * 4 * U.tick && !groundPlunge();
+  return (onMoundSlope || atOrAboveAndWithinMoundTopRadius) && V.speedY < -E.gravity * 4 * U.tick && !velocityDown();
  }
 
- private boolean groundPlunge() {//<-Only tested in moundHugPrevent()--not certified for general use
+ private boolean velocityDown() {
   return speed * U.sin(V.YZ) < 0;
  }
 
@@ -1387,7 +1390,7 @@ public class Physics {
  private void runSetWheelXYZ() {
   double primeX = V.speedX * U.tick, primeY = V.speedY * U.tick, primeZ = V.speedZ * U.tick;
   double sinXZ = U.sin(V.XZ), cosXZ = U.cos(V.XZ), sinYZ = U.sin(V.YZ), cosYZ = U.cos(V.YZ), sinXY = U.sin(V.XY), cosXY = U.cos(V.XY);
-  for (var wheel : V.wheels) {
+  for (Wheel wheel : V.wheels) {
    wheel.beneathLocalGround = false;
    double[] wheelX = {wheel.pointX}, wheelY = {clearance}, wheelZ = {wheel.pointZ};
    if (V.XY != 0) {

@@ -29,7 +29,7 @@ public enum Rain {
 
  public static void run(boolean update) {
   if (!raindrops.isEmpty()) {
-   for (var raindrop : raindrops) {
+   for (Drop raindrop : raindrops) {
     raindrop.run();
    }
    if (!Match.muteSound && update) {

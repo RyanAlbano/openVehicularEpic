@@ -27,13 +27,13 @@ public enum Fire {
  }
 
  static void run(boolean update) {
-  for (var fire : instances) {
+  for (Instance fire : instances) {
    fire.run(update);
   }
  }
 
  public static void vehicleInteract(Vehicle V) {
-  for (var fire : instances) {
+  for (Instance fire : instances) {
    double distance = U.distance(V, fire);
    if (distance < V.collisionRadius + fire.absoluteRadius) {
     V.addDamage(10 * U.tick);
@@ -101,7 +101,7 @@ public enum Fire {
   }
 
   void run(boolean update) {
-   for (var flame : flames) {
+   for (Flame flame : flames) {
     flame.X += flame.speedX * U.tick + (Wind.speedX * U.tick);
     flame.Z += flame.speedZ * U.tick + (Wind.speedZ * U.tick);
     flame.Y -= .1 * absoluteRadius * U.tick;
@@ -116,7 +116,7 @@ public enum Fire {
    if (U.getDepth(this) > -absoluteRadius) {
     U.setTranslate(pit, this);
     pit.setVisible(true);
-    for (var flame : flames) {
+    for (Flame flame : flames) {
      U.randomRotate(flame.MV);
      ((PhongMaterial) flame.MV.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
      U.setTranslate(flame.MV, flame);
@@ -124,7 +124,7 @@ public enum Fire {
     }
    } else {
     pit.setVisible(false);
-    for (var flame : flames) {
+    for (Flame flame : flames) {
      flame.MV.setVisible(false);
     }
    }

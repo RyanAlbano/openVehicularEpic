@@ -32,7 +32,7 @@ public enum Fog {
    Phong.setDiffuseRGB(PM, E.skyRGB, Math.min(opacityBase / currentQuantity, .5));
    Phong.setSpecularRGB(PM, 0);
    PM.setSpecularPower(Double.POSITIVE_INFINITY);
-   for (var fog : spheres) {
+   for (Sphere fog : spheres) {
     fog.setMaterial(PM);
     fog.setCullFace(CullFace.FRONT);
    }
@@ -56,7 +56,7 @@ public enum Fog {
   if (recalibrationTimer <= 0) {//<-Using '<=' so that initial down-calibration gets called
    currentQuantity += recalibration == null ? 0 : recalibration == Recalibration.increment ? 1 : -1;
    double radius = (E.viewableMapDistance / currentQuantity) * .5;
-   for (var fog : spheres) {
+   for (Sphere fog : spheres) {
     U.setScale(fog, radius);
     radius += E.viewableMapDistance / currentQuantity;
     fog.setVisible(spheres.indexOf(fog) < currentQuantity);

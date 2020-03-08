@@ -95,7 +95,7 @@ public enum Arrow {
   } else {
    if (status != Arrow.Status.locked) {
     double compareDistance = Double.POSITIVE_INFINITY;
-    for (var vehicle : I.vehicles) {
+    for (Vehicle vehicle : I.vehicles) {
      if (vehicle.index != I.vehiclePerspective && vehicle.isIntegral() && U.distance(V, vehicle) < compareDistance) {
       target = vehicle.index;
       compareDistance = U.distance(V, vehicle);

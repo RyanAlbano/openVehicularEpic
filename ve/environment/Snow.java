@@ -10,21 +10,21 @@ import ve.utilities.U;
 import java.util.ArrayList;
 import java.util.Collection;
 
-public enum Snowball {
+public enum Snow {
  ;
- public static final Collection<Instance> instances = new ArrayList<>();
+ public static final Collection<Ball> instances = new ArrayList<>();
  private static final long wrapDistance = 2000;
 
  public static void run() {
-  for (var snowball : instances) {
-   snowball.run();
+  for (Ball ball : instances) {
+   ball.run();
   }
  }
 
- public static class Instance extends CoreAdvanced {
+ public static class Ball extends CoreAdvanced {
   final Sphere S;
 
-  public Instance() {
+  public Ball() {
    X = U.randomPlusMinus(1000000.);
    Y = U.randomPlusMinus(1000000.);
    Z = U.randomPlusMinus(1000000.);

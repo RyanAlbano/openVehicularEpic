@@ -6,26 +6,21 @@ import java.util.*;
 import javafx.scene.paint.*;
 import javafx.scene.shape.*;
 import javafx.scene.transform.*;
-import org.fxyz3d.shapes.Torus;
 import ve.environment.E;
 import ve.environment.Ground;
 import ve.environment.Terrain;
-import ve.environment.Tornado;
-import ve.instances.I;
 import ve.instances.Instance;
 import ve.instances.InstancePart;
 import ve.trackElements.TE;
 import ve.ui.UI;
 import ve.utilities.*;
 
-public class TrackPart extends Instance {//<-todo--Manage repair points on their own List (not in TE.trackParts)?
+public class TrackPart extends Instance {
  public final Collection<TrackPartPart> parts = new ArrayList<>();
  private Sphere foliageSphere;
- private Torus repairTorus;
  final boolean vehicleModel;
- public boolean isRepairPoint;
  public boolean wraps;
- public boolean sidewaysXZ;
+ private boolean sidewaysXZ;
  boolean tree;
  public boolean rainbow;
  boolean checkpointSignRotation;
@@ -37,25 +32,23 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
 
  private List<RoadRock> roadRocks;
 
- private final List<Cylinder> repairShocks = new ArrayList<>();
-
- public TrackPart(int model, double sourceX, double sourceY, double sourceZ, double angle) {
+ public TrackPart(String model, double sourceX, double sourceY, double sourceZ, double angle) {
   this(model, sourceX, sourceY, sourceZ, angle, false, 1, new double[]{1, 1, 1});
  }
 
- public TrackPart(int model, double sourceX, double sourceY, double sourceZ, double angle, boolean isVehicleModel) {
+ public TrackPart(String model, double sourceX, double sourceY, double sourceZ, double angle, boolean isVehicleModel) {
   this(model, sourceX, sourceY, sourceZ, angle, isVehicleModel, 1, new double[]{1, 1, 1});
  }
 
- public TrackPart(int model, double sourceX, double sourceY, double sourceZ, double angle, double inSize, double[] inScale) {
+ public TrackPart(String model, double sourceX, double sourceY, double sourceZ, double angle, double inSize, double[] inScale) {
   this(model, sourceX, sourceY, sourceZ, angle, false, inSize, inScale);
  }
 
- private TrackPart(int model, double sourceX, double sourceY, double sourceZ, double angle, boolean isVehicleModel, double inSize, double[] inScale) {
-  modelNumber = model;
+ private TrackPart(String model, double sourceX, double sourceY, double sourceZ, double angle, boolean isVehicleModel, double inSize, double[] inScale) {
+  //modelNumber = model;
   vehicleModel = isVehicleModel;
-  if (model >= 0 || vehicleModel) {
-   modelName = vehicleModel ? I.vehicleModels.get(modelNumber) : TE.getTrackPartName(modelNumber);
+  if (model != null || vehicleModel) {
+   modelName = model;
    if (modelName.equals(TE.Models.checkpoint.name())) {//<-Checkpoint sign may glitch otherwise
     while (angle >= 90) angle -= 180;
     while (angle <= -90) angle += 180;//Will always end up at '90' rather then '-90'
@@ -67,7 +60,7 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
    double treeRandomXZ = U.randomPlusMinus(180.);
    theRandomColor = U.getColor(U.random(), U.random(), U.random());
    int wheelCount = 0;
-   boolean onModelPart = false, onTrackPlane = false, addWheel = false, rocky = false;
+   boolean onModelPart = false, onTrackPlane = false, trackPlaneOnly = false, addWheel = false, rocky = false;
    List<Double> xx = new ArrayList<>(), yy = new ArrayList<>(), zz = new ArrayList<>();
    double[] translate = new double[3];
    Color RGB = U.getColor(0);
@@ -78,7 +71,7 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
      s = s1.trim();
      if (s.startsWith("<>") && (!s.contains(D.aerialOnly) || sourceY != 0)) {
       onModelPart = true;
-      addWheel = false;
+      addWheel = trackPlaneOnly = false;
       xx.clear();
       yy.clear();
       zz.clear();
@@ -86,7 +79,7 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
       textureType = "";
      } else if (s.startsWith("><")) {
       double minimumX = Double.NEGATIVE_INFINITY, maximumX = Double.POSITIVE_INFINITY;
-      for (var listX : xx) {
+      for (double listX : xx) {
        minimumX = Math.max(minimumX, listX);
        maximumX = Math.min(maximumX, listX);
       }
@@ -94,21 +87,23 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
       type.append(averageX > 0 ? " R " : averageX < 0 ? " L " : U.random() < .5 ? " R " : " L ");
       if (addWheel && wheelCount < 4) {
        double minimumZ = Double.NEGATIVE_INFINITY, maximumZ = Double.POSITIVE_INFINITY;
-       for (var listZ : zz) {
+       for (double listZ : zz) {
         minimumZ = Math.max(minimumZ, listZ);
         maximumZ = Math.min(maximumZ, listZ);
        }
-       for (var listY : yy) {
+       for (double listY : yy) {
         clearanceY = Math.max(clearanceY, listY);
        }
        wheelCount++;
       }
       if (String.valueOf(type).contains(" foliage ")) {
        foliageSphere = new Sphere(125, 9);
-      } else if (!xx.isEmpty() && !String.valueOf(type).contains(D.thick(D.thrust))) {
-       parts.add(new TrackPartPart(this, U.listToArray(xx), U.listToArray(yy), U.listToArray(zz), xx.size(), RGB, String.valueOf(type), textureType));
-       xx.clear();
+      } else if (!xx.isEmpty()) {
+       if (!trackPlaneOnly && !String.valueOf(type).contains(D.thick(D.thrust))) {
+        parts.add(new TrackPartPart(this, U.listToArray(xx), U.listToArray(yy), U.listToArray(zz), xx.size(), RGB, String.valueOf(type), textureType));
+       }
       }
+      xx.clear();
       onModelPart = false;
      }
      RGB = getLoadColor(s, RGB);
@@ -123,6 +118,7 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
        }
       }
       if (xx.size() < 1) {
+       trackPlaneOnly = s.startsWith("trackPlaneOnly") || trackPlaneOnly;
        textureType = s.startsWith(D.texture + "(") ? U.getString(s, 0) : textureType;
        type.append(s.startsWith(D.fastCull) ? " " + D.fastCull + (s.endsWith("B") ? "B" : s.endsWith("F") ? "F" : s.endsWith("R") ? "R" : s.endsWith("L") ? "L" : "") + " " : "");
        if (s.startsWith(D.lit)) {
@@ -151,15 +147,6 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
      turretBaseY = s.startsWith("turretBaseY" + "(") ? U.getValue(s, 0) : turretBaseY;
      wraps = s.startsWith("scenery") || wraps;
      tree = s.startsWith(D.tree) || tree;
-     if (s.startsWith(TE.Models.repair.name())) {
-      isRepairPoint = true;
-      repairTorus = new Torus();
-      setRepairTorusDetail(true);
-      repairTorus.setMaterial(Terrain.universal);//<-Can't set THIS securely!
-      Nodes.add(repairTorus);
-      repairTorus.setRotationAxis(Rotate.Y_AXIS);
-      repairTorus.setRotate(angle);
-     }
      rocky = s.startsWith("rocky") || rocky;
      universalPhongMaterialUsage =
      s.startsWith("mapTerrain") ? UniversalPhongMaterialUsage.terrain :
@@ -214,7 +201,6 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
        trackPlanes.get(trackPlanes.size() - 1).RGB = U.getColor(TE.Paved.globalShade);
        trackPlanes.get(trackPlanes.size() - 1).type += D.thick(D.paved);
       }
-      trackPlanes.get(trackPlanes.size() - 1).damage = 1;
      } else if (s.startsWith(">t<")) {
       onTrackPlane = false;
      }
@@ -272,7 +258,7 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
     boundsX = boundsZ;
     boundsZ = storeBoundsX;
    }
-   for (var part : parts) {
+   for (TrackPartPart part : parts) {
     if (!Double.isNaN(part.fastCull)) {
      if (XZ > 45 && XZ < 135) {
       part.fastCull = --part.fastCull < -1 ? 2 : part.fastCull;
@@ -301,7 +287,7 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
     U.setMaterialSecurely(foliageSphere, PM);
     Nodes.add(foliageSphere);
    }
-   for (var trackPlane : trackPlanes) {
+   for (TrackPlane trackPlane : trackPlanes) {
     if (Math.abs(XZ) > 135) {
      trackPlane.YZ *= -1;
      trackPlane.XY *= -1;
@@ -345,17 +331,6 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
     roadRocks = new ArrayList<>();
     for (int n = 50; --n >= 0; ) {
      roadRocks.add(new RoadRock(X, Y, Z, XZ));
-    }
-   }
-   if (isRepairPoint) {
-    PhongMaterial PM = new PhongMaterial();
-    Phong.setSpecularRGB(PM, 0);
-    PM.setSelfIlluminationMap(Images.white);
-    for (int n = 0; n < 8; n++) {
-     repairShocks.add(new Cylinder(Math.round(U.random(5.)) + 1, 1100, 4));
-     U.setMaterialSecurely(repairShocks.get(n), PM);
-     Nodes.add(repairShocks.get(n));
-     repairShocks.get(n).setVisible(false);
     }
    }
    sidewaysXZ = Math.abs(U.cos(XZ)) < U.sin45;
@@ -409,7 +384,6 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
    s.contains("wallR") ? TrackPlane.Wall.right :
    s.contains("wallL") ? TrackPlane.Wall.left :
    TP.wall;
-   TP.damage = 1;
    if (s.contains("useLargerRadius")) {
     if (s.contains(D.getYZ)) {
      double largerRadius = Math.max(TP.radiusY, TP.radiusZ);
@@ -422,7 +396,7 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
    }
    TP.addSpeed = true;
    try {
-    TP.type = " " + U.getString(s, 0) + " ";
+    TP.type = D.thick(U.getString(s, 0));
     TP.damage = U.getValue(s, 1);
    } catch (RuntimeException ignored) {
    }
@@ -437,7 +411,7 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
 
  public void runGraphics(boolean renderALL) {
   if (rainbow) {
-   for (var part : parts) {
+   for (TrackPartPart part : parts) {
     U.setTranslate(part.MV, Camera.C.X + X, Camera.C.Y + Y, Camera.C.Z + Z);
     part.MV.setVisible(true);
    }
@@ -445,42 +419,19 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
    if (wraps) {
     E.wrap(this);
    }
-   if (isRepairPoint) {
-    if (!Tornado.parts.isEmpty() && Tornado.movesRepairPoints) {
-     speedX *= .995;
-     speedY *= .995;
-     speedZ *= .995;
-     speedX += U.random(125.) * Double.compare(Tornado.parts.get(0).X, X);
-     speedZ += U.random(125.) * Double.compare(Tornado.parts.get(0).Z, Z);
-     speedY += Y < 0 ? U.random(125.) : 0;
-     speedY -= Y > Tornado.parts.get(Tornado.parts.size() - 1).Y ? U.random(125.) : 0;
-     X += speedX;
-     Z += speedZ;
-     Y = Math.min(0, Y + speedY);
-    }
-    double depth = U.getDepth(this);
-    if (depth > -repairTorus.getRadius()) {
-     setRepairTorusDetail(false);
-     U.setTranslate(repairTorus, this);
-     repairTorus.setVisible(true);
-    } else {
-     repairTorus.setVisible(false);
-    }
-    runRepairShocks(depth);
-   }
    boolean showFoliageSphere = false;
    if (U.getDepth(this) > -renderRadius) {
     if (checkpointNumber >= 0 && checkpointNumber == TE.currentCheckpoint) {
      checkpointSignRotation = sidewaysXZ ? (XZ > 0 ? Camera.C.X < X : Camera.C.X > X) : Camera.C.Z > Z;//If checkpoint, XZ is never > Math.abs(90)
     }
-    double distanceToCamera = U.distance(this);
+    double distanceToCameraTimesFOV = U.distance(this) * Camera.FOV;
     if (vehicleModel) {
-     for (var part : parts) {
-      part.runAsVehiclePart(distanceToCamera, renderALL);
+     for (TrackPartPart part : parts) {
+      part.runAsVehiclePart(distanceToCameraTimesFOV, renderALL);
      }
     } else {
-     for (var part : parts) {
-      part.runAsTrackPart(distanceToCamera, renderALL);
+     for (TrackPartPart part : parts) {
+      part.runAsTrackPart(distanceToCameraTimesFOV, renderALL);
      }
     }
     if (foliageSphere != null) {
@@ -492,46 +443,15 @@ public class TrackPart extends Instance {//<-todo--Manage repair points on their
    if (foliageSphere != null) {
     foliageSphere.setVisible(showFoliageSphere);
    }
-   for (var part : parts) {
+   for (TrackPartPart part : parts) {
     part.MV.setVisible(part.visible);
     part.visible = false;
    }
    if (roadRocks != null) {
-    for (var rock : roadRocks) {
+    for (RoadRock rock : roadRocks) {
      rock.run();
     }
    }
-  }
- }
-
- private void runRepairShocks(double depth) {
-  double radius = repairTorus.getRadius(),
-  rotateXZ = sidewaysXZ ? 0 : 90,//<-Reversed for some reason
-  sinXZ = U.sin(rotateXZ), cosXZ = U.cos(rotateXZ);//This math is very optimized--probably not worth it
-  for (var shock : repairShocks) {
-   if (depth > -radius) {
-    double rotateYZ = U.random(360.),
-    sinYZ = U.sin(rotateYZ), cosYZ = U.cos(rotateYZ);
-    U.rotate(shock, sinYZ, cosYZ, sinXZ, cosXZ);
-    U.setTranslate(shock, this);
-    shock.setVisible(true);
-   } else {
-    shock.setVisible(false);
-   }
-  }
- }
-
- private void setRepairTorusDetail(boolean firstLoad) {
-  if (U.averageFPS < 30) {
-   repairTorus.setRadius(700);
-   repairTorus.setTubeRadius(125);
-   repairTorus.setRadiusDivisions(4);
-   repairTorus.setTubeDivisions(4);
-  } else if (U.maxedFPS(true) || firstLoad) {
-   repairTorus.setRadius(650);
-   repairTorus.setTubeRadius(100);
-   repairTorus.setRadiusDivisions(64);
-   repairTorus.setTubeDivisions(64);
   }
  }
 }

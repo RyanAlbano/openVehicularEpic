@@ -145,8 +145,8 @@ public class TrackPartPart extends InstancePart {
   }
  }
 
- void runAsVehiclePart(double distanceTrackPartCamera, boolean renderALL) {
-  if (renderALL || ((E.renderType == E.RenderType.fullDistance || size * E.renderLevel >= distanceTrackPartCamera * Camera.FOV) &&
+ void runAsVehiclePart(double distanceTrackPartCameraTimesFOV, boolean renderALL) {
+  if (renderALL || ((E.renderType == E.RenderType.fullDistance || size * E.renderLevel >= distanceTrackPartCameraTimesFOV) &&
   !(flickPolarity == 1 && TP.flicker) && !(flickPolarity == 2 && !TP.flicker))) {
    boolean render = true;
    if (!Double.isNaN(fastCull) && !renderALL) {
@@ -190,8 +190,8 @@ public class TrackPartPart extends InstancePart {
   }
  }
 
- void runAsTrackPart(double distanceTrackPartCamera, boolean renderALL) {
-  if (renderALL || ((E.renderType == E.RenderType.fullDistance || size * E.renderLevel >= distanceTrackPartCamera * Camera.FOV) &&
+ void runAsTrackPart(double distanceTrackPartCameraTimesFOV, boolean renderALL) {
+  if (renderALL || ((E.renderType == E.RenderType.fullDistance || size * E.renderLevel >= distanceTrackPartCameraTimesFOV) &&
   ((!checkpoint || TP.checkpointNumber == TE.currentCheckpoint) && !(checkpointWord && TE.lapCheckpoint) && !(lapWord && !TE.lapCheckpoint) &&
   !(flickPolarity == 1 && U.yinYang) && !(flickPolarity == 2 && !U.yinYang)))) {
    boolean render = true;
@@ -209,9 +209,6 @@ public class TrackPartPart extends InstancePart {
    if (renderALL || (render && U.getDepth(TP) > -renderRadius)) {
     if (blink) {
      PM.setSelfIlluminationMap(Effects.blink());
-    }
-    if (TP.isRepairPoint) {
-     U.rotate(MV, TP.XY, TP.YZ, 0);
     }
     if (checkpoint) {
      rotateXZ.setAngle(-TP.XZ + (TP.checkpointSignRotation ? 180 : 0));

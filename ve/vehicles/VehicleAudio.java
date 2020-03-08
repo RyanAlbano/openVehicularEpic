@@ -41,7 +41,7 @@ public class VehicleAudio {
  FireAndForget repair;
  private Controlled grind;
  private Controlled boost;
- Controlled gate;
+ Sound gate;
  Controlled turret;
  private Controlled splash;
  private Controlled splashOverSurface;
@@ -63,7 +63,7 @@ public class VehicleAudio {
  public FireAndForget hitShot;
  public FireAndForget hitRicochet;
  public FireAndForget hitExplosive;
- private Sound trainNoise;
+ private FireAndForget trainNoise;
  private Controlled trainDrive;//Separate entities for train engine is better
  public Controlled spinner;
  public FireAndForget massiveHit;
@@ -72,7 +72,7 @@ public class VehicleAudio {
 
  //Keep order identical between declarations and 'close()'!
  public void close() {//*
-  for (var special : V.specials) {
+  for (Special special : V.specials) {
    if (special.sound != null) {
     special.sound.close();
    }
@@ -224,7 +224,7 @@ public class VehicleAudio {
    gate.addClip("gateSlow");
   }
   boolean loadHitExplosive = false, loadMineExplosion = false;
-  for (var special : V.specials) {
+  for (Special special : V.specials) {
    loadHitExplosive = special.type.name().contains(Special.Type.shell.name()) || special.type == Special.Type.missile || special.type == Special.Type.bomb || special.type == Special.Type.mine || V.explosionType.name().startsWith(Vehicle.ExplosionType.nuclear.name()) || loadHitExplosive;
    loadMineExplosion = special.type == Special.Type.mine || loadMineExplosion;
   }
@@ -263,7 +263,7 @@ public class VehicleAudio {
    backUp = new Controlled("backUp");
   } else if (V.engine == Vehicle.Engine.train) {
    chuff = new FireAndForget(D.chuff, 4);
-   trainNoise = Sounds.softwareBased ? Sounds.trainNoise : new Sound(D.train, Double.POSITIVE_INFINITY);
+   trainNoise = Sounds.softwareBased ? Sounds.trainNoise : new FireAndForget(D.train, Double.POSITIVE_INFINITY);
    trainDrive = new Controlled("trainDrive", 2);
   } else if (V.engine == Vehicle.Engine.turbine) {
    turbineThrust = new Controlled("turbineThrust");
@@ -273,7 +273,7 @@ public class VehicleAudio {
  void run(boolean gamePlay) {
   if (V.engine == Vehicle.Engine.train && gamePlay && Match.started) {
    if (Math.abs(V.P.speed) * U.tick > U.random(5000.)) {
-    trainNoise.playIfNotPlaying(Double.NaN, distanceVehicleToCamera);
+    trainNoise.play(Double.NaN, distanceVehicleToCamera);
    }
    if (U.startsWith(V.P.mode.name(), D.drive, Physics.Mode.neutral.name()) && !V.destroyed && (V.drive || V.reverse)) {
     if (Math.abs(V.P.speed) > V.topSpeeds[1] * .75 && !trainDrive.running(0)) {
@@ -298,7 +298,7 @@ public class VehicleAudio {
     chuffTimer = 22;
    }
    if (fly != null && V.P.mode == Physics.Mode.fly && (V.drive || V.reverse || V.turnL || V.turnR || (V.steerByMouse && (Math.abs(Mouse.steerX) > U.random(2000.) || Math.abs(Mouse.steerY) > U.random(2000.))))) {
-    fly.playIfNotPlaying(U.random(fly.clips.size()), distanceVehicleToCamera);
+    fly.playIfNotPlaying(U.random(fly.clipHolders.size()), distanceVehicleToCamera);
    }
    if (!V.isFixed()) {
     int n = 0;
@@ -387,7 +387,7 @@ public class VehicleAudio {
   if (scrape != null) {
    if (scraping && V.P.netSpeed > 100) {
     int n1;
-    for (n1 = scrape.clips.size(); --n1 >= 0; ) {
+    for (n1 = scrape.clipHolders.size(); --n1 >= 0; ) {
      if (scrape.running(n1)) {
       n1 = -2;
       break;
@@ -419,7 +419,7 @@ public class VehicleAudio {
    }
   }
   if (Match.muteSound || !V.isIntegral() || !gamePlay) {
-   for (var special : V.specials) {
+   for (Special special : V.specials) {
     if (special.type == Special.Type.phantom) {
      special.sound.stop();
     }

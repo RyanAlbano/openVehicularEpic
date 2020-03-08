@@ -57,8 +57,8 @@ public enum Tornado {
     parts.get(n).X = (parts.get(n - 1).X + parts.get(n).X) * .5;
     parts.get(n).Z = (parts.get(n - 1).Z + parts.get(n).Z) * .5;
    }
-   for (var tornadoPart : parts) {
-    tornadoPart.run();
+   for (Part part : parts) {
+    part.run();
    }
    if (!Match.muteSound && update) {
     sound.loop(Math.sqrt(U.distance(parts.get(0))) * Sounds.standardGain(1));
@@ -70,20 +70,26 @@ public enum Tornado {
 
  public static void vehicleInteract(Vehicle V) {
   V.P.inTornado = false;
-  if (!parts.isEmpty() && !V.phantomEngaged && V.Y > parts.get(parts.size() - 1).Y && U.distance(V.X, parts.get(0).X, V.Z, parts.get(0).Z) < parts.get(0).C.getRadius() * 7.5) {
-   double throwEngage = (400000 / U.distance(V.X, parts.get(0).X, V.Z, parts.get(0).Z)) * U.tick * (V.P.mode == Physics.Mode.fly ? 20 : 1);
+  if (!parts.isEmpty() && !V.phantomEngaged && V.Y > parts.get(parts.size() - 1).Y && U.distanceXZ(V, parts.get(0)) < parts.get(0).C.getRadius() * 7.5) {
+   double throwEngage = (400000 / U.distanceXZ(V, parts.get(0))) * U.tick * (V.P.mode == Physics.Mode.fly ? 20 : 1);
    long maxThrow = 750;
    if (V.getsPushed >= 0) {
-    V.speedX += Math.abs(V.speedX) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
+    if (Math.abs(V.speedX) < maxThrow) {
+     V.speedX += U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow);
+    }
     V.speedX += 2 *
     (V.X < parts.get(0).X && V.speedX < maxThrow ? Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) :
     V.X > parts.get(0).X && V.speedX > -maxThrow ? -Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) : 0);
-    V.speedZ += Math.abs(V.speedZ) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
+    if (Math.abs(V.speedZ) < maxThrow) {
+     V.speedZ += U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow);
+    }
     V.speedZ += 2 *
     (V.Z < parts.get(0).Z && V.speedZ < maxThrow ? Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) :
     V.Z > parts.get(0).Z && V.speedZ > -maxThrow ? -Math.min(U.random(StrictMath.pow(throwEngage, .75)), maxThrow) : 0);
    }
-   V.speedY += V.getsLifted >= 0 && Math.abs(V.speedY) < maxThrow ? U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow) : 0;
+   if (V.getsLifted >= 0 && Math.abs(V.speedY) < maxThrow) {
+    V.speedY += U.clamp(-maxThrow, U.randomPlusMinus(throwEngage), maxThrow);
+   }
    V.P.inTornado = V.getsLifted >= 0;
   }
  }

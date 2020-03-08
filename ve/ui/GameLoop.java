@@ -3,16 +3,27 @@ package ve.ui;
 import javafx.animation.AnimationTimer;
 import javafx.stage.Stage;
 import ve.environment.E;
+import ve.environment.FrustumMound;
 import ve.environment.Pool;
 import ve.instances.I;
 import ve.trackElements.Arrow;
+import ve.trackElements.Bonus;
 import ve.trackElements.TE;
+import ve.trackElements.trackParts.RepairPoint;
+import ve.trackElements.trackParts.TrackPart;
 import ve.ui.options.GraphicsOptions;
 import ve.ui.options.Options;
 import ve.ui.options.SoundOptions;
 import ve.utilities.*;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Physics;
+import ve.vehicles.Vehicle;
+import ve.vehicles.VehiclePart;
+import ve.vehicles.explosions.Explosion;
+import ve.vehicles.explosions.MaxNukeBlast;
+import ve.vehicles.specials.Port;
+import ve.vehicles.specials.PortSmoke;
+import ve.vehicles.specials.Shot;
 import ve.vehicles.specials.Special;
 
 import java.io.File;
@@ -32,7 +43,9 @@ class GameLoop extends AnimationTimer {
    UI.GC.clearRect(0, 0, UI.width, UI.height);
    E.GC.clearRect(0, 0, UI.width, UI.height);
    E.renderLevel = U.clamp(10000, E.renderLevel * (U.FPS < 30 ? .75 : 1.05), 40000);
-   E.renderLevel = U.maxedFPS(true) ? Double.POSITIVE_INFINITY : E.renderLevel;
+   if (U.goodFPS(true)) {//<-Better devices don't need to cut back on rendering
+    E.renderLevel = Double.POSITIVE_INFINITY;
+   }
    Camera.FOV = Math.min(Camera.FOV * Camera.adjustFOV, 170);
    Camera.FOV = Camera.restoreZoom[0] && Camera.restoreZoom[1] ? Camera.defaultFOV : Camera.FOV;
    Camera.PC.setFieldOfView(Camera.FOV);
@@ -69,15 +82,15 @@ class GameLoop extends AnimationTimer {
     E.canvas.setHeight(UI.height);
    }
    if (gamePlay || UI.status == UI.Status.paused || UI.status == UI.Status.optionsMatch) {
-    for (var vehicle : I.vehicles) {//*These are SPLIT so that energy towers can empower specials before the affected vehicles fire, and to make shots render correctly
-     for (var special : vehicle.specials) {
+    for (Vehicle vehicle : I.vehicles) {//*These are SPLIT so that energy towers can empower specials before the affected vehicles fire, and to make shots render correctly
+     for (Special special : vehicle.specials) {
       if (special.type == Special.Type.energy) {
        special.EB.run(gamePlay);//*
       }
      }
     }
     //Energization before runMiscellaneous() is called
-    for (var vehicle : I.vehicles) {
+    for (Vehicle vehicle : I.vehicles) {
      vehicle.runMiscellaneous(gamePlay);
     }
     if (Match.started) {
@@ -101,7 +114,7 @@ class GameLoop extends AnimationTimer {
       Network.matchDataOut();
      }
      if (gamePlay) {
-      for (var vehicle : I.vehicles) {
+      for (Vehicle vehicle : I.vehicles) {
        vehicle.getPlayerInput();
        vehicle.P.run();
       }
@@ -109,23 +122,23 @@ class GameLoop extends AnimationTimer {
        Recorder.vehicles.get(n).recordVehicle(I.vehicles.get(n));
       }
      }
-     for (var vehicle : I.vehicles) {
-      for (var explosion : vehicle.explosions) {
+     for (Vehicle vehicle : I.vehicles) {
+      for (Explosion explosion : vehicle.explosions) {
        explosion.run(gamePlay);
       }
       double
       sinXZ = U.sin(vehicle.XZ), cosXZ = U.cos(vehicle.XZ),
       sinYZ = U.sin(vehicle.YZ), cosYZ = U.cos(vehicle.YZ),
       sinXY = U.sin(vehicle.XY), cosXY = U.cos(vehicle.XY);
-      for (var special : vehicle.specials) {
+      for (Special special : vehicle.specials) {
        special.run(gamePlay, sinXZ, cosXZ, sinYZ, cosYZ, sinXY, cosXY);//*
       }
      }
      if (gamePlay) {
-      for (var vehicle : I.vehicles) {
+      for (Vehicle vehicle : I.vehicles) {
        vehicle.P.runCollisions();
       }
-      for (var vehicle : I.vehicles) {
+      for (Vehicle vehicle : I.vehicles) {
        if (vehicle.destroyed && vehicle.P.vehicleHit > -1) {
         Match.scoreKill[vehicle.index < I.vehiclesInMatch >> 1 ? 1 : 0] += UI.status == UI.Status.replay ? 0 : 1;
         if (vehicle.index != I.userPlayerIndex) {
@@ -138,7 +151,7 @@ class GameLoop extends AnimationTimer {
       if (UI.status == UI.Status.play) {
        Recorder.recordGeneral();
        if (Network.mode == Network.Mode.OFF) {
-        for (var vehicle : I.vehicles) {
+        for (Vehicle vehicle : I.vehicles) {
          vehicle.AI.run();
         }
        }
@@ -146,7 +159,7 @@ class GameLoop extends AnimationTimer {
      }
      Recorder.updateFrame();
     } else {
-     for (var vehicle : I.vehicles) {
+     for (Vehicle vehicle : I.vehicles) {
       vehicle.setTurretY();
      }
      Network.preMatchCommunication(gamePlay);
@@ -182,7 +195,7 @@ class GameLoop extends AnimationTimer {
       } else {
        Network.ready[I.userPlayerIndex] = Network.waiting = true;
        if (Network.mode == Network.Mode.HOST) {
-        for (var PW : Network.out) {
+        for (PrintWriter PW : Network.out) {
          PW.println(D.Ready + "0");
          PW.println(D.Ready + "0");
         }
@@ -217,18 +230,19 @@ class GameLoop extends AnimationTimer {
     Recorder.playBack();
     //RENDERING begins here
     Camera.run(I.vehicles.get(I.vehiclePerspective), gamePlay);
+    MaxNukeBlast.runLighting();//<-Just after camera is placed, but before any other environmental/vehicular lights get added
     E.run(gamePlay);
-    for (var vehicle : I.vehicles) {
-     for (var special : vehicle.specials) {
-      for (var shot : special.shots) {
+    for (Vehicle vehicle : I.vehicles) {
+     for (Special special : vehicle.specials) {
+      for (Shot shot : special.shots) {
        shot.runRender();
       }
-      for (var port : special.ports) {
+      for (Port port : special.ports) {
        if (port.spit != null) {
         port.spit.runRender();
        }
        if (port.smokes != null) {
-        for (var smoke : port.smokes) {
+        for (PortSmoke smoke : port.smokes) {
          smoke.runRender();
         }
        }
@@ -237,12 +251,12 @@ class GameLoop extends AnimationTimer {
        special.EB.renderMesh();
       }
      }
-     for (var part : vehicle.parts) {
+     for (VehiclePart part : vehicle.parts) {
       Nodes.removePointLight(part.pointLight);
      }
     }
     if (Maps.defaultVehicleLightBrightness > 0) {
-     for (var vehicle : I.vehicles) {
+     for (Vehicle vehicle : I.vehicles) {
       Nodes.removePointLight(vehicle.burnLight);
      }
     }
@@ -251,7 +265,7 @@ class GameLoop extends AnimationTimer {
     } else {
      int closest = I.vehiclePerspective;
      double compareDistance = Double.POSITIVE_INFINITY;
-     for (var vehicle : I.vehicles) {
+     for (Vehicle vehicle : I.vehicles) {
       if (vehicle.index != I.vehiclePerspective && U.distance(I.vehicles.get(I.vehiclePerspective), vehicle) < compareDistance) {
        closest = vehicle.index;
        compareDistance = U.distance(I.vehicles.get(I.vehiclePerspective), vehicle);
@@ -264,19 +278,22 @@ class GameLoop extends AnimationTimer {
       I.vehicles.get(closest).runRender(gamePlay);
       I.vehicles.get(I.vehiclePerspective).runRender(gamePlay);
      }
-     for (var vehicle : I.vehicles) {
+     for (Vehicle vehicle : I.vehicles) {
       if (vehicle.index != I.vehiclePerspective && vehicle.index != closest) {
        vehicle.runRender(gamePlay);
       }
      }
     }
-    for (var trackPart : TE.trackParts) {
+    for (TrackPart trackPart : TE.trackParts) {
      trackPart.runGraphics(renderALL);
     }
-    for (var mound : TE.mounds) {
+    for (RepairPoint.Instance repairPoint : RepairPoint.instances) {
+     repairPoint.run();
+    }
+    for (FrustumMound mound : TE.mounds) {
      mound.runGraphics();
     }
-    TE.bonus.run();
+    Bonus.run();
     Match.run(gamePlay);
     if (Camera.toUserPerspective[0] && Camera.toUserPerspective[1]) {
      I.vehiclePerspective = I.userPlayerIndex;
@@ -303,7 +320,7 @@ class GameLoop extends AnimationTimer {
    } else if (UI.status == UI.Status.mainMenu) {
     UI.runMainMenu();
    } else if (UI.status == UI.Status.howToPlay) {
-    UI.runHowToPlay();
+    HowToPlay.run();
    } else if (UI.status == UI.Status.vehicleSelect) {
     VS.run(gamePlay);
    } else if (UI.status == UI.Status.loadLAN) {
@@ -320,13 +337,6 @@ class GameLoop extends AnimationTimer {
    }
    U.yinYang = !U.yinYang;
    U.timerBase20 = (U.timerBase20 += U.tick) > 20 ? 0 : U.timerBase20;
-   if (UI.status != UI.Status.vehicleSelect) {
-    for (var vehicle : I.vehicles) {
-     if (vehicle != null && !vehicle.destroyed) {
-      vehicle.flicker = !vehicle.flicker;
-     }
-    }
-   }
    UI.selectionTimer = (UI.selectionTimer > UI.selectionWait ? 0 : UI.selectionTimer) + 5 * U.tick;
    if (Keys.left || Keys.right || Keys.up || Keys.down || Keys.space || Keys.enter) {
     if (UI.selectionWait == -1) {
@@ -341,11 +351,9 @@ class GameLoop extends AnimationTimer {
     UI.selectionTimer = 0;
    }
    double targetFPS = Math.min(UI.gameFPS, UI.userFPS), dividedFPS = 1000 / targetFPS;
-   if (targetFPS < U.refreshRate) {
-    double difference = System.currentTimeMillis() - U.FPSTime;
-    if (difference < dividedFPS) {
-     U.zZz(dividedFPS - difference);
-    }
+   double difference = System.currentTimeMillis() - U.FPSTime;
+   if (difference < dividedFPS) {
+    U.zZz(dividedFPS - difference);
    }
    U.setFPS();
    if (Options.showAppInfo) {
@@ -359,10 +367,10 @@ class GameLoop extends AnimationTimer {
     U.text(Math.round(U.averageFPS) + " FPS", .75, .965);
    }
    long time = System.nanoTime();
-   U.tick = Math.min((time - U.lastTime + 500000) * .00000002, 1);
+   U.tick = Math.min((time - U.lastTime) * .00000002, 1);//todo--start migrating to .00000001 standard? (will be long and brutal)
    U.lastTime = time;
   } catch (Exception E) {//<-It's for the entire loop--a general exception is probably most surefire
-   try (PrintWriter PW = new PrintWriter(new File("V.E. EXCEPTION"), U.standardChars)) {
+   try (PrintWriter PW = new PrintWriter(new File("V.E. EXCEPTION"))) {
     E.printStackTrace(PW);
    } catch (IOException ignored) {
    }
@@ -383,7 +391,7 @@ class GameLoop extends AnimationTimer {
    VS.chosen[n] = U.random(I.vehicleModels.size());
   }
   if (Network.mode == Network.Mode.HOST) {
-   for (var PW : Network.out) {
+   for (PrintWriter PW : Network.out) {
     PW.println(D.CANCEL);
     PW.println(D.CANCEL);
    }

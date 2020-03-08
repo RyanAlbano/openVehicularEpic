@@ -140,15 +140,14 @@ public class Vehicle extends Instance {
 
  public VehicleTurret VT;
 
- public Vehicle(int model, int listIndex, boolean isReal) {
-  this(model, listIndex, isReal, true);
+ public Vehicle(int model, int inIndex, boolean isReal) {
+  this(model, inIndex, isReal, true);
  }
 
- public Vehicle(int model, int listIndex, boolean isReal, boolean show) {
-  modelNumber = model;
-  index = listIndex;
+ public Vehicle(int model, int inIndex, boolean isReal, boolean show) {
+  index = inIndex;
   realVehicle = isReal;
-  modelName = I.vehicleModels.get(modelNumber);
+  modelName = I.vehicleModels.get(model);
   long n;
   theRandomColor = index == I.userPlayerIndex ? I.userRandomRGB : U.getColor(U.random(), U.random(), U.random());
   for (n = 4; --n >= 0; ) {
@@ -163,7 +162,7 @@ public class Vehicle extends Instance {
   double pivotX = 0, pivotY = 0, pivotZ = 0;
   StringBuilder properties = new StringBuilder(), wheelProperties = new StringBuilder(), rimProperties = new StringBuilder();
   String texture = "", s = "";
-  try (BufferedReader BR = new BufferedReader(new InputStreamReader(getFile(modelName, true), U.standardChars))) {
+  try (BufferedReader BR = new BufferedReader(new InputStreamReader(getFile(modelName, true), U.standardChars))) {//todo--set up system that allows vehicles to be read from separate files in a FOLDER
    for (String s1; (s1 = BR.readLine()) != null; ) {
     s = s1.trim();
     if (s.startsWith("<>")) {
@@ -180,7 +179,7 @@ public class Vehicle extends Instance {
      pivotX = pivotY = pivotZ = 0;
     } else if (s.startsWith("><") && onModelPart) {//<-Is onModelPart Redundant?
      double minimumX = Double.NEGATIVE_INFINITY, maximumX = Double.POSITIVE_INFINITY;
-     for (var listX : xx) {
+     for (double listX : xx) {
       minimumX = Math.max(minimumX, listX);
       maximumX = Math.min(maximumX, listX);
      }
@@ -188,11 +187,11 @@ public class Vehicle extends Instance {
      properties.append(averageX > 0 ? " R " : averageX < 0 ? " L " : U.random() < .5 ? " R " : " L ");
      if (addWheel && wheelCount < 4) {
       double minimumZ = Double.NEGATIVE_INFINITY, maximumZ = Double.POSITIVE_INFINITY;
-      for (var listZ : zz) {
+      for (double listZ : zz) {
        minimumZ = Math.max(minimumZ, listZ);
        maximumZ = Math.min(maximumZ, listZ);
       }
-      for (var listY : yy) {
+      for (double listY : yy) {
        clearanceY = Math.max(clearanceY, listY);
       }
       double wheelAverageZ = (minimumZ + maximumZ) * .5;
@@ -432,7 +431,7 @@ public class Vehicle extends Instance {
    getsPushed = getsLifted = -1;
    behavior = ve.vehicles.AI.Behavior.engageOthers;
   }
-  for (var special : specials) {
+  for (Special special : specials) {
    if (special.type == Special.Type.spinner) {
     spinner = new Spinner(this);
     break;
@@ -442,7 +441,7 @@ public class Vehicle extends Instance {
   collisionRadius = spinner == null ? absoluteRadius * .2 : Math.min(renderRadius * .75, absoluteRadius * .2);//<-Optimized for CALAMITUS MAXIMUS
   explosionType = explosionsWhenDestroyed > 0 && !explosionType.name().contains(ExplosionType.nuclear.name()) ? ExplosionType.normal : explosionType;
   X = Y = Z = XZ = 0;
-  for (var part : parts) {
+  for (VehiclePart part : parts) {
    Nodes.add(part.MV);
   }
   loadRealVehicleContent();
@@ -468,41 +467,41 @@ public class Vehicle extends Instance {
     }
    } else if (s.startsWith("gunX(")) {
     try {
-     for (var port : special.ports) {
+     for (Port port : special.ports) {
       port.X = U.getValue(s, special.ports.indexOf(port)) * modelSize;
      }
     } catch (RuntimeException E) {
-     for (var port : special.ports) {
+     for (Port port : special.ports) {
       port.X = U.getValue(s, 0) * modelSize;
      }
     }
    } else if (s.startsWith("gunZ(")) {
     try {
-     for (var port : special.ports) {
+     for (Port port : special.ports) {
       port.Z = U.getValue(s, special.ports.indexOf(port)) * modelSize;
      }
     } catch (RuntimeException E) {
-     for (var port : special.ports) {
+     for (Port port : special.ports) {
       port.Z = U.getValue(s, 0) * modelSize;
      }
     }
    } else if (s.startsWith("gunXZ(")) {
     try {
-     for (var port : special.ports) {
+     for (Port port : special.ports) {
       port.XZ = U.getValue(s, special.ports.indexOf(port));
      }
     } catch (RuntimeException E) {
-     for (var port : special.ports) {
+     for (Port port : special.ports) {
       port.XZ = U.getValue(s, 0);
      }
     }
    } else if (s.startsWith("gunYZ(")) {
     try {
-     for (var port : special.ports) {
+     for (Port port : special.ports) {
       port.YZ = U.getValue(s, special.ports.indexOf(port));
      }
     } catch (RuntimeException E) {
-     for (var port : special.ports) {
+     for (Port port : special.ports) {
       port.YZ = U.getValue(s, 0);
      }
     }
@@ -523,7 +522,7 @@ public class Vehicle extends Instance {
     if (!wheelTextureType.isEmpty()) {
      C = U.getColor(C.getRed() * .333, C.getGreen() * .333, C.getBlue() * .333);
     }
-    for (var wheel : wheels) {
+    for (Wheel wheel : wheels) {
      wheel.skidmarks = new ArrayList<>();
      for (int n = 48; --n >= 0; ) {
       wheel.skidmarks.add(new Skidmark(wheel, C));
@@ -538,21 +537,21 @@ public class Vehicle extends Instance {
      dusts.add(new Dust());
     }
    }
-   for (var special : specials) {
-    for (var shot : special.shots) {
+   for (Special special : specials) {
+    for (Shot shot : special.shots) {
      Nodes.add(shot.MV);
     }
-    for (var port : special.ports) {
+    for (Port port : special.ports) {
      if (port.smokes != null) {
-      for (var smoke : port.smokes) {
+      for (PortSmoke smoke : port.smokes) {
        Nodes.add(smoke.C);
       }
      }
     }
    }
-   for (var part : parts) {
+   for (VehiclePart part : parts) {
     if (part.smokes != null) {
-     for (var smoke : part.smokes) {
+     for (Smoke smoke : part.smokes) {
       Nodes.add(smoke.C);//<-Smokes are the most transparent, thus should be the last Nodes added
      }
     }
@@ -569,14 +568,14 @@ public class Vehicle extends Instance {
      splashes.add(new Splash(this));
     }
    }
-   for (var wheel : wheels) {
+   for (Wheel wheel : wheels) {
     for (n = 50; --n >= 0; ) {
      wheel.sparks.add(new Spark());
     }
    }
-   for (var part : parts) {
+   for (VehiclePart part : parts) {
     if (part.thrustTrails != null) {
-     for (var trail : part.thrustTrails) {
+     for (ThrustTrail trail : part.thrustTrails) {
       Nodes.add(trail.B);
      }
     }
@@ -589,7 +588,7 @@ public class Vehicle extends Instance {
    }
    TE.setVehicleMatchStartPlacement(this);
    P.cameraXZ = XZ;
-   for (var wheel : wheels) {
+   for (Wheel wheel : wheels) {
     wheel.X = X;
     wheel.Y = Y;
     wheel.Z = Z;
@@ -598,7 +597,7 @@ public class Vehicle extends Instance {
     P.wheelGapFrontToBack = Math.max(Math.abs(wheels.get(0).pointZ - wheels.get(2).pointZ), Math.abs(wheels.get(1).pointZ - wheels.get(3).pointZ));
     P.wheelGapLeftToRight = Math.max(Math.abs(wheels.get(0).pointX - wheels.get(1).pointX), Math.abs(wheels.get(2).pointX - wheels.get(3).pointX));
    }
-   for (var special : specials) {
+   for (Special special : specials) {
     special.time();
     special.load();
    }
@@ -642,13 +641,13 @@ public class Vehicle extends Instance {
 
  public void deformParts() {
   double deformAngle = getDamage(true) * 6.;
-  for (var part : parts) {
+  for (VehiclePart part : parts) {
    part.deform(deformAngle);
   }
  }
 
  public void throwChips(double power, boolean randomizePower) {//<-Parameter passed in should never have random() or randomPlusMinus() applied
-  for (var part : parts) {
+  for (VehiclePart part : parts) {
    if (part.chip != null) {
     part.chip.deploy(randomizePower ? U.randomPlusMinus(power) : power);
    }
@@ -678,10 +677,13 @@ public class Vehicle extends Instance {
   while (XY > 180) XY -= 360;
   while (XZ < -180) XZ += 360;
   while (XZ > 180) XZ -= 360;
+  if (UI.status != UI.Status.vehicleSelect && !destroyed) {
+   flicker = !flicker;
+  }
   double distanceToCamera = U.distance(this);
   boolean nullPhysics = P == null;
   double sinXZ = U.sin(XZ), cosXZ = U.cos(XZ), sinYZ = U.sin(YZ), cosYZ = U.cos(YZ), sinXY = U.sin(XY), cosXY = U.cos(XY);
-  for (var part : parts) {
+  for (VehiclePart part : parts) {
    part.runSetPosition(nullPhysics, sinXZ, cosXZ, sinYZ, cosYZ, sinXY, cosXY);
   }
   boolean renderALL = E.renderType == E.RenderType.ALL;
@@ -691,23 +693,25 @@ public class Vehicle extends Instance {
    rotation.multiply(0, 0, -U.sin(XY * .5), U.cos(XY * .5));//<-Mind the multiply order!
    rotation.multiply(-U.sin(YZ * .5), 0, 0, U.cos(YZ * .5));
    rotation.multiply(0, U.sin(XZ * .5), 0, U.cos(XZ * .5));
-   for (var part : parts) {
+   double deformation = getDamage(true) * 6;
+   for (VehiclePart part : parts) {
     part.runRender(nullPhysics, distanceToCamera, renderALL);
+    part.damage.setAngle(U.clamp(-deformation, part.damage.getAngle(), deformation));//<-Ensures the visual deformation is never above the damage--fixMe--this doesn't seem to be working in replays?
    }
   }
   double smokeEmitProbability = nullPhysics || destroyed ? 0 : (P.mode.name().contains(D.drive) || P.mode == Physics.Mode.neutral) && (drive || reverse) ? 1 : .25;
-  for (var part : parts) {
+  for (VehiclePart part : parts) {
    if (part.smokes != null) {
     if (U.random() < smokeEmitProbability) {
      part.smokes.get(part.currentSmoke).deploy(part);
      part.currentSmoke = ++part.currentSmoke >= Smoke.defaultQuantity ? 0 : part.currentSmoke;
     }
-    for (var smoke : part.smokes) {
+    for (Smoke smoke : part.smokes) {
      smoke.run();
     }
    }
    if (part.thrustTrails != null) {
-    for (var trail : part.thrustTrails) {
+    for (ThrustTrail trail : part.thrustTrails) {
      trail.run();
     }
    }
@@ -720,27 +724,27 @@ public class Vehicle extends Instance {
     part.flame.run();
    }
   }
-  for (var wheel : wheels) {
-   for (var spark : wheel.sparks) {
+  for (Wheel wheel : wheels) {
+   for (Spark spark : wheel.sparks) {
     spark.run(gamePlay);
    }
    if (wheel.skidmarks != null) {
-    for (var skidmark : wheel.skidmarks) {
+    for (Skidmark skidmark : wheel.skidmarks) {
      skidmark.run();
     }
    }
   }
-  for (var dust : dusts) {
+  for (Dust dust : dusts) {
    dust.run();
   }
-  for (var splash : splashes) {
+  for (Splash splash : splashes) {
    splash.run();
   }
   if (MNB != null) {
    MNB.runRender();
   }
   long repairSpheresRemoved = 0;
-  for (var repairSphere : repairSpheres) {
+  for (RepairSphere repairSphere : repairSpheres) {
    repairSphere.run(this);
    if (repairSphere.stage <= 0) {
     repairSpheresRemoved++;
@@ -789,7 +793,7 @@ public class Vehicle extends Instance {
     drive2 = Keys.W;
     reverse2 = Keys.S;
    }
-   for (var special : specials) {
+   for (Special special : specials) {
     if (special.aimType != Special.AimType.auto) {
      boolean shootWithCanceledSteer = special.aimType != Special.AimType.normal && special.type != Special.Type.mine && turretExists && VT.turnL && VT.turnR;
      special.fire = Keys.special[specials.indexOf(special)] || shootWithCanceledSteer;
@@ -808,25 +812,25 @@ public class Vehicle extends Instance {
   }
  }
 
- public void repair(boolean gamePlay) {
+ public void repair(boolean hear) {
   if (!reviveImmortality && (explosionType != ExplosionType.maxnuclear || isIntegral())) {
    setDamage(0);
-   for (var sphere : repairSpheres) {
+   for (RepairSphere sphere : repairSpheres) {
     sphere.deploy();
    }
-   if (gamePlay) {
+   if (hear) {
     VA.repair.play(VA.distanceVehicleToCamera);
    }
   }
  }
 
- public void runMiscellaneous(boolean gamePlay) {
+ public void runMiscellaneous(boolean gamePlay) {//<-todo--turn this into a runLogic() and give it a reasonable call location?
   steerByMouse = index == I.userPlayerIndex && Match.cursorDriving;
   int n;
   inDriverView = index == I.vehiclePerspective && Camera.view == Camera.View.driver;
   if (!specials.isEmpty()) {
-   phantomEngaged = false;
-   for (var special : specials) {
+   phantomEngaged = false;//This block is probably best at the top, so that phantom is already engaged by the time collisions, destruction events, etc. are handled
+   for (Special special : specials) {
     if (special.fire && special.type == Special.Type.phantom) {
      phantomEngaged = true;
      break;
@@ -843,37 +847,36 @@ public class Vehicle extends Instance {
   cameraShake -= cameraShake > 0 ? U.tick : 0;
   P.inWrath = false;
   if (isIntegral()) {
-   destroyed = false;
-   P.destructTimer = 0;
+   destroyed = P.subtractExplodeStage = false;
+   P.destructTimer = P.explodeStage = 0;
    onFire = Maps.name.equals(D.Maps.theSun) && onFire;
    addDamage(gamePlay ? -selfRepair * U.tick : 0);
-   for (var part : parts) {
+   for (VehiclePart part : parts) {
     part.explodeStage = VehiclePart.ExplodeStage.intact;
    }
-   P.subtractExplodeStage = false;
-   P.explodeStage = 0;
   } else {
    onFire = true;
    if (P.destructTimer <= 0) {
     VA.death.play(VA.distanceVehicleToCamera);
-    setCameraShake(Camera.shakePresets.vehicleDeath);
+    setCameraShake(Camera.shakeIntensity.vehicleDeath);
     if (explosionsWhenDestroyed > 0) {
      if (VA.deathExplode != null) {//<-Nukes don't have this
       VA.deathExplode.play(Double.NaN, VA.distanceVehicleToCamera * Sounds.gainMultiples.deathExplode);
      }
      nukeDetonate();
     }
-   }
-   destroyed = (P.destructTimer += U.tick) >= 8 || destroyed;
-   if (VA.burn != null && destroyed && gamePlay) {
-    VA.burn.loop(VA.distanceVehicleToCamera);
+    P.destructTimer = Double.MIN_VALUE;//<-Prevents recursive calls of this block
    }
    if (gamePlay) {
-    double multiple = explosionType == ExplosionType.maxnuclear ? Double.POSITIVE_INFINITY : explosionType == ExplosionType.nuclear ? 2 : 1;
-    P.subtractExplodeStage = P.explodeStage > 100 * multiple || P.subtractExplodeStage;
+    destroyed = (P.destructTimer += U.tick) >= 8 || destroyed;
+    if (VA.burn != null && destroyed) {
+     VA.burn.loop(VA.distanceVehicleToCamera);
+    }
+    double reviveWait = explosionType == ExplosionType.maxnuclear ? Double.POSITIVE_INFINITY : explosionType == ExplosionType.nuclear ? 2 : 1;
+    P.subtractExplodeStage = P.explodeStage > 100 * reviveWait || P.subtractExplodeStage;
     P.explodeStage += U.tick * (P.subtractExplodeStage ? -1 : 1);
     if (P.explodeStage < 0) {
-     repair(gamePlay);
+     repair(true);
      reviveImmortality = true;
     }
    }
@@ -881,12 +884,8 @@ public class Vehicle extends Instance {
   if (MNB != null) {
    MNB.runLogic(gamePlay);
   }
-  double deformation = getDamage(true) * 6;
-  for (var part : parts) {//Ensures the visual deformation is never above the damage
-   part.damage.setAngle(U.clamp(-deformation, part.damage.getAngle(), deformation));//fixMe--this doesn't seem to be working in replays?
-  }
   if (passBonus && Bonus.holder == index) {
-   for (var vehicle : I.vehicles) {
+   for (Vehicle vehicle : I.vehicles) {
     if (!U.sameVehicle(this, vehicle) && U.sameTeam(this, vehicle) && U.distance(this, vehicle) < collisionRadius + vehicle.collisionRadius) {
      Bonus.setHolder(vehicle);//^Checking same team, so sameVehicle check IS needed
     }
@@ -903,7 +902,7 @@ public class Vehicle extends Instance {
   if (thrusting) {
    boolean forceOut = isJet || (speedBoost > 0 && boost);
    double sinXZ = U.sin(XZ), cosXZ = U.cos(XZ), sinYZ = U.sin(YZ);
-   for (var part : parts) {
+   for (VehiclePart part : parts) {
     if (part.thrustTrails != null) {
      for (n = 4; --n >= 0; ) {
       part.thrustTrails.get(part.currentThrustTrail).deploy(forceOut, sinXZ, cosXZ, sinYZ);
@@ -913,11 +912,13 @@ public class Vehicle extends Instance {
    }
   }
   TE.runVehicleRepairPointInteraction(this, gamePlay);
-  XY = !Match.started && engine == Engine.hotrod ? U.randomPlusMinus(2.) : XY;
-  for (var special : specials) {
+  if (!Match.started && engine == Engine.hotrod) {
+   XY = U.randomPlusMinus(2.);
+  }
+  for (Special special : specials) {
    if (special.type == Special.Type.phantom) {
     if (special.fire) {
-     for (var part : parts) {
+     for (VehiclePart part : parts) {
       if (U.random() < .5) {
        part.MV.setMaterial(E.phantomPM);
       }
@@ -927,7 +928,7 @@ public class Vehicle extends Instance {
      }
     } else {
      special.sound.stop();
-     for (var part : parts) {
+     for (VehiclePart part : parts) {
       part.MV.setMaterial(part.PM);
      }
     }
@@ -948,10 +949,11 @@ public class Vehicle extends Instance {
    screenFlash = 1;
    if (explosionType == ExplosionType.maxnuclear) {
     MNB.setSingularity();
-    setCameraShake(Camera.shakePresets.maxNuclear);
+    setCameraShake(Camera.shakeIntensity.maxNuclear);
+    MaxNukeBlast.whoIsLit = index;
     VA.nukeMax.play(0, VA.distanceVehicleToCamera * Sounds.gainMultiples.nukeMax);
    } else {
-    setCameraShake(Camera.shakePresets.normalNuclear);
+    setCameraShake(Camera.shakeIntensity.normalNuclear);
     VA.nuke.play(Double.NaN, VA.distanceVehicleToCamera * Sounds.gainMultiples.nuke);
    }
   }

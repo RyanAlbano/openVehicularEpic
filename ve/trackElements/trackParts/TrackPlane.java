@@ -6,7 +6,7 @@ import ve.utilities.U;
 
 public class TrackPlane extends CoreAdvanced {
 
- public double radiusX, radiusY, radiusZ, damage;
+ public double radiusX, radiusY, radiusZ, damage = 1;
  public Color RGB = U.getColor(0);
  public boolean addSpeed;
  public String type = "";

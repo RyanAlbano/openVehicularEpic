@@ -1,6 +1,6 @@
 package ve.utilities.sound;
 
-import ve.effects.echo.TimerEcho;
+import ve.effects.Echo;
 import ve.environment.E;
 import ve.ui.Match;
 import ve.utilities.U;
@@ -10,7 +10,7 @@ import java.util.*;
 
 public class Sound {//Both TinySound and javax.sound.sampled implementations exist within this class--prepare for a read!
  private int currentIndex;
- public final List<ClipVE> clips = new ArrayList<>();
+ public final List<ClipHolder> clipHolders = new ArrayList<>();
 
  enum Support {full, fireAndForget, loop}
 
@@ -23,10 +23,11 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
 
  Sound(String sound, Support support) {
   try {
-   clips.add(new ClipVE(Sounds.folder + File.separator + sound + Sounds.extension, 1, support));
+   clipHolders.add(new ClipHolder(Sounds.folder + File.separator + sound + Sounds.extension, 1, support));
   } catch (Exception E) {
    System.out.println(Sounds.exception + E);
   }
+  removeFailedClipHolders(support);
  }
 
  public Sound(String sound, double maximumCheck) {
@@ -40,7 +41,7 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  Sound(String sound, double maximumCheck, double ratio, Support support) {
   for (int n = 0; n < maximumCheck; n++) {
    try {
-    clips.add(new ClipVE(Sounds.folder + File.separator + sound + n + Sounds.extension, ratio, support));
+    clipHolders.add(new ClipHolder(Sounds.folder + File.separator + sound + n + Sounds.extension, ratio, support));
    } catch (Exception E) {
     if (maximumCheck < Double.POSITIVE_INFINITY) {
      System.out.println(Sounds.exception + E);
@@ -48,6 +49,7 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
     break;
    }
   }
+  removeFailedClipHolders(support);
  }
 
  public void addClip(String sound) {
@@ -64,21 +66,32 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
 
  void addClip(String sound, double ratio, Support support) {
   try {
-   clips.add(new ClipVE(Sounds.folder + File.separator + sound + Sounds.extension, ratio, support));
+   clipHolders.add(new ClipHolder(Sounds.folder + File.separator + sound + Sounds.extension, ratio, support));
   } catch (Exception E) {
    System.out.println(Sounds.exception + E);
+  }
+  removeFailedClipHolders(support);
+ }
+
+ private void removeFailedClipHolders(Support support) {//<-Absolutely necessary for TinySound. Failed clips don't halt ClipHolder creation, so they must be removed afterwards manually (so that unusable, null etc. clips are never checked for when playing audio).
+  if (Sounds.softwareBased && !clipHolders.isEmpty()) {
+   for (int n = clipHolders.size(); --n >= 0; ) {
+    if ((clipHolders.get(n).tinyLoop == null && support != Support.fireAndForget) || (clipHolders.get(n).tinySingle == null && support != Support.loop)) {
+     clipHolders.remove(n);
+    }
+   }
   }
  }
 
  public boolean running() {
   if (Sounds.softwareBased) {
-   for (var clip : clips) {
+   for (ClipHolder clip : clipHolders) {
     if (clip.tinyLoop.playing()) {
      return true;
     }
    }
   } else {
-   for (var clip : clips) {
+   for (ClipHolder clip : clipHolders) {
     if (clip.sampled.isRunning()) {
      return true;
     }
@@ -88,7 +101,7 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  }
 
  public boolean running(int index) {
-  return index < clips.size() && (Sounds.softwareBased ? clips.get(index).tinyLoop.playing() : clips.get(index).sampled.isRunning());
+  return index < clipHolders.size() && (Sounds.softwareBased ? clipHolders.get(index).tinyLoop.playing() : clipHolders.get(index).sampled.isRunning());
  }
 
  public void play(double gain) {
@@ -98,17 +111,17 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  public void play(double index, double gain) {
   if (!Match.muteSound) {
    setCurrentIndex(index);
-   if (currentIndex < clips.size()) {
+   if (currentIndex < clipHolders.size()) {
     if (Sounds.softwareBased) {
      gain = Sounds.decibelToLinear(-gain * E.soundMultiple);
-     clips.get(currentIndex).tinySingle.play(gain);
+     clipHolders.get(currentIndex).tinySingle.play(gain);
     } else {
-     clips.get(currentIndex).sampled.stop();//<-Could add overhead. But Linux tests show it also improves sound-restart reliability!
+     clipHolders.get(currentIndex).sampled.stop();//<-Could add overhead. But Linux tests show it also improves sound-restart reliability!
      gain *= E.soundMultiple;
      if (gain < Sounds.sampledGainLimit) {
-      clips.get(currentIndex).gain.setValue((float) -gain);
-      clips.get(currentIndex).sampled.setFramePosition(0);
-      clips.get(currentIndex).sampled.loop(0);
+      clipHolders.get(currentIndex).gain.setValue((float) -gain);
+      clipHolders.get(currentIndex).sampled.setFramePosition(0);
+      clipHolders.get(currentIndex).sampled.loop(0);
      }
      playEcho(currentIndex);
     }
@@ -117,24 +130,24 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  }
 
  private void playEcho(int index) {
-  if (TimerEcho.presence > 0) {
-   if (clips.get(index).tinySingleEcho != null) {
+  if (Echo.presence > 0) {
+   if (clipHolders.get(index).tinySingleEcho != null) {
     new Timer().schedule(new TimerTask() {
      public void run() {
-      clips.get(index).tinySingleEcho.play(Sounds.echoVolume, U.randomPlusMinus(1));
+      clipHolders.get(index).tinySingleEcho.play(Sounds.echoVolume, U.randomPlusMinus(1));
       cancel();
      }
-    }, TimerEcho.presence);
-   } else if (clips.get(index).sampledEcho != null) {
+    }, Echo.presence);
+   } else if (clipHolders.get(index).sampledEcho != null) {
     new Timer().schedule(new TimerTask() {
      public void run() {
-      clips.get(index).sampledEcho.stop();//<-Could add overhead. But Linux tests show it also improves sound-restart reliability!
-      clips.get(index).echoBalance.setValue((float) U.randomPlusMinus(1));
-      clips.get(index).sampledEcho.setFramePosition(0);
-      clips.get(index).sampledEcho.loop(0);
+      clipHolders.get(index).sampledEcho.stop();//<-Could add overhead. But Linux tests show it also improves sound-restart reliability!
+      clipHolders.get(index).echoBalance.setValue((float) U.randomPlusMinus(1));
+      clipHolders.get(index).sampledEcho.setFramePosition(0);
+      clipHolders.get(index).sampledEcho.loop(0);
       cancel();
      }
-    }, TimerEcho.presence);
+    }, Echo.presence);
    }
   }
  }
@@ -146,20 +159,20 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  public void playIfNotPlaying(double index, double gain) {
   if (!Match.muteSound) {
    setCurrentIndex(index);
-   if (currentIndex < clips.size()) {
+   if (currentIndex < clipHolders.size()) {
     if (Sounds.softwareBased) {
-     if (!clips.get(currentIndex).tinyLoop.playing()) {
+     if (!clipHolders.get(currentIndex).tinyLoop.playing()) {
       gain = Sounds.decibelToLinear(-gain * E.soundMultiple);
-      clips.get(currentIndex).tinyLoop.setLoop(false);
-      clips.get(currentIndex).tinyLoop.rewind();
-      clips.get(currentIndex).tinyLoop.play(false, gain);
+      clipHolders.get(currentIndex).tinyLoop.setLoop(false);
+      clipHolders.get(currentIndex).tinyLoop.rewind();
+      clipHolders.get(currentIndex).tinyLoop.play(false, gain);
      }
     } else {
      gain *= E.soundMultiple;
-     if (!clips.get(currentIndex).sampled.isRunning() && gain < Sounds.sampledGainLimit) {
-      clips.get(currentIndex).gain.setValue((float) -gain);
-      clips.get(currentIndex).sampled.setFramePosition(0);
-      clips.get(currentIndex).sampled.loop(0);
+     if (!clipHolders.get(currentIndex).sampled.isRunning() && gain < Sounds.sampledGainLimit) {
+      clipHolders.get(currentIndex).gain.setValue((float) -gain);
+      clipHolders.get(currentIndex).sampled.setFramePosition(0);
+      clipHolders.get(currentIndex).sampled.loop(0);
      }
     }
     playIfNotPlayingEcho(currentIndex);
@@ -168,29 +181,29 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  }
 
  private void playIfNotPlayingEcho(int index) {
-  if (TimerEcho.presence > 0) {
-   if (clips.get(index).tinyLoopEcho != null) {
+  if (Echo.presence > 0) {
+   if (clipHolders.get(index).tinyLoopEcho != null) {
     new Timer().schedule(new TimerTask() {
      public void run() {
-      if (!clips.get(index).tinyLoopEcho.playing()) {
-       clips.get(index).tinyLoopEcho.setPan(U.randomPlusMinus(1));
-       clips.get(currentIndex).tinyLoop.rewind();
-       clips.get(index).tinyLoopEcho.play(false);
+      if (!clipHolders.get(index).tinyLoopEcho.playing()) {
+       clipHolders.get(index).tinyLoopEcho.setPan(U.randomPlusMinus(1));
+       clipHolders.get(currentIndex).tinyLoop.rewind();
+       clipHolders.get(index).tinyLoopEcho.play(false);
       }
       cancel();
      }
-    }, TimerEcho.presence);
-   } else if (clips.get(index).sampledEcho != null) {
+    }, Echo.presence);
+   } else if (clipHolders.get(index).sampledEcho != null) {
     new Timer().schedule(new TimerTask() {
      public void run() {
-      if (!clips.get(index).sampledEcho.isRunning()) {
-       clips.get(index).echoBalance.setValue((float) U.randomPlusMinus(1));
-       clips.get(index).sampledEcho.setFramePosition(0);
-       clips.get(index).sampledEcho.loop(0);
+      if (!clipHolders.get(index).sampledEcho.isRunning()) {
+       clipHolders.get(index).echoBalance.setValue((float) U.randomPlusMinus(1));
+       clipHolders.get(index).sampledEcho.setFramePosition(0);
+       clipHolders.get(index).sampledEcho.loop(0);
       }
       cancel();
      }
-    }, TimerEcho.presence);
+    }, Echo.presence);
    }
   }
  }
@@ -202,21 +215,21 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  public void loop(double index, double gain) {
   if (!Match.muteSound) {
    setCurrentIndex(index);
-   if (currentIndex < clips.size()) {
+   if (currentIndex < clipHolders.size()) {
     if (Sounds.softwareBased) {
      gain = Sounds.decibelToLinear(-gain * E.soundMultiple);
-     clips.get(currentIndex).tinyLoop.setVolume(gain);
-     if (!clips.get(currentIndex).tinyLoop.playing()) {
-      clips.get(currentIndex).tinyLoop.play(true, gain);
+     clipHolders.get(currentIndex).tinyLoop.setVolume(gain);
+     if (!clipHolders.get(currentIndex).tinyLoop.playing()) {
+      clipHolders.get(currentIndex).tinyLoop.play(true, gain);
       loopEcho(currentIndex, 0);//<-Inside the block here = less Timer tasks!
      }
     } else {
      shiftGainWithFlush();
      gain *= E.soundMultiple;
-     clips.get(currentIndex).gain.setValue(Math.max((float) -gain, -Sounds.sampledGainLimit));//<-Always set the gain, as a large distance jump (i.e. vehicle perspective change) could cause problems
-     if (!clips.get(currentIndex).sampled.isRunning()) {
-      clips.get(currentIndex).sampled.loop(-1);
-      loopEcho(currentIndex, clips.get(currentIndex).sampled.getFramePosition());//<-Inside the block here = less Timer tasks!
+     clipHolders.get(currentIndex).gain.setValue(Math.max((float) -gain, -Sounds.sampledGainLimit));//<-Always set the gain, as a large distance jump (i.e. vehicle perspective change) could cause problems
+     if (!clipHolders.get(currentIndex).sampled.isRunning()) {
+      clipHolders.get(currentIndex).sampled.loop(-1);
+      loopEcho(currentIndex, clipHolders.get(currentIndex).sampled.getFramePosition());//<-Inside the block here = less Timer tasks!
      }
     }
     setEchoBalance(currentIndex);
@@ -225,26 +238,26 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  }
 
  private void loopEcho(int index, int framePosition) {
-  if (TimerEcho.presence > 0) {
-   if (clips.get(index).sampledEcho != null) {
+  if (Echo.presence > 0) {
+   if (clipHolders.get(index).sampledEcho != null) {
     new Timer().schedule(new TimerTask() {
      public void run() {
-      clips.get(index).sampledEcho.setFramePosition(framePosition);
-      if (!clips.get(index).sampledEcho.isRunning()) {
-       clips.get(index).sampledEcho.loop(-1);
+      clipHolders.get(index).sampledEcho.setFramePosition(framePosition);
+      if (!clipHolders.get(index).sampledEcho.isRunning()) {
+       clipHolders.get(index).sampledEcho.loop(-1);
       }
       cancel();
      }
-    }, TimerEcho.presence);
-   } else if (clips.get(index).tinyLoopEcho != null) {
+    }, Echo.presence);
+   } else if (clipHolders.get(index).tinyLoopEcho != null) {
     new Timer().schedule(new TimerTask() {
      public void run() {
-      if (!clips.get(index).tinyLoopEcho.playing()) {
-       clips.get(index).tinyLoopEcho.play(true);
+      if (!clipHolders.get(index).tinyLoopEcho.playing()) {
+       clipHolders.get(index).tinyLoopEcho.play(true);
       }
       cancel();
      }
-    }, TimerEcho.presence);
+    }, Echo.presence);
    }
   }
  }
@@ -256,26 +269,26 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  public void resume(double index, double gain) {
   if (!Match.muteSound) {
    setCurrentIndex(index);
-   if (currentIndex < clips.size()) {
+   if (currentIndex < clipHolders.size()) {
     if (Sounds.softwareBased) {
-     if (!clips.get(currentIndex).tinyLoop.playing()) {
+     if (!clipHolders.get(currentIndex).tinyLoop.playing()) {
       gain = Sounds.decibelToLinear(-gain * E.soundMultiple);
-      clips.get(currentIndex).tinyLoop.setVolume(gain);
-      clips.get(currentIndex).tinyLoop.setLoop(false);
-      clips.get(currentIndex).tinyLoop.rewind();
-      clips.get(currentIndex).tinyLoop.resume();
+      clipHolders.get(currentIndex).tinyLoop.setVolume(gain);
+      clipHolders.get(currentIndex).tinyLoop.setLoop(false);
+      clipHolders.get(currentIndex).tinyLoop.rewind();
+      clipHolders.get(currentIndex).tinyLoop.resume();
       resumeEcho(currentIndex, 0);//<-Inside the block here = less Timer tasks!
      }
     } else {
      shiftGainWithFlush();
      gain *= E.soundMultiple;
-     clips.get(currentIndex).gain.setValue(Math.max((float) -gain, -Sounds.sampledGainLimit));
-     if (!clips.get(currentIndex).sampled.isRunning()) {
-      if (clips.get(currentIndex).sampled.getFramePosition() >= clips.get(currentIndex).sampled.getFrameLength()) {
-       clips.get(currentIndex).sampled.setFramePosition(0);
+     clipHolders.get(currentIndex).gain.setValue(Math.max((float) -gain, -Sounds.sampledGainLimit));
+     if (!clipHolders.get(currentIndex).sampled.isRunning()) {
+      if (clipHolders.get(currentIndex).sampled.getFramePosition() >= clipHolders.get(currentIndex).sampled.getFrameLength()) {
+       clipHolders.get(currentIndex).sampled.setFramePosition(0);
       }
-      clips.get(currentIndex).sampled.loop(0);
-      resumeEcho(currentIndex, clips.get(currentIndex).sampled.getFramePosition());//<-Inside the block here = less Timer tasks!
+      clipHolders.get(currentIndex).sampled.loop(0);
+      resumeEcho(currentIndex, clipHolders.get(currentIndex).sampled.getFramePosition());//<-Inside the block here = less Timer tasks!
      }
     }
     setEchoBalance(currentIndex);
@@ -284,101 +297,101 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  }
 
  private void resumeEcho(int index, int framePosition) {
-  if (TimerEcho.presence > 0) {
-   if (clips.get(index).tinyLoopEcho != null) {
+  if (Echo.presence > 0) {
+   if (clipHolders.get(index).tinyLoopEcho != null) {
     new Timer().schedule(new TimerTask() {
      public void run() {
-      if (!clips.get(index).tinyLoopEcho.playing()) {
-       clips.get(index).tinyLoopEcho.resume();
+      if (!clipHolders.get(index).tinyLoopEcho.playing()) {
+       clipHolders.get(index).tinyLoopEcho.resume();
       }
       cancel();
      }
-    }, TimerEcho.presence);
-   } else if (clips.get(index).sampledEcho != null) {
+    }, Echo.presence);
+   } else if (clipHolders.get(index).sampledEcho != null) {
     new Timer().schedule(new TimerTask() {
      public void run() {
-      clips.get(index).sampledEcho.setFramePosition(framePosition);
-      if (!clips.get(index).sampledEcho.isRunning()) {
-       if (clips.get(index).sampledEcho.getFramePosition() >= clips.get(index).sampledEcho.getFrameLength()) {
-        clips.get(index).sampledEcho.setFramePosition(0);
+      clipHolders.get(index).sampledEcho.setFramePosition(framePosition);
+      if (!clipHolders.get(index).sampledEcho.isRunning()) {
+       if (clipHolders.get(index).sampledEcho.getFramePosition() >= clipHolders.get(index).sampledEcho.getFrameLength()) {
+        clipHolders.get(index).sampledEcho.setFramePosition(0);
        }
-       clips.get(index).sampledEcho.loop(0);
+       clipHolders.get(index).sampledEcho.loop(0);
       }
       cancel();
      }
-    }, TimerEcho.presence);
+    }, Echo.presence);
    }
   }
  }
 
  private void setCurrentIndex(double index) {
-  currentIndex = Double.isNaN(index) ? U.randomize(currentIndex, clips.size()) : (int) Math.round(index);
+  currentIndex = Double.isNaN(index) ? U.randomize(currentIndex, clipHolders.size()) : (int) Math.round(index);
  }
 
  public void randomizeFramePosition(int index) {
-  if (index < clips.size() && !Sounds.softwareBased) {//<-No implementation exists if on TinySound
-   clips.get(index).sampled.setFramePosition(U.random(clips.get(index).sampled.getFrameLength()));
+  if (index < clipHolders.size() && !Sounds.softwareBased) {//<-No implementation exists if on TinySound
+   clipHolders.get(index).sampled.setFramePosition(U.random(clipHolders.get(index).sampled.getFrameLength()));
   }
  }
 
  private void shiftGainWithFlush() {
-  if (Math.abs(clips.get(currentIndex).lastGain - clips.get(currentIndex).gain.getValue()) > 1) {
-   clips.get(currentIndex).sampled.flush();
-   clips.get(currentIndex).lastGain = clips.get(currentIndex).gain.getValue();
+  if (Math.abs(clipHolders.get(currentIndex).lastGain - clipHolders.get(currentIndex).gain.getValue()) > 1) {
+   clipHolders.get(currentIndex).sampled.flush();
+   clipHolders.get(currentIndex).lastGain = clipHolders.get(currentIndex).gain.getValue();
   }
  }
 
  private void setEchoBalance(int index) {
-  if (TimerEcho.presence > 0) {
-   if (clips.get(index).tinyLoopEcho != null) {
-    clips.get(index).tinyLoopEcho.setPan(U.randomPlusMinus(1));
-   } else if (clips.get(index).sampledEcho != null) {
-    clips.get(index).echoBalance.setValue((float) U.randomPlusMinus(1));
+  if (Echo.presence > 0) {
+   if (clipHolders.get(index).tinyLoopEcho != null) {
+    clipHolders.get(index).tinyLoopEcho.setPan(U.randomPlusMinus(1));
+   } else if (clipHolders.get(index).sampledEcho != null) {
+    clipHolders.get(index).echoBalance.setValue((float) U.randomPlusMinus(1));
    }
   }
  }
 
  public void stop() {
-  int size = clips.size();
+  int size = clipHolders.size();
   for (int n = 0; n < size; n++) {//<-Forward loop probably safer here
    stop(n);
   }
  }
 
  public void stop(int index) {
-  if (index < clips.size()) {
-   if (clips.get(index).tinySingle != null) clips.get(index).tinySingle.stop();
-   if (clips.get(index).tinyLoop != null) clips.get(index).tinyLoop.stop();
-   if (clips.get(index).sampled != null) clips.get(index).sampled.stop();
+  if (index < clipHolders.size()) {
+   if (clipHolders.get(index).tinySingle != null) clipHolders.get(index).tinySingle.stop();
+   if (clipHolders.get(index).tinyLoop != null) clipHolders.get(index).tinyLoop.stop();
+   if (clipHolders.get(index).sampled != null) clipHolders.get(index).sampled.stop();
    stopTimerEcho(index);
   }
  }
 
  private void stopTimerEcho(int index) {
-  if (TimerEcho.presence > 0) {
-   if (clips.get(index).tinyLoopEcho != null && clips.get(index).tinyLoopEcho.playing()) {
+  if (Echo.presence > 0) {
+   if (clipHolders.get(index).tinyLoopEcho != null && clipHolders.get(index).tinyLoopEcho.playing()) {
     new Timer().schedule(new TimerTask() {
      public void run() {
-      clips.get(index).tinyLoopEcho.stop();
+      clipHolders.get(index).tinyLoopEcho.stop();
       cancel();
      }
-    }, TimerEcho.presence);
+    }, Echo.presence);
    }
-   if (clips.get(index).sampledEcho != null && clips.get(index).sampledEcho.isRunning()) {
+   if (clipHolders.get(index).sampledEcho != null && clipHolders.get(index).sampledEcho.isRunning()) {
     new Timer().schedule(new TimerTask() {
      public void run() {
-      clips.get(index).sampledEcho.stop();
+      clipHolders.get(index).sampledEcho.stop();
       cancel();
      }
-    }, TimerEcho.presence);
+    }, Echo.presence);
    }
   }
  }
 
  public void close() {
-  for (var clip : clips) {
-   if (clip.sampled != null) clip.sampled.close();
-   if (clip.sampledEcho != null) clip.sampledEcho.close();
+  for (ClipHolder holder : clipHolders) {
+   if (holder.sampled != null) holder.sampled.close();
+   if (holder.sampledEcho != null) holder.sampledEcho.close();
    //TinySound audio all closes automatically in Sounds.close()
   }
  }

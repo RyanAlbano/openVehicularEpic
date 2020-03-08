@@ -6,8 +6,7 @@ public enum Mouse {
  ;
  public static boolean mouse;//<-What's 'mouse' for?
  public static boolean click;
- public static double X;
- public static double Y;
+ public static double X, Y;
  public static double steerX, steerY;
 
  static {
@@ -18,11 +17,13 @@ public enum Mouse {
    Match.cursorDriving = Match.started || Match.cursorDriving;
   });
   UI.scene.setOnMousePressed((MouseEvent mouseEvent) -> {
+   Keys.inUse = false;
    X = mouseEvent.getX() / UI.width;
    Y = mouseEvent.getY() / UI.height;
    mouse = !click || mouse;
   });
   UI.scene.setOnMouseReleased((MouseEvent mouseEvent) -> {
+   Keys.inUse = false;
    X = mouseEvent.getX() / UI.width;
    Y = mouseEvent.getY() / UI.height;
    click = mouse = false;

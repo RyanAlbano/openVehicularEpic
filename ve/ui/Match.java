@@ -124,6 +124,7 @@ public enum Match {
     U.fillRGB(0, 1, 0);
     U.textL(I.vehiclesInMatch > 2 ? UI.GREEN_TEAM : UI.playerNames[0], .0125, .175);
     if (Bonus.holder > -1 && Bonus.holder < I.vehiclesInMatch >> 1) {
+     UI.drawBonus(.11, .3125, 20);
      U.textL("(Player " + Bonus.holder + ") BONUS", .0125, .325);
     }
     U.textL(U.DF.format(score[0]) + " :Current Score", .0125, .35);
@@ -143,6 +144,7 @@ public enum Match {
     U.fillRGB(1, 0, 0);
     U.textR(I.vehiclesInMatch > 2 ? UI.RED_TEAM : UI.playerNames[1], .9875, .175);
     if (Bonus.holder >= I.vehiclesInMatch >> 1) {
+     UI.drawBonus(.89, .3125, 20);
      U.textR(bonus + Bonus.holder + ")", .9875, .325);
     }
     U.textR(currentScore + U.DF.format(score[1]), .9875, .35);
@@ -363,8 +365,8 @@ public enum Match {
   scoreCheckpoint[0] = scoreCheckpoint[1] = scoreLap[0] = scoreLap[1] = scoreKill[0] = scoreKill[1] = 1;
   scoreDamage[0] = scoreDamage[1] = Camera.aroundVehicleXZ = printTimer = Camera.lookAround = scoreStunt[0] = scoreStunt[1] = 0;
   Bonus.big.setVisible(true);
-  for (var bonusBall : Bonus.balls) {
-   bonusBall.S.setVisible(false);
+  for (Bonus.Ball ball : Bonus.balls) {
+   ball.S.setVisible(false);
   }
   Bonus.holder = Network.bonusHolder = -1;
   stuntTimer = TE.MS.timer = Recorder.recorded = TE.MS.point = 0;
