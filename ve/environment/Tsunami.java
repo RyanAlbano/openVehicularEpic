@@ -6,7 +6,10 @@ import javafx.scene.shape.Cylinder;
 import ve.instances.Core;
 import ve.ui.Match;
 import ve.ui.UI;
-import ve.utilities.*;
+import ve.utilities.D;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.utilities.sound.Controlled;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Splash;
@@ -46,7 +49,7 @@ public enum Tsunami {
    } catch (RuntimeException e) {
     globalSize = 200000;
    }
-   for (Part part : parts) {
+   for (var part : parts) {
     part.Y = -part.C.getRadius() * .5;
     Nodes.add(part.C);
    }
@@ -82,12 +85,12 @@ public enum Tsunami {
      parts.get(n).X = X;
     }
    }
-   for (Part part : parts) {
+   for (var part : parts) {
     part.run();
    }
    if (!Match.muteSound && update) {
     double soundDistance = Double.POSITIVE_INFINITY;
-    for (Part part : parts) {
+    for (var part : parts) {
      soundDistance = Math.min(soundDistance, U.distance(part));
     }
     sound.loop(Math.sqrt(soundDistance) * Sounds.standardGain(Sounds.gainMultiples.tsunami));
@@ -110,7 +113,7 @@ public enum Tsunami {
 
  public static void vehicleInteract(Vehicle V) {
   if (!V.phantomEngaged) {
-   for (Part part : parts) {
+   for (var part : parts) {
     if (U.distance(V, part) < V.collisionRadius + part.C.getRadius()) {
      if (V.getsPushed >= 0) {
       V.speedX += speedX * .5 * U.tick;

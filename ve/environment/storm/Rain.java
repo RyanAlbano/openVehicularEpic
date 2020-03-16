@@ -5,7 +5,10 @@ import javafx.scene.shape.Cylinder;
 import ve.environment.Wind;
 import ve.instances.Core;
 import ve.ui.Match;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.D;
+import ve.utilities.Nodes;
+import ve.utilities.U;
 import ve.utilities.sound.Controlled;
 import ve.utilities.sound.Sounds;
 
@@ -29,7 +32,7 @@ public enum Rain {
 
  public static void run(boolean update) {
   if (!raindrops.isEmpty()) {
-   for (Drop raindrop : raindrops) {
+   for (var raindrop : raindrops) {
     raindrop.run();
    }
    if (!Match.muteSound && update) {

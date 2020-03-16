@@ -1,12 +1,16 @@
 package ve.instances;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 
 import javafx.scene.paint.Color;
 import ve.trackElements.TE;
 import ve.trackElements.trackParts.TrackPart;
 import ve.trackElements.trackParts.TrackPartPart;
-import ve.utilities.*;
+import ve.utilities.D;
+import ve.utilities.Quaternion;
+import ve.utilities.U;
 import ve.vehicles.Vehicle;
 import ve.vehicles.VehiclePart;
 
@@ -52,7 +56,7 @@ public class Instance extends CoreAdvanced {
  }
 
  protected static void append(StringBuilder SB, String s, boolean useContains, String... prefixes) {
-  for (String s1 : prefixes) {
+  for (var s1 : prefixes) {
    if (useContains ? s.contains(s1) : s.startsWith(s1)) {
     SB.append(" ").append(s1).append(" ");
    }

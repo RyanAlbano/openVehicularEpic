@@ -1,7 +1,10 @@
 package ve.ui.options;
 
 import ve.instances.I;
-import ve.ui.*;
+import ve.ui.Keys;
+import ve.ui.Mouse;
+import ve.ui.Tournament;
+import ve.ui.UI;
 import ve.utilities.Camera;
 import ve.utilities.D;
 import ve.utilities.U;
@@ -28,7 +31,12 @@ public enum Options {
   U.fillRGB(1);
   U.text("DriverSeat [" + (driverSeat > 0 ? "RIGHT->" : driverSeat < 0 ? "<-LEFT" : "CENTER") + "]", .3 + UI.textOffset);
   U.text("Units [" + (Units.units == Units.Unit.metric ? "METRIC" : Units.units == Units.Unit.US ? "U.S." : Units.Unit.VEs.name()) + "]", .35 + UI.textOffset);
-  U.text("Limit FPS to [" + UI.userFPS + (UI.userFPS == U.refreshRate ? " (system refresh rate--recommended)" : "") + "]", .4 + UI.textOffset);
+  String infoFPS = UI.userFPS == U.refreshRate ? "system refresh rate--recommended" :
+  Math.abs(UI.userFPS - (U.refreshRate * .5)) <= 1 ? "1/2 of system refresh rate" :
+  Math.abs(UI.userFPS - (U.refreshRate * .25)) <= 1 ? "1/4 of system refresh rate" :
+  Math.abs(UI.userFPS - (U.refreshRate << 1)) <= 1 ? "twice the system refresh rate" :
+  "";
+  U.text("Limit FPS to [" + UI.userFPS + (infoFPS.isEmpty() ? "" : " (" + infoFPS + ")") + "]", .4 + UI.textOffset);
   U.text("Camera-Shake Effects [" + (Camera.shake ? UI.ON : UI.OFF) + "]", .45 + UI.textOffset);
   if (fromMenu) {
    U.text("Match Length [" + matchLength + "]", .5 + UI.textOffset);
@@ -75,16 +83,16 @@ public enum Options {
   } else if (UI.selected == 3) {
    isAdjustFunction = true;
    if (UI.selectionReady()) {
-    if (Keys.left && UI.userFPS > 1) {
-     UI.userFPS--;
-     UI.sound.play(0, 0);
-    }
     if (Keys.right && UI.userFPS < Long.MAX_VALUE) {
      UI.userFPS++;
      UI.sound.play(0, 0);
     }
+    if (Keys.left && UI.userFPS > 1) {
+     UI.userFPS--;
+     UI.sound.play(0, 0);
+    }
    }
-   U.text("Lower the FPS ceiling if your PC can't process V.E. well (i.e. overheating). Leave maxed otherwise.", messageHeight);
+   U.text("Lower the FPS ceiling if your PC can't process V.E. well (i.e. overheating).", messageHeight);
   } else if (UI.selected == 4) {
    if ((Keys.enter || Keys.space) && UI.selectionReady()) {
     Camera.shake = !Camera.shake;
@@ -95,15 +103,15 @@ public enum Options {
     isAdjustFunction = true;
     if (UI.selectionReady()) {
      if (Keys.left && matchLength > 0) {
-      matchLength = Math.max(0, matchLength - 10);
+      matchLength = Math.max(0, matchLength - 1);
       UI.sound.play(0, 0);
      }
      if (Keys.right) {
-      matchLength += 10;
+      matchLength++;
       UI.sound.play(0, 0);
      }
     }
-    U.text("Set how long the match lasts", messageHeight);
+    U.text("Set how long the match lasts, in seconds", messageHeight);
    } else {
     UI.selected++;
    }

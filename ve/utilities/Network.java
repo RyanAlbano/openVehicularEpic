@@ -1,11 +1,17 @@
 package ve.utilities;
 
 import ve.instances.I;
-import ve.ui.*;
+import ve.ui.Keys;
+import ve.ui.Maps;
+import ve.ui.UI;
+import ve.ui.VS;
 import ve.ui.options.Options;
 import ve.vehicles.Vehicle;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -49,9 +55,9 @@ public enum Network {
      server = new ServerSocket(port);
      while (runLoadThread) {
       if (out.size() + 1 < I.vehiclesInMatch && !server.isClosed()) {
-       Socket S = server.accept();//<-IDE suggestion to put this in a block fails--DO NOT TOUCH THIS
+       Socket S = server.accept();//<-DO NOT TOUCH THIS--IDE suggestion to put this in a block FAILS!
        System.out.println("A client has been accepted");
-       out.add(new PrintWriter(S.getOutputStream(), true));
+       out.add(new PrintWriter(S.getOutputStream(), true, U.standardChars));
        try {
         in.add(new BufferedReader(new InputStreamReader(S.getInputStream(), U.standardChars)));
        } catch (IOException E) {
@@ -64,7 +70,7 @@ public enum Network {
         UI.escapeToLast(false);
        } else if (s.startsWith("Name(")) {
         UI.playerNames[out.size()] = U.getString(s, 0);
-        for (PrintWriter PW : out) {
+        for (var PW : out) {
          for (int n1 = out.size() + 1; --n1 > 0; ) {
           PW.println(D.Name + n1 + "(" + UI.playerNames[n1]);
          }
@@ -79,7 +85,7 @@ public enum Network {
        }
       }
       if (out.size() + 1 >= I.vehiclesInMatch) {
-       for (PrintWriter PW : out) {
+       for (var PW : out) {
         PW.println(D.HostReady);
        }
        UI.status = UI.Status.vehicleSelect;
@@ -94,7 +100,7 @@ public enum Network {
    } else {
     try {
      client = new Socket(targetHost, port);
-     out.add(new PrintWriter(client.getOutputStream(), true));
+     out.add(new PrintWriter(client.getOutputStream(), true, U.standardChars));
      in.add(new BufferedReader(new InputStreamReader(client.getInputStream(), U.standardChars)));
      out.get(0).println(D.Name + "(" + userName);
      while (runLoadThread) {
@@ -144,15 +150,15 @@ public enum Network {
    int n;
    if (mode == Mode.HOST) {
     if (U.timerBase20 <= 0) {
-     for (PrintWriter PW : out) {
+     for (var PW : out) {
       PW.println(D.Vehicle + "0" + "(" + I.vehicles.get(0).name);
      }
      if (gamePlay) {
-      for (PrintWriter PW : out) {
+      for (var PW : out) {
        PW.println(D.Map + "(" + Maps.name);
       }
       if (waiting) {
-       for (PrintWriter PW : out) {
+       for (var PW : out) {
         PW.println(D.Ready + "0");
        }
       }
@@ -165,14 +171,14 @@ public enum Network {
      } else if (s.startsWith(D.Vehicle + "(")) {
       VS.chosen[n] = I.getVehicleIndex(U.getString(s, 0));
       if (I.vehiclesInMatch > 2) {
-       for (PrintWriter out : out) {
+       for (var out : out) {
         out.println(D.Vehicle + n + "(" + U.getString(s, 0));
        }
       }
      } else if (gamePlay && s.startsWith(D.Ready)) {
       ready[n] = true;
       if (I.vehiclesInMatch > 2) {
-       for (PrintWriter out : out) {
+       for (var out : out) {
         out.println(D.Ready + n);
        }
       }
@@ -264,7 +270,7 @@ public enum Network {
     } else {
      s = readIn(0);
      hostLeftMatch = s.startsWith(D.END) || hostLeftMatch;
-     for (Vehicle vehicle : I.vehicles) {
+     for (var vehicle : I.vehicles) {
       if (vehicle.index != I.userPlayerIndex) {
        bonusHolder = s.startsWith(D.BonusOpen) ? -1 : s.startsWith(D.BONUS + vehicle.index) ? vehicle.index : bonusHolder;
        if (s.startsWith(vehicle.index + "(")) {
@@ -337,7 +343,7 @@ public enum Network {
    }
    s += V.boost ? " b " : "";
    if (mode == Mode.HOST) {
-    for (PrintWriter out : out) {
+    for (var out : out) {
      out.println("0" + s);
     }
    } else {

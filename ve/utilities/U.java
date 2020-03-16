@@ -1,18 +1,10 @@
 package ve.utilities;
 
-import java.awt.*;
-import java.nio.charset.*;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.regex.Pattern;
-
 import javafx.geometry.Point3D;
 import javafx.scene.Node;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.paint.*;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Shape3D;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
@@ -22,16 +14,25 @@ import ve.environment.MapBounds;
 import ve.environment.Pool;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
-import ve.instances.I;
 import ve.ui.UI;
-import ve.vehicles.Vehicle;
+
+import java.awt.Dimension;
+import java.awt.GraphicsEnvironment;
+import java.awt.Toolkit;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Pattern;
 
 public enum U {//Low-level utilities, such as math functions
  ;
 
  public static final String lineSeparator = System.lineSeparator();
  public static final Pattern regex = Pattern.compile("[(,)]");
- public static double tick;
+ public static double tick, tickSeconds;
  public static long lastTime;
  public static boolean yinYang;
  public static double timerBase20;
@@ -48,7 +49,7 @@ public enum U {//Low-level utilities, such as math functions
  public static final DecimalFormat DF = new DecimalFormat("0.#E0");
  public static final Quaternion inert = new Quaternion();
  //public static final boolean onLinux = System.getProperty("os.name").toLowerCase().contains("linux");
- public static long maxMemory = Runtime.getRuntime().maxMemory();
+ public static final long maxMemory = Runtime.getRuntime().maxMemory();
 
  public static String getString(CharSequence s, int index) {
   try {
@@ -60,19 +61,6 @@ public enum U {//Low-level utilities, such as math functions
 
  public static double getValue(CharSequence s, int index) {
   return Double.parseDouble(regex.split(s)[index + 1]);
- }
-
- public static boolean sameVehicle(Vehicle V1, Vehicle V2) {
-  return V1.index == V2.index;
- }
-
- public static boolean sameTeam(Vehicle V1, Vehicle V2) {
-  return sameTeam(V1.index, V2.index);
- }
-
- public static boolean sameTeam(long index1, long index2) {
-  long halfOfPlayers = I.vehiclesInMatch >> 1;
-  return index1 < halfOfPlayers == index2 < halfOfPlayers;
  }
 
  public static void text(String s, double Y) {
@@ -147,11 +135,16 @@ public enum U {//Low-level utilities, such as math functions
  }
 
  public static Color getColor(double shade) {
-  return getColor(shade, shade, shade);
+  shade = clamp(shade);
+  return Color.color(shade, shade, shade);
  }
 
  public static Color getColor(double R, double G, double B) {
   return Color.color(clamp(R), clamp(G), clamp(B));
+ }
+
+ public static Color getColor(double R, double G, double B, double A) {
+  return Color.color(clamp(R), clamp(G), clamp(B), clamp(A));
  }
 
  public static void setMaterialSecurely(Shape3D shape3D, PhongMaterial PM) {
@@ -164,7 +157,7 @@ public enum U {//Low-level utilities, such as math functions
  }
 
  public static boolean equals(String in, String... prefixes) {
-  for (String s : prefixes) {
+  for (var s : prefixes) {
    if (in.equals(s)) {
     return true;
    }
@@ -173,7 +166,7 @@ public enum U {//Low-level utilities, such as math functions
  }
 
  public static boolean startsWith(String in, String... prefixes) {
-  for (String s : prefixes) {
+  for (var s : prefixes) {
    if (in.startsWith(s)) {
     return true;
    }
@@ -182,7 +175,7 @@ public enum U {//Low-level utilities, such as math functions
  }
 
  public static boolean contains(String in, String... prefixes) {
-  for (String s : prefixes) {
+  for (var s : prefixes) {
    if (in.contains(s)) {
     return true;
    }
@@ -190,9 +183,9 @@ public enum U {//Low-level utilities, such as math functions
   return false;
  }
 
- public static boolean containsEnum(Enum in, Enum... prefixes) {
+ public static boolean contains(Enum in, Enum... prefixes) {
   String name = in.name();
-  for (Enum e : prefixes) {
+  for (var e : prefixes) {
    if (name.contains(e.name())) {
     return true;
    }
@@ -410,7 +403,7 @@ public enum U {//Low-level utilities, such as math functions
  }
 
  private static boolean outOfBounds(double x, double y, double z, double tolerance) {
-  double depth = Ground.level + (Pool.exists && distance(x, Pool.core.X, z, Pool.core.Z) < Pool.C[0].getRadius() ? Pool.depth : 0);
+  double depth = Ground.level + (Pool.exists && distance(x, Pool.core.X, z, Pool.core.Z) < Pool.surface.getRadius() ? Pool.depth : 0);
   return y > depth || x > MapBounds.right + tolerance || x < MapBounds.left - tolerance || z > MapBounds.forward + tolerance || z < MapBounds.backward - tolerance || y < MapBounds.Y - tolerance;
  }
 

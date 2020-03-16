@@ -60,8 +60,8 @@ public enum DestructionLog {
   for (int n = names.length; --n >= 0; ) {
    names[n][0] = "";
    names[n][1] = "";
-   nameColors[n][0] = new Color(0, 0, 0, 1);
-   nameColors[n][1] = new Color(0, 0, 0, 1);
+   nameColors[n][0] = U.getColor(0, 0, 0, 1);
+   nameColors[n][1] = U.getColor(0, 0, 0, 1);
   }
   inUse = I.vehiclesInMatch > 1;
  }

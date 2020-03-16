@@ -2,8 +2,13 @@ package ve.ui.options;
 
 import ve.instances.I;
 import ve.trackElements.TE;
-import ve.ui.*;
-import ve.utilities.*;
+import ve.ui.Keys;
+import ve.ui.Mouse;
+import ve.ui.Tournament;
+import ve.ui.UI;
+import ve.utilities.Images;
+import ve.utilities.Texture;
+import ve.utilities.U;
 
 public enum GraphicsOptions {
  ;

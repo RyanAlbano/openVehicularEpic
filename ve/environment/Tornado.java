@@ -5,7 +5,10 @@ import javafx.scene.shape.CullFace;
 import javafx.scene.shape.Cylinder;
 import ve.instances.Core;
 import ve.ui.Match;
-import ve.utilities.*;
+import ve.utilities.D;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.utilities.sound.Controlled;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Physics;
@@ -57,7 +60,7 @@ public enum Tornado {
     parts.get(n).X = (parts.get(n - 1).X + parts.get(n).X) * .5;
     parts.get(n).Z = (parts.get(n - 1).Z + parts.get(n).Z) * .5;
    }
-   for (Part part : parts) {
+   for (var part : parts) {
     part.run();
    }
    if (!Match.muteSound && update) {
@@ -98,7 +101,7 @@ public enum Tornado {
   if (sound != null) sound.close();
  }
 
- public static class Part extends Core {//<-Do NOT weaken access--will fail in 'TrackPart'!
+ public /*<-Do NOT weaken access--will fail in 'TrackPart'!*/ static class Part extends Core {
 
   final Cylinder C;
   Cylinder groundDustC;
@@ -137,8 +140,10 @@ public enum Tornado {
    if (U.render(groundDust, false, false)) {
     U.randomRotate(groundDustC);
     double shade = 1 - U.random(.5);
-    double[] mix = {(shade + Ground.RGB.getRed()) * .5, (shade + Ground.RGB.getGreen()) * .5, (shade + Ground.RGB.getBlue()) * .5};
-    Phong.setDiffuseRGB(groundDustPM, mix[0], mix[1], mix[2]);
+    Phong.setDiffuseRGB(groundDustPM,
+    (shade + Ground.RGB.getRed()) * .5,
+    (shade + Ground.RGB.getGreen()) * .5,
+    (shade + Ground.RGB.getBlue()) * .5);
     U.setTranslate(groundDustC, groundDust);
     groundDustC.setVisible(true);
    } else {

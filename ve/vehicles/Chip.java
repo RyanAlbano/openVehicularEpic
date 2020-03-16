@@ -1,6 +1,8 @@
 package ve.vehicles;
 
-import javafx.scene.shape.*;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.MeshView;
+import javafx.scene.shape.TriangleMesh;
 import ve.environment.E;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;

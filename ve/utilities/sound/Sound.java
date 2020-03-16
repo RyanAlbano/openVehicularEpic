@@ -5,8 +5,11 @@ import ve.environment.E;
 import ve.ui.Match;
 import ve.utilities.U;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Sound {//Both TinySound and javax.sound.sampled implementations exist within this class--prepare for a read!
  private int currentIndex;
@@ -85,13 +88,13 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
 
  public boolean running() {
   if (Sounds.softwareBased) {
-   for (ClipHolder clip : clipHolders) {
+   for (var clip : clipHolders) {
     if (clip.tinyLoop.playing()) {
      return true;
     }
    }
   } else {
-   for (ClipHolder clip : clipHolders) {
+   for (var clip : clipHolders) {
     if (clip.sampled.isRunning()) {
      return true;
     }
@@ -389,7 +392,7 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  }
 
  public void close() {
-  for (ClipHolder holder : clipHolders) {
+  for (var holder : clipHolders) {
    if (holder.sampled != null) holder.sampled.close();
    if (holder.sampledEcho != null) holder.sampledEcho.close();
    //TinySound audio all closes automatically in Sounds.close()

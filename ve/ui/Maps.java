@@ -3,19 +3,52 @@ package ve.ui;
 import javafx.scene.Cursor;
 import javafx.scene.paint.PhongMaterial;
 import ve.effects.Echo;
-import ve.environment.*;
+import ve.environment.Atmosphere;
+import ve.environment.Boulder;
+import ve.environment.Cloud;
+import ve.environment.Crystal;
+import ve.environment.E;
+import ve.environment.Fire;
+import ve.environment.Fog;
+import ve.environment.FrustumMound;
+import ve.environment.Ground;
+import ve.environment.MapBounds;
+import ve.environment.Meteor;
+import ve.environment.Pool;
+import ve.environment.Snow;
+import ve.environment.Star;
+import ve.environment.Sun;
+import ve.environment.Terrain;
+import ve.environment.Tornado;
+import ve.environment.Tsunami;
+import ve.environment.Volcano;
+import ve.environment.Wind;
 import ve.environment.storm.Storm;
 import ve.instances.I;
-import ve.trackElements.*;
+import ve.trackElements.Arrow;
+import ve.trackElements.Bonus;
+import ve.trackElements.Checkpoint;
+import ve.trackElements.Point;
+import ve.trackElements.TE;
 import ve.trackElements.trackParts.RepairPoint;
 import ve.trackElements.trackParts.TrackPart;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.D;
+import ve.utilities.Network;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.utilities.sound.Controlled;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.AI;
 import ve.vehicles.Vehicle;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -62,6 +95,7 @@ public enum Maps {
      Star.load(s);
      E.loadSky(s);
      Fog.load(s);
+     Atmosphere.load(s);
      Ground.load(s);
      Terrain.load(s);
      if (s.startsWith("viewDistance(")) {
@@ -157,7 +191,7 @@ public enum Maps {
      TE.randomZ = s.startsWith("randomZ(") ? U.getValue(s, 0) : TE.randomZ;
      Crystal.load(s);//<-Here so it's affected by randomXYZ
      if (U.startsWith(s, "(", D.strip + "(", D.curve + "(")) {
-      Enum model = null;
+      TE.Models model = null;
       try {
        model = TE.Models.valueOf(U.getString(s, 0));
       } catch (Exception E) {//<-Don't bother
@@ -276,17 +310,17 @@ public enum Maps {
     }
    }
    if (Pool.type == Pool.Type.lava) {
-    for (Tsunami.Part part : Tsunami.parts) {//Setting the illumination here in case the lava pool gets called AFTER tsunami definition
-     ((PhongMaterial) part.C.getMaterial()).setSelfIlluminationMap(Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
+    for (var part : Tsunami.parts) {//Setting the illumination here in case the lava pool gets called AFTER tsunami definition
+     ((PhongMaterial) part.C.getMaterial()).setSelfIlluminationMap(Phong.getSelfIllumination(E.lavaSelfIllumination));
     }
    }
    Bonus.load();
   } else if (UI.status == UI.Status.mapLoadPass4) {
-   for (TrackPart TP : TE.trackParts) {
+   for (var TP : TE.trackParts) {
     TP.setInitialSit();
    }
    RepairPoint.notifyDuplicates();
-   for (FrustumMound FM : TE.mounds) {
+   for (var FM : TE.mounds) {
     FM.setInitialSit();
    }
    if (!Viewer.inUse) {
@@ -329,17 +363,23 @@ public enum Maps {
  }
 
  private static void addTransparentNodes() {
-  for (Boulder.Instance instance : Boulder.instances) {
+  for (var instance : Boulder.instances) {
    instance.addTransparentNodes();
   }
-  for (RepairPoint.Instance repairPoint : RepairPoint.instances) {
+  for (var repairPoint : RepairPoint.instances) {
    Nodes.add(repairPoint.pulse);
   }
-  for (Vehicle vehicle : I.vehicles) {
+  for (var vehicle : I.vehicles) {
    vehicle.addTransparentNodes();
   }
   for (int n = Fog.spheres.size(); --n >= 0; ) {//<-Adding spheres in forward order doesn't layer fog correctly
    Nodes.add(Fog.spheres.get(n));
+  }
+  for (var instance : Atmosphere.rings) {
+   //Nodes.add(instance);
+  }
+  for (int n = Atmosphere.rings.size(); --n >= 0; ) {//<-Adding in forward order doesn't layer correctly
+   Nodes.add(Atmosphere.rings.get(n));
   }
  }
 
@@ -442,17 +482,17 @@ public enum Maps {
   Camera.runAroundTrack();
   U.rotate(Camera.PC, Camera.YZ, -Camera.XZ);
   E.run(gamePlay);
-  for (Vehicle vehicle : I.vehicles) {
+  for (var vehicle : I.vehicles) {
    vehicle.runRender(gamePlay);
   }
   boolean renderALL = E.renderType == E.RenderType.ALL;
-  for (TrackPart trackPart : TE.trackParts) {
+  for (var trackPart : TE.trackParts) {
    trackPart.runGraphics(renderALL);
   }
-  for (RepairPoint.Instance repairPoint : RepairPoint.instances) {
+  for (var repairPoint : RepairPoint.instances) {
    repairPoint.run();
   }
-  for (FrustumMound mound : TE.mounds) {
+  for (var mound : TE.mounds) {
    mound.runGraphics();
   }
   UI.scene.setCursor(Cursor.CROSSHAIR);

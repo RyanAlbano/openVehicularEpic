@@ -15,7 +15,7 @@ public enum Nodes {
 
  public static void add(Node... N) {
   UI.denyExpensiveInGameCall();
-  for (Node n : N) {
+  for (var n : N) {
    if (n != null) {
     denyPointLight(n);
     if (!UI.group.getChildren().contains(n)) {
@@ -27,7 +27,7 @@ public enum Nodes {
 
  public static void remove(Node... N) {
   UI.denyExpensiveInGameCall();
-  for (Node n : N) {
+  for (var n : N) {
    if (n != null) {
     denyPointLight(n);
     UI.group.getChildren().remove(n);
@@ -76,7 +76,7 @@ public enum Nodes {
  }
 
  public static void reset() {
-  boolean addSunlightBack = E.lights.getChildren().contains(Sun.light),//<-Check LIGHT group, not main group!
+  boolean addSunlightBack = /*Check LIGHT group, not main group!->*/E.lights.getChildren().contains(Sun.light),
   addSunBack = UI.group.getChildren().contains(Sun.S),
   addGroundBack = UI.group.getChildren().contains(Ground.C);
   UI.group.getChildren().clear();

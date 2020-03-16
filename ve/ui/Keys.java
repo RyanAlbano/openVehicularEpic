@@ -6,6 +6,7 @@ import ve.instances.I;
 import ve.trackElements.Arrow;
 import ve.ui.options.Options;
 import ve.utilities.Camera;
+import ve.utilities.U;
 
 public enum Keys {
  ;
@@ -14,7 +15,7 @@ public enum Keys {
  public static boolean boost, passBonus, amphibious = true;//<-Vehicle's 'amphibious' syncs to this, so defaulting true is desired
  public static boolean enter;
  public static boolean escape;
- public static boolean inUse;//<-todo--VERIFY--now only controlled in Keys/Mouse.java--check working
+ public static boolean inUse;//<-now only controlled in Keys/Mouse.java (9 March 2020)
 
  static {
   UI.scene.setOnKeyPressed((KeyEvent keyEvent) -> {
@@ -101,10 +102,10 @@ public enum Keys {
    } else if (KC == KeyCode.P) {
     passBonus = true;
    } else if (KC == KeyCode.SHIFT) {
-    Camera.adjustFOV = .98;
+    Camera.adjustFOV = 1 - (U.tick * .05);
     Camera.restoreZoom[1] = true;
    } else if (KC == KeyCode.CONTROL) {
-    Camera.adjustFOV = 1.02;
+    Camera.adjustFOV = 1 + (U.tick * .05);
     Camera.restoreZoom[0] = true;
    } else if (KC == KeyCode.M) {
     Match.muteSound = !Match.muteSound;

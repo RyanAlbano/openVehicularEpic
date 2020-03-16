@@ -8,11 +8,14 @@ import ve.instances.CoreAdvanced;
 import ve.instances.I;
 import ve.ui.Match;
 import ve.ui.options.Options;
-import ve.utilities.*;
+import ve.utilities.D;
+import ve.utilities.Network;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.utilities.sound.Controlled;
 import ve.vehicles.Vehicle;
 
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -38,7 +41,7 @@ public enum Bonus {//<-fixme--balls drifted away from vehicle (on Linux)
   C.Z = startZ;
   E.setMoundSit(C, false);
   Nodes.add(big);
-  for (Ball ball : balls) {
+  for (var ball : balls) {
    Nodes.add(ball.S);
   }
  }
@@ -52,7 +55,7 @@ public enum Bonus {//<-fixme--balls drifted away from vehicle (on Linux)
    } else {
     big.setVisible(false);
    }
-   for (Ball ball : balls) {
+   for (var ball : balls) {
     ball.S.setVisible(false);
    }
   } else {
@@ -60,13 +63,13 @@ public enum Bonus {//<-fixme--balls drifted away from vehicle (on Linux)
    C.X = I.vehicles.get(holder).X;
    C.Y = I.vehicles.get(holder).Y;
    C.Z = I.vehicles.get(holder).Z;
-   for (Ball ball : balls) {
+   for (var ball : balls) {
     ball.run();
    }
   }
   if (Match.started) {
    if (Network.mode == Network.Mode.OFF) {
-    for (Vehicle vehicle : I.vehicles) {
+    for (var vehicle : I.vehicles) {
      if (holder < 0 && vehicle.isIntegral() && !vehicle.phantomEngaged && U.distance(C, vehicle) < vehicle.collisionRadius + big.getRadius()) {
       setHolder(vehicle);
      }
@@ -79,7 +82,7 @@ public enum Bonus {//<-fixme--balls drifted away from vehicle (on Linux)
     if (Network.bonusHolder < 0 && V.isIntegral() && !V.phantomEngaged && U.distance(C, V) < V.collisionRadius + big.getRadius()) {
      Network.bonusHolder = I.userPlayerIndex;
      if (Network.mode == Network.Mode.HOST) {
-      for (PrintWriter PW : Network.out) {
+      for (var PW : Network.out) {
        PW.println("BONUS0");
       }
      } else {
@@ -90,7 +93,7 @@ public enum Bonus {//<-fixme--balls drifted away from vehicle (on Linux)
     if (setHolder > -1 && !I.vehicles.get(setHolder).isIntegral()) {
      Network.bonusHolder = holder = -1;
      if (Network.mode == Network.Mode.HOST) {
-      for (PrintWriter PW : Network.out) {
+      for (var PW : Network.out) {
        PW.println(D.BonusOpen);
       }
      } else {
@@ -109,7 +112,7 @@ public enum Bonus {//<-fixme--balls drifted away from vehicle (on Linux)
 
  public static void setHolder(Vehicle vehicle) {
   holder = vehicle.index;
-  for (Ball ball : balls) {
+  for (var ball : balls) {
    ball.S.setRadius(I.vehicles.get(holder).absoluteRadius * .02);
    ball.X = ball.Y = ball.Z = ball.speedX = ball.speedY = ball.speedZ = 0;
   }

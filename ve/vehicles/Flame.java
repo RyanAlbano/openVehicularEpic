@@ -1,9 +1,13 @@
 package ve.vehicles;
 
-import javafx.scene.paint.*;
-import javafx.scene.shape.*;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.MeshView;
+import javafx.scene.shape.TriangleMesh;
 import ve.effects.Effects;
-import ve.utilities.*;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 
 class Flame extends MeshView {
 

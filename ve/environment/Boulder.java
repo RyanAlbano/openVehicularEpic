@@ -5,13 +5,18 @@ import javafx.scene.shape.Sphere;
 
 import ve.instances.CoreAdvanced;
 import ve.ui.Match;
-import ve.utilities.*;
 import ve.effects.Dust;
+import ve.utilities.D;
+import ve.utilities.Images;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.utilities.sound.Controlled;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public enum Boulder {
  ;
@@ -28,13 +33,13 @@ public enum Boulder {
  }
 
  static void run(boolean updateIfMatchBegan) {
-  for (Instance boulder : instances) {
+  for (var boulder : instances) {
    boulder.run(updateIfMatchBegan);
   }
  }
 
  public static void vehicleInteract(Vehicle V) {
-  for (Instance boulder : instances) {
+  for (var boulder : instances) {
    if (U.distanceXZ(V, boulder) < V.collisionRadius + boulder.S.getRadius() && V.Y > boulder.Y - V.collisionRadius - boulder.S.getRadius()) {//<-Will call incorrectly in the unlikely event a vehicle is underground and the boulder rolls directly overhead
     V.setDamage(V.damageCeiling());
     V.deformParts();
@@ -81,7 +86,7 @@ public enum Boulder {
     dusts.get(currentDust).deploy(this);
     currentDust = ++currentDust >= Dust.defaultQuantity ? 0 : currentDust;
    }
-   for (Instance otherBoulder : instances) {
+   for (var otherBoulder : instances) {
     if (U.random() < .5 && otherBoulder != this && U.distance(this, otherBoulder) < S.getRadius() + otherBoulder.S.getRadius()) {
      XZ = U.random(360.);
     }
@@ -106,7 +111,7 @@ public enum Boulder {
    } else {
     sound.stop();
    }
-   for (Dust dust : dusts) {
+   for (var dust : dusts) {
     dust.run();
    }
   }

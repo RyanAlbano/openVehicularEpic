@@ -1,11 +1,13 @@
 package ve.vehicles;
 
 import javafx.geometry.Point3D;
-import javafx.scene.*;
+import javafx.scene.PointLight;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.*;
-import javafx.scene.transform.*;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.DrawMode;
+import javafx.scene.shape.MeshView;
+import javafx.scene.transform.Rotate;
 import ve.effects.Effects;
 import ve.effects.Smoke;
 import ve.environment.E;
@@ -14,8 +16,14 @@ import ve.instances.InstancePart;
 import ve.ui.Maps;
 import ve.ui.UI;
 import ve.ui.options.Options;
-import ve.utilities.*;
 import ve.utilities.Camera;
+import ve.utilities.D;
+import ve.utilities.Images;
+import ve.utilities.Matrix4x3;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.Quaternion;
+import ve.utilities.U;
 
 import java.util.ArrayList;
 import java.util.List;

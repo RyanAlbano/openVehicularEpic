@@ -59,6 +59,6 @@ public enum Sun {
   Nodes.remove(S);
   type = Type.none;
   Nodes.removePointLight(light);
-  Nodes.setLightRGB(light, 1, 1, 1);
+  Nodes.setLightRGB(light, 1);
  }
 }

@@ -1,8 +1,9 @@
 package ve.environment;
 
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.*;
 
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.Sphere;
 import ve.instances.Core;
 import ve.ui.Maps;
 import ve.utilities.Nodes;
@@ -36,7 +37,7 @@ public enum Cloud {
  }
 
  public static void run() {
-  for (Instance cloud : instances) {
+  for (var cloud : instances) {
    cloud.run();
   }
  }

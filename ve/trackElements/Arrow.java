@@ -95,13 +95,13 @@ public enum Arrow {
   } else {
    if (status != Arrow.Status.locked) {
     double compareDistance = Double.POSITIVE_INFINITY;
-    for (Vehicle vehicle : I.vehicles) {
+    for (var vehicle : I.vehicles) {
      if (vehicle.index != I.vehiclePerspective && vehicle.isIntegral() && U.distance(V, vehicle) < compareDistance) {
       target = vehicle.index;
       compareDistance = U.distance(V, vehicle);
      }
     }
-    if (I.vehiclePerspective == I.userPlayerIndex && !U.sameTeam(I.userPlayerIndex, target)) {
+    if (I.vehiclePerspective == I.userPlayerIndex && !I.sameTeam(I.userPlayerIndex, target)) {
      I.vehicles.get(I.userPlayerIndex).AI.target = target;//<-Calling userPlayer more accurate than 'vehiclePerspective' here
     }
    }
@@ -136,7 +136,7 @@ public enum Arrow {
   } else {
    long[] RG = {0, 0};
    if (U.yinYang) {
-    RG[target < I.vehiclesInMatch >> 1 ? 1 : 0] = 1;
+    RG[target < I.halfThePlayers() ? 1 : 0] = 1;
    }
    Phong.setDiffuseRGB((PhongMaterial) MV.getMaterial(), RG[0], RG[1], 0);
   }

@@ -5,26 +5,24 @@ import javafx.scene.Group;
 import javafx.scene.PointLight;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.paint.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
 import ve.effects.Echo;
 import ve.environment.storm.Storm;
 import ve.instances.Core;
 import ve.instances.I;
 import ve.trackElements.TE;
-import ve.trackElements.trackParts.TrackPart;
 import ve.trackElements.trackParts.TrackPlane;
 import ve.ui.Maps;
 import ve.ui.Match;
 import ve.ui.UI;
 import ve.utilities.*;
-import ve.vehicles.Vehicle;
 import ve.vehicles.explosions.MaxNukeBlast;
 
 import java.util.Random;
 
 public enum E {//<-Static game-environment content
- ;//todo--Attempt layered 'atmosphere rings'? (similar to what was built for RaR in Graphics2D)
-
+ ;
  public static Canvas canvas;
  public static GraphicsContext GC;
  public static final Group lights = new Group();
@@ -38,7 +36,7 @@ public enum E {//<-Static game-environment content
  public static double gravity;
  private static double centerShiftOffAt;
  public static Color skyRGB = U.getColor(1);//<-Keep bright for first vehicle select
- public static final double[] lavaSelfIllumination = {1, .5, 0};//<-Not explicitly a Pool property, so leave here
+ public static final Color lavaSelfIllumination = Color.color(1, .5, 0);//<-Not explicitly a Pool property, so leave here
  public static double soundMultiple;//<-This system is technically wrong--should be based on gainHalf and not simply * or / 2, etc.
 
  static {
@@ -121,7 +119,7 @@ public enum E {//<-Static game-environment content
    }
   }
   if (Ground.exists && Ground.level <= 0) {
-   double groundY = Pool.exists && U.distanceXZ(Pool.core) < Pool.C[0].getRadius() && Camera.C.Y > 0 ? Pool.depth : Math.max(0, -Camera.C.Y * .01);
+   double groundY = Pool.exists && U.distanceXZ(Pool.core) < Pool.surface.getRadius() && Camera.C.Y > 0 ? Pool.depth : Math.max(0, -Camera.C.Y * .01);
    while (Math.abs(Ground.X - Camera.C.X) > 100000) Ground.X += Ground.X > Camera.C.X ? -200000 : 200000;
    while (Math.abs(Ground.Z - Camera.C.Z) > 100000) Ground.Z += Ground.Z > Camera.C.Z ? -200000 : 200000;
    if (Camera.C.Y < groundY) {
@@ -136,6 +134,7 @@ public enum E {//<-Static game-environment content
   Texture.adapt();
   Wind.runSetPower();
   Fog.run();
+  Atmosphere.run();
   Star.run();
   Cloud.run();
   GroundPlate.run();
@@ -143,13 +142,13 @@ public enum E {//<-Static game-environment content
   Storm.run(gamePlay || mapViewer);
   if (Pool.exists) {
    if (Camera.C.Y < 0) {
-    U.setTranslate(Pool.C[0], Pool.core.X, 0, Pool.core.Z);
-    Pool.C[0].setVisible(true);
-    Pool.C[1].setVisible(false);
+    U.setTranslate(Pool.surface, Pool.core.X, 0, Pool.core.Z);
+    Pool.surface.setVisible(true);
+    Pool.basin.setVisible(false);
    } else {
-    U.setTranslate(Pool.C[1], Pool.core.X, Pool.depth * .5, Pool.core.Z);
-    Pool.C[1].setVisible(true);
-    Pool.C[0].setVisible(false);
+    U.setTranslate(Pool.basin, Pool.core.X, Pool.depth * .5, Pool.core.Z);
+    Pool.basin.setVisible(true);
+    Pool.surface.setVisible(false);
    }
    if (Pool.type == Pool.Type.lava) {
     Phong.setDiffuseRGB(Pool.PM, 1, .25 + U.random(.5), 0);
@@ -165,7 +164,7 @@ public enum E {//<-Static game-environment content
   //*Draw order is windstorm, poolVision, screenFlashes
   Wind.runStorm(gamePlay || mapViewer);//*
   Pool.runVision();//*
-  for (Vehicle vehicle : I.vehicles) {//*
+  for (var vehicle : I.vehicles) {//*
    if (vehicle.screenFlash > 0) {
     U.fillRGB(GC, 1, 1, 1, vehicle.screenFlash);
     U.fillRectangle(GC, .5, .5, 1, 1);
@@ -174,14 +173,14 @@ public enum E {//<-Static game-environment content
  }
 
  public static void setTerrainSit(Core core, boolean vehicle) {
-  core.Y = U.distanceXZ(core, Pool.core) < Pool.C[0].getRadius() ? Pool.depth : 0;
+  core.Y = U.distanceXZ(core, Pool.core) < Pool.surface.getRadius() ? Pool.depth : 0;
   if (Volcano.exists) {
    double volcanoDistance = U.distanceXZ(core, Volcano.C);
    core.Y = volcanoDistance < Volcano.radiusBottom && volcanoDistance > Volcano.radiusTop && core.Y > -Volcano.radiusBottom + volcanoDistance ? Math.min(core.Y, -Volcano.radiusBottom + volcanoDistance) : core.Y;
   }
-  for (TrackPart trackPart : TE.trackParts) {
+  for (var trackPart : TE.trackParts) {
    if ((!trackPart.wraps || vehicle) && !trackPart.trackPlanes.isEmpty() && U.distanceXZ(core, trackPart) < trackPart.renderRadius + core.absoluteRadius) {//<-Not sure how much this section helps optimize in actuality
-    for (TrackPlane trackPlane : trackPart.trackPlanes) {
+    for (var trackPlane : trackPart.trackPlanes) {
      if (!trackPlane.type.contains(D.gate)) {
       double trackX = trackPlane.X + trackPart.X, trackZ = trackPlane.Z + trackPart.Z;
       if (Math.abs(core.X - trackX) <= trackPlane.radiusX && Math.abs(core.Z - trackZ) <= trackPlane.radiusZ) {
@@ -208,7 +207,7 @@ public enum E {//<-Static game-environment content
  }
 
  public static void setMoundSit(Core core, boolean vehicle) {
-  for (FrustumMound FM : TE.mounds) {
+  for (var FM : TE.mounds) {
    if (!FM.wraps || vehicle) {
     double distance = U.distanceXZ(core, FM), radiusBottom = FM.majorRadius;
     if (distance < radiusBottom) {
@@ -263,6 +262,7 @@ public enum E {//<-Static game-environment content
   Wind.reset();
   Pool.reset();
   Storm.reset();
+  Atmosphere.reset();
   Fog.reset();
   Tornado.reset();
   Tsunami.reset();

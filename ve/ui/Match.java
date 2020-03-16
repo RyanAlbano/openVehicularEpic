@@ -10,7 +10,12 @@ import ve.trackElements.Bonus;
 import ve.trackElements.TE;
 import ve.ui.options.Options;
 import ve.ui.options.Units;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.D;
+import ve.utilities.Images;
+import ve.utilities.Network;
+import ve.utilities.Recorder;
+import ve.utilities.U;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Physics;
 import ve.vehicles.Vehicle;
@@ -35,7 +40,9 @@ public enum Match {
  private static final double[] finalScore = new double[2];
 
  public static void run(boolean gamePlay) {
-  timeLeft -= timeLeft > 0 && UI.status == UI.Status.play && started ? U.tick : 0;
+  if (timeLeft > 0 && UI.status == UI.Status.play && started) {
+   timeLeft -= U.tickSeconds;
+  }
   Tournament.finished = Tournament.stage > 0 && ((Tournament.stage > 4 && Math.abs(Tournament.wins[0] - Tournament.wins[1]) > 0) || (Tournament.stage > 2 && Math.abs(Tournament.wins[0] - Tournament.wins[1]) > 1));
   if (started && (Keys.enter || Keys.escape) && gamePlay) {
    Keys.up = Keys.down = Keys.enter = Keys.escape = false;
@@ -110,7 +117,7 @@ public enum Match {
   scoreCheckpoint[0] * scoreLap[0] * scoreStunt0 * scoreDamage0 * scoreKill[0],
   scoreCheckpoint[1] * scoreLap[1] * scoreStunt1 * scoreDamage1 * scoreKill[1]};
   if (Bonus.holder > -1) {
-   score[Bonus.holder < I.vehiclesInMatch >> 1 ? 0 : 1] *= 2;
+   score[Bonus.holder < I.halfThePlayers() ? 0 : 1] *= 2;
   }
   if (Options.headsUpDisplay) {
    U.font(.00875);
@@ -123,7 +130,7 @@ public enum Match {
     //GREEN
     U.fillRGB(0, 1, 0);
     U.textL(I.vehiclesInMatch > 2 ? UI.GREEN_TEAM : UI.playerNames[0], .0125, .175);
-    if (Bonus.holder > -1 && Bonus.holder < I.vehiclesInMatch >> 1) {
+    if (Bonus.holder > -1 && Bonus.holder < I.halfThePlayers()) {
      UI.drawBonus(.11, .3125, 20);
      U.textL("(Player " + Bonus.holder + ") BONUS", .0125, .325);
     }
@@ -143,7 +150,7 @@ public enum Match {
     //RED
     U.fillRGB(1, 0, 0);
     U.textR(I.vehiclesInMatch > 2 ? UI.RED_TEAM : UI.playerNames[1], .9875, .175);
-    if (Bonus.holder >= I.vehiclesInMatch >> 1) {
+    if (Bonus.holder >= I.halfThePlayers()) {
      UI.drawBonus(.89, .3125, 20);
      U.textR(bonus + Bonus.holder + ")", .9875, .325);
     }
@@ -170,7 +177,7 @@ public enum Match {
     U.textR(stunts + scoreStunt1, .9875, .25);
     U.textR(damageDealt + U.DF.format(scoreDamage1), .9875, .275);
     U.textR(kills + scoreKill[1], .9875, .3);
-    if (Bonus.holder >= I.vehiclesInMatch >> 1) {
+    if (Bonus.holder >= I.halfThePlayers()) {
      U.textR(bonus + Bonus.holder + ")", .9875, .325);
     }
     U.textR(currentScore + U.DF.format(score[1]), .9875, .35);
@@ -187,8 +194,8 @@ public enum Match {
      Sounds.finish.play(1, 0);
     } else {
      long side =
-     (score[0] > score[1] && I.vehiclePerspective < I.vehiclesInMatch >> 1) ||
-     (score[1] > score[0] && I.vehiclePerspective >= I.vehiclesInMatch >> 1) ? 0 :
+     (score[0] > score[1] && I.vehiclePerspective < I.halfThePlayers()) ||
+     (score[1] > score[0] && I.vehiclePerspective >= I.halfThePlayers()) ? 0 :
      1;
      Sounds.finish.play(side, 0);
     }
@@ -235,7 +242,7 @@ public enum Match {
    if (I.vehiclesInMatch > 1) {
     U.text("Vehicle #", .975, .865);
     if (I.vehiclesInMatch > 2) {
-     if (I.vehiclePerspective < I.vehiclesInMatch >> 1) {
+     if (I.vehiclePerspective < I.halfThePlayers()) {
       U.fillRGB(0, 1, 0);
      } else {
       U.fillRGB(1, 0, 0);
@@ -365,7 +372,7 @@ public enum Match {
   scoreCheckpoint[0] = scoreCheckpoint[1] = scoreLap[0] = scoreLap[1] = scoreKill[0] = scoreKill[1] = 1;
   scoreDamage[0] = scoreDamage[1] = Camera.aroundVehicleXZ = printTimer = Camera.lookAround = scoreStunt[0] = scoreStunt[1] = 0;
   Bonus.big.setVisible(true);
-  for (Bonus.Ball ball : Bonus.balls) {
+  for (var ball : Bonus.balls) {
    ball.S.setVisible(false);
   }
   Bonus.holder = Network.bonusHolder = -1;

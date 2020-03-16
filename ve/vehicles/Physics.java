@@ -1,6 +1,5 @@
 package ve.vehicles;
 
-import javafx.scene.paint.Color;
 import ve.environment.*;
 import ve.environment.storm.Lightning;
 import ve.instances.Core;
@@ -8,12 +7,13 @@ import ve.instances.CoreAdvanced;
 import ve.instances.I;
 import ve.trackElements.Bonus;
 import ve.trackElements.TE;
-import ve.trackElements.trackParts.TrackPart;
 import ve.trackElements.trackParts.TrackPlane;
 import ve.ui.*;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.D;
+import ve.utilities.Network;
+import ve.utilities.U;
 import ve.vehicles.explosions.Explosion;
-import ve.vehicles.specials.Shot;
 import ve.vehicles.specials.Special;
 
 public class Physics {
@@ -114,11 +114,11 @@ public class Physics {
  }
 
  public void runCollisions() {
-  boolean replay = UI.status == UI.Status.replay, greenTeam = V.index < I.vehiclesInMatch >> 1;
+  boolean replay = UI.status == UI.Status.replay, greenTeam = V.index < I.halfThePlayers();
   if (!V.phantomEngaged) {
    if (!V.destroyed && !V.reviveImmortality) {
-    for (Vehicle otherV : I.vehicles) {
-     if (!U.sameTeam(V, otherV) && !otherV.destroyed && !otherV.reviveImmortality && !otherV.phantomEngaged) {
+    for (var otherV : I.vehicles) {
+     if (!I.sameTeam(V, otherV) && !otherV.destroyed && !otherV.reviveImmortality && !otherV.phantomEngaged) {
       if (advancedCollisionCheck(V, otherV, V.collisionRadius + otherV.collisionRadius)) {//<-There's no reason for 'collideAt' to be any other value. Change the default value if needed
        if (V.getsLifted > 0 && V.Y < otherV.Y) {
         V.speedY -= E.gravity * 1.5 * U.tick;
@@ -186,16 +186,16 @@ public class Physics {
      }
     }
    }
-   for (Special special : V.specials) {
-    for (Vehicle vehicle : I.vehicles) {
-     if (!U.sameTeam(V, vehicle) && (!vehicle.destroyed || wrathEngaged) && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
+   for (var special : V.specials) {
+    for (var vehicle : I.vehicles) {
+     if (!I.sameTeam(V, vehicle) && (!vehicle.destroyed || wrathEngaged) && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
       boolean throughWeapon = special.throughWeapon();
-      for (Shot shot : special.shots) {
+      for (var shot : special.shots) {
        shot.vehicleInteract(vehicle, throughWeapon, replay, greenTeam);
       }
       if (V.isFixed() && Bonus.holder < 0 && V.isIntegral()) {
        double collideAt = special.diameter + Bonus.big.getRadius();
-       for (Shot shot : special.shots) {
+       for (var shot : special.shots) {
         if (shot.stage > 0 && shot.advancedCollisionCheck(Bonus.C, collideAt)) {
          Bonus.setHolder(V);
         }
@@ -209,7 +209,7 @@ public class Physics {
         vehicle.speedX = V.speedX;
         vehicle.speedY = V.speedY;
         vehicle.speedZ = V.speedZ;
-        for (VehiclePart part : vehicle.parts) {
+        for (var part : vehicle.parts) {
          part.X = V.X + U.randomPlusMinus(V.absoluteRadius);
          part.Y = V.Y + U.randomPlusMinus(V.absoluteRadius);
          part.Z = V.Z + U.randomPlusMinus(V.absoluteRadius);
@@ -226,9 +226,9 @@ public class Physics {
      explosionDiameter = U.random(20000.);
      explosionDamage = 2500 + U.random(5000.);
     }
-    for (Vehicle vehicle : I.vehicles) {
-     if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
-      for (Explosion explosion : V.explosions) {
+    for (var vehicle : I.vehicles) {
+     if (!I.sameTeam(V, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
+      for (var explosion : V.explosions) {
        explosion.vehicleInteract(vehicle, replay, greenTeam);
       }
      }
@@ -236,8 +236,8 @@ public class Physics {
    }
    if (!V.destroyed) {
     if (V.isFixed()) {
-     for (Vehicle vehicle : I.vehicles) {
-      if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && U.distance(V.X, vehicle.X, V.Y + (V.turretBaseY * .5), vehicle.Y, V.Z, vehicle.Z) < V.collisionRadius * .5 + vehicle.collisionRadius && !vehicle.phantomEngaged) {
+     for (var vehicle : I.vehicles) {
+      if (!I.sameTeam(V, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && U.distance(V.X, vehicle.X, V.Y + (V.turretBaseY * .5), vehicle.Y, V.Z, vehicle.Z) < V.collisionRadius * .5 + vehicle.collisionRadius && !vehicle.phantomEngaged) {
        hitCheck(vehicle);
        if (vehicle.fragility > 0) {
         vehicle.addDamage(V.structureBaseDamageDealt * vehicle.fragility);
@@ -257,11 +257,11 @@ public class Physics {
      }
     }
     if (!V.reviveImmortality) {
-     for (Special special : V.specials) {
+     for (var special : V.specials) {
       if (special.type.name().contains(D.particle) && special.fire) {
        boolean disintegrate = special.type == Special.Type.particledisintegrator;
-       for (Vehicle vehicle : I.vehicles) {
-        if ((disintegrate ? !U.sameTeam(V, vehicle) : !U.sameVehicle(V, vehicle) && U.sameTeam(V, vehicle)) &&
+       for (var vehicle : I.vehicles) {
+        if ((disintegrate ? !I.sameTeam(V, vehicle) : !I.sameVehicle(V, vehicle) && I.sameTeam(V, vehicle)) &&
         !vehicle.destroyed && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
          if (
          ((vehicle.Y <= V.Y && U.sin(V.YZ) >= 0) || (vehicle.Y >= V.Y && U.sin(V.YZ) <= 0) || Math.abs(vehicle.Y - V.Y) < vehicle.collisionRadius) &&//<-inY
@@ -298,22 +298,22 @@ public class Physics {
    if (V.death == Vehicle.Death.none) {
     String s = Network.mode == Network.Mode.OFF ? V.name : UI.playerNames[V.index];
     V.death = Vehicle.Death.diedAlone;
-    for (Vehicle vehicle : I.vehicles) {
-     if (!U.sameTeam(V, vehicle) && vehicleHit == vehicle.index && vehicle.P.vehicleHit == V.index) {
+    for (var vehicle : I.vehicles) {
+     if (!I.sameTeam(V, vehicle) && vehicleHit == vehicle.index && vehicle.P.vehicleHit == V.index) {
       V.death = Vehicle.Death.killedByAnother;
       DestructionLog.update();
       String s1 = Network.mode == Network.Mode.OFF ? vehicle.name : UI.playerNames[vehicle.index];
       DestructionLog.names[4][0] = s1;
       DestructionLog.names[4][1] = s;
-      DestructionLog.nameColors[4][0] = vehicle.index < I.vehiclesInMatch >> 1 ? Color.color(0, 1, 0) : Color.color(1, 0, 0);
-      DestructionLog.nameColors[4][1] = greenTeam ? Color.color(0, 1, 0) : Color.color(1, 0, 0);
+      DestructionLog.nameColors[4][0] = vehicle.index < I.halfThePlayers() ? U.getColor(0, 1, 0) : U.getColor(1, 0, 0);
+      DestructionLog.nameColors[4][1] = greenTeam ? U.getColor(0, 1, 0) : U.getColor(1, 0, 0);
      }
     }
     if (V.death == Vehicle.Death.diedAlone) {
      DestructionLog.update();
      DestructionLog.names[4][0] = s;
      DestructionLog.names[4][1] = "";
-     DestructionLog.nameColors[4][0] = greenTeam ? Color.color(0, 1, 0) : Color.color(1, 0, 0);
+     DestructionLog.nameColors[4][0] = greenTeam ? U.getColor(0, 1, 0) : U.getColor(1, 0, 0);
     }
    }
   }
@@ -350,7 +350,7 @@ public class Physics {
   if (V.isIntegral()) {
    vehicleHit = -1;
   }
-  atPoolXZ = Pool.exists && U.distanceXZ(V, Pool.core) < Pool.C[0].getRadius();
+  atPoolXZ = Pool.exists && U.distanceXZ(V, Pool.core) < Pool.surface.getRadius();
   runVehiclesAircraft();
   runTurretsInfrastructure();
   if (V.explosionsWhenDestroyed > 0 && !V.isIntegral() && !V.destroyed) {
@@ -424,7 +424,7 @@ public class Physics {
    driftXZ = V.XZ;//<-Best spot for assigning this
    boolean crashLand = (Math.abs(V.YZ) > 30 || Math.abs(V.XY) > 30) && !(Math.abs(V.YZ) > 150 && Math.abs(V.XY) > 150);
    double gravityCompensation = E.gravity * 2 * U.tick;
-   for (Wheel wheel : V.wheels) {//<-Best place for this?
+   for (var wheel : V.wheels) {//<-Best place for this?
     wheel.againstWall = wheel.angledSurface = false;
     wheel.minimumSkidmarkY = localGround;
    }
@@ -579,7 +579,7 @@ public class Physics {
  private void runDriveEffects() {
   boolean shockAbsorb = !Double.isNaN(V.shockAbsorb);
   if (shockAbsorb) {
-   for (Wheel wheel : V.wheels) {
+   for (var wheel : V.wheels) {
     wheel.vibrateY -= wheel.vibrateY * valueAdjustSmoothing * U.tick;
    }
   }
@@ -589,7 +589,7 @@ public class Physics {
     V.XY += lean;
     if (shockAbsorb) {
      lean *= .25;
-     for (Wheel wheel : V.wheels) {
+     for (var wheel : V.wheels) {
       wheel.vibrateY -= wheel.pointX * U.sin(lean) * V.shockAbsorb;
      }
     }
@@ -637,7 +637,7 @@ public class Physics {
    boolean connected = false;
    //significantDown = V.speedY > -E.gravity * U.tick;//<-Should prevent vehicles from 'hugging' mounds instead of taking off fully
    boolean flipped = flipped();
-   for (Wheel wheel : V.wheels) {
+   for (var wheel : V.wheels) {
     if (wheel.beneathLocalGround) {
      connected = true;
      wheel.XY -= wheel.XY * valueAdjustSmoothing * U.tick;
@@ -735,16 +735,16 @@ public class Physics {
    int n;
    boolean markedSnow = false;
    if (terrainProperties.contains(D.thick(D.snow))) {
-    for (Wheel wheel : V.wheels) {
+    for (var wheel : V.wheels) {
      wheel.skidmark(true);
     }
     markedSnow = true;
    }
    boolean kineticFriction = Math.abs(Math.abs(speed) - netSpeed) > 15,
-   driveEngine = !U.containsEnum(V.engine, Vehicle.Engine.prop, Vehicle.Engine.jet, Vehicle.Engine.rocket);
+   driveEngine = !U.contains(V.engine, Vehicle.Engine.prop, Vehicle.Engine.jet, Vehicle.Engine.rocket);
    if (((driveEngine && kineticFriction) || speedXZ * speedXZ > 300000 / netSpeed) && (kineticFriction || Math.abs(speed) > V.topSpeeds[1] * .9)) {
     if (terrainProperties.contains(D.thick(D.hard)) && V.contact == Contact.metal) {
-     for (Wheel wheel : V.wheels) {
+     for (var wheel : V.wheels) {
       wheel.sparks(true);
      }
     }
@@ -755,7 +755,7 @@ public class Physics {
     }
     if (!terrainProperties.contains(D.thick(D.ice))) {
      if (!markedSnow && V.contact == Contact.rubber) {//<-Contact check is so that skidmarks don't misfire due to being preloaded on snow-terrain maps
-      for (Wheel wheel : V.wheels) {
+      for (var wheel : V.wheels) {
        wheel.skidmark(false);
       }
      }
@@ -960,7 +960,7 @@ public class Physics {
   if (inPool) {
    if (netSpeed > 0) {
     for (int n = 3; --n >= 0; ) {
-     for (Wheel wheel : V.wheels) {
+     for (var wheel : V.wheels) {
       V.splashes.get(V.currentSplash).deploy(wheel, V.absoluteRadius * .0125 + U.random(V.absoluteRadius * .0125),
       V.speedX + U.randomPlusMinus(Math.max(speed, netSpeed)),
       V.speedY + U.randomPlusMinus(Math.max(speed, netSpeed)),
@@ -995,9 +995,9 @@ public class Physics {
   wallPlaneBounce = Math.min(Math.abs(cosXY) + Math.abs(cosYZ), 1),//<-Not the best, but still probably better than a flat value
   crashPower = 0;
   boolean spinnerHit = inWall = false, flipped = flipped();
-  for (TrackPart trackPart : TE.trackParts) {
+  for (var trackPart : TE.trackParts) {
    if (!trackPart.trackPlanes.isEmpty() && U.distanceXZ(V, trackPart) <= trackPart.renderRadius + V.renderRadius) {//<-NEEDED--large maps get performance overhead without it!
-    for (TrackPlane trackPlane : trackPart.trackPlanes) {
+    for (var trackPlane : trackPart.trackPlanes) {
      double trackX = trackPlane.X + trackPart.X, trackY = trackPlane.Y + trackPart.Y, trackZ = trackPlane.Z + trackPart.Z,
      velocityXZ = Math.abs(sinXZ),
      radiusX = trackPlane.radiusX + (trackPlane.addSpeed && velocityXZ > U.sin45 ? netSpeed * U.tick : 0),
@@ -1032,7 +1032,7 @@ public class Physics {
       angleAdjustForYZ = criterion || Math.abs((cosXZ > 0 ? -V.YZ : V.YZ) - trackPlane.YZ) < 30,
       angleAdjustForXY = criterion || Math.abs((sinXZ < 0 ? -V.YZ : V.YZ) - trackPlane.XY) < 30;
       //WHEEL BASED
-      for (Wheel wheel : V.wheels) {
+      for (var wheel : V.wheels) {
        if (Math.abs(wheel.Y - (trackY + gravityCompensation)) <= trackPlane.radiusY) {
         boolean wheelInX = Math.abs(wheel.X - trackX) <= radiusX, wheelInZ = Math.abs(wheel.Z - trackZ) <= radiusZ;
         if (wheelInX && wheelInZ) {
@@ -1173,9 +1173,9 @@ public class Physics {
  }
 
  private void runSetTerrainFromTrackPlanes(double gravityCompensation) {
-  for (TrackPart trackPart : TE.trackParts) {
+  for (var trackPart : TE.trackParts) {
    if (!trackPart.trackPlanes.isEmpty() && U.distanceXZ(V, trackPart) <= trackPart.renderRadius + V.renderRadius) {//<-NEEDED--large maps get performance overhead without it!
-    for (TrackPlane trackPlane : trackPart.trackPlanes) {
+    for (var trackPlane : trackPart.trackPlanes) {
      if (trackPlane.wall == TrackPlane.Wall.none && !trackPlane.type.contains(D.thick(D.tree)) && !trackPlane.type.contains(D.gate)) {
       double trackX = trackPlane.X + trackPart.X, trackY = trackPlane.Y + trackPart.Y, trackZ = trackPlane.Z + trackPart.Z;
       if (Math.abs(V.X - trackX) <= trackPlane.radiusX && Math.abs(V.Z - trackZ) <= trackPlane.radiusZ &&
@@ -1208,7 +1208,7 @@ public class Physics {
   onMoundSlope = atOrAboveAndWithinMoundTopRadius = false;
   if (!V.phantomEngaged) {
    boolean flipped = flipped();
-   for (FrustumMound FM : TE.mounds) {
+   for (var FM : TE.mounds) {
     if (!V.bumpIgnore || !FM.wraps) {
      double distanceXZ = U.distanceXZ(V, FM), radiusBottom = FM.majorRadius;
      if (distanceXZ < radiusBottom) {
@@ -1261,13 +1261,13 @@ public class Physics {
  private void runSpeedConstraints() {
   if (mode.name().startsWith(D.drive) || V.phantomEngaged) {
    if (!V.highGrip() && !flipped() && Math.abs(speed) > netSpeed && Math.abs(Math.abs(speed) - netSpeed) > Math.abs(speed) * .5 && !terrainProperties.contains(D.thick(D.ice))) {
-    speed *= .5;
+    speed *= .5;//<-Does NOT need tick basing
    }
    if (V.turnDrag && (V.turnL || V.turnR)) {
     speed -= speed * .01 * U.tick;
    }
    if (V.destroyed) {
-    speed *= .9;
+    speed *= .9;//<-fixme--make tick based
     if (Math.abs(speed) < 2 * U.tick) {
      speed = 0;
     } else {
@@ -1277,7 +1277,7 @@ public class Physics {
   }
   speed = U.clamp(-V.topSpeeds[2], speed, V.topSpeeds[2]);
   if (againstWall() && V.highGrip()) {
-   speed *= .95;
+   speed -= speed * .25 * U.tick;
   }
   if (V.drag != 0) {
    if (Math.abs(speed) < V.drag * U.tick) {
@@ -1390,7 +1390,7 @@ public class Physics {
  private void runSetWheelXYZ() {
   double primeX = V.speedX * U.tick, primeY = V.speedY * U.tick, primeZ = V.speedZ * U.tick;
   double sinXZ = U.sin(V.XZ), cosXZ = U.cos(V.XZ), sinYZ = U.sin(V.YZ), cosYZ = U.cos(V.YZ), sinXY = U.sin(V.XY), cosXY = U.cos(V.XY);
-  for (Wheel wheel : V.wheels) {
+  for (var wheel : V.wheels) {
    wheel.beneathLocalGround = false;
    double[] wheelX = {wheel.pointX}, wheelY = {clearance}, wheelZ = {wheel.pointZ};
    if (V.XY != 0) {

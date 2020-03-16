@@ -1,18 +1,21 @@
 package ve.environment;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import javafx.scene.PointLight;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.MeshView;
-
 import javafx.scene.shape.TriangleMesh;
 import ve.effects.Effects;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.ui.Match;
-import ve.utilities.*;
+import ve.utilities.D;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.utilities.sound.Controlled;
 import ve.vehicles.Vehicle;
 
@@ -27,13 +30,13 @@ public enum Fire {
  }
 
  static void run(boolean update) {
-  for (Instance fire : instances) {
+  for (var fire : instances) {
    fire.run(update);
   }
  }
 
  public static void vehicleInteract(Vehicle V) {
-  for (Instance fire : instances) {
+  for (var fire : instances) {
    double distance = U.distance(V, fire);
    if (distance < V.collisionRadius + fire.absoluteRadius) {
     V.addDamage(10 * U.tick);
@@ -101,7 +104,7 @@ public enum Fire {
   }
 
   void run(boolean update) {
-   for (Flame flame : flames) {
+   for (var flame : flames) {
     flame.X += flame.speedX * U.tick + (Wind.speedX * U.tick);
     flame.Z += flame.speedZ * U.tick + (Wind.speedZ * U.tick);
     flame.Y -= .1 * absoluteRadius * U.tick;
@@ -116,7 +119,7 @@ public enum Fire {
    if (U.getDepth(this) > -absoluteRadius) {
     U.setTranslate(pit, this);
     pit.setVisible(true);
-    for (Flame flame : flames) {
+    for (var flame : flames) {
      U.randomRotate(flame.MV);
      ((PhongMaterial) flame.MV.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
      U.setTranslate(flame.MV, flame);
@@ -124,7 +127,7 @@ public enum Fire {
     }
    } else {
     pit.setVisible(false);
-    for (Flame flame : flames) {
+    for (var flame : flames) {
      flame.MV.setVisible(false);
     }
    }

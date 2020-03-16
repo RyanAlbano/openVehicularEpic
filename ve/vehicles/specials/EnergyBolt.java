@@ -6,7 +6,11 @@ import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import ve.instances.I;
 import ve.ui.Match;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.Images;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.vehicles.Vehicle;
 
 public class EnergyBolt extends MeshView {
@@ -46,8 +50,8 @@ public class EnergyBolt extends MeshView {
   } else {
    target = V.index;
    double compareDistance1 = Double.POSITIVE_INFINITY;
-   for (Vehicle vehicle : I.vehicles) {//<-Direct energy towards fellow support infrastructure
-    if (vehicle.index != V.index && U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) < compareDistance1 &&
+   for (var vehicle : I.vehicles) {//<-Direct energy towards fellow support infrastructure
+    if (vehicle.index != V.index && I.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) < compareDistance1 &&
     vehicle.type == Vehicle.Type.supportInfrastructure) {//*
      target = vehicle.index;
      compareDistance1 = U.distance(V, vehicle);
@@ -55,8 +59,8 @@ public class EnergyBolt extends MeshView {
    }
    //*May need to be changed if more infrastructure types get added later!
    double compareDistance = Double.POSITIVE_INFINITY;
-   for (Vehicle vehicle : I.vehicles) {//<-Redirect energy towards fellow non-support-infrastructure teammates if they're alive or exist
-    if (vehicle.index != V.index && U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) < compareDistance &&
+   for (var vehicle : I.vehicles) {//<-Redirect energy towards fellow non-support-infrastructure teammates if they're alive or exist
+    if (vehicle.index != V.index && I.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) < compareDistance &&
     vehicle.type != Vehicle.Type.supportInfrastructure) {//*
      target = vehicle.index;
      compareDistance = U.distance(V, vehicle);

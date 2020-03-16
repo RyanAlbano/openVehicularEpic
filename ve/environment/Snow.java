@@ -16,7 +16,7 @@ public enum Snow {
  private static final long wrapDistance = 2000;
 
  public static void run() {
-  for (Ball ball : instances) {
+  for (var ball : instances) {
    ball.run();
   }
  }

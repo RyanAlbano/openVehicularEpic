@@ -12,8 +12,6 @@ import ve.ui.Match;
 import ve.ui.options.Options;
 import ve.utilities.D;
 import ve.utilities.U;
-import ve.vehicles.explosions.Explosion;
-import ve.vehicles.specials.Shot;
 import ve.vehicles.specials.Special;
 
 public class AI {
@@ -51,7 +49,7 @@ public class AI {
   nukeWait = V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) ? U.random(Options.matchLength) : nukeWait;
   waitPoint = U.random(TE.checkpoints.size());
   boolean supportInfrastructure = V.type == Vehicle.Type.supportInfrastructure;
-  for (Special special : V.specials) {
+  for (var special : V.specials) {
    if (special.type == Special.Type.particlereintegrator) {
     supportInfrastructure = true;
     break;
@@ -63,14 +61,14 @@ public class AI {
  public void run() {
   if (V.index == I.userPlayerIndex) {//*Should ensure that this is only called for auto-aiming turrets, though it's a messy approach
    if (V.VT != null && V.VT.hasAutoAim) {
-    for (Special special : V.specials) {
+    for (var special : V.specials) {
      if (special.aimType == Special.AimType.auto) {//*
       special.fire = false;
      }
     }
     runAutoAim();
     engagingOthers = true;
-    for (Special special : V.specials) {
+    for (var special : V.specials) {
      if (special.aimType == Special.AimType.auto) {//*
       runAimAndShoot(special);
      }
@@ -78,16 +76,16 @@ public class AI {
    }
   } else {
    V.drive = V.drive2 = V.reverse = V.reverse2 = V.turnL = V.turnR = V.handbrake = V.boost = false;
-   for (Special special : V.specials) {
+   for (var special : V.specials) {
     special.fire = false;
    }
    boolean needRace =
-   V.index < I.vehiclesInMatch >> 1 ?
+   V.index < I.halfThePlayers() ?
    Match.scoreCheckpoint[0] <= Match.scoreCheckpoint[1] || Match.scoreLap[0] < Match.scoreLap[1] :
    Match.scoreCheckpoint[1] <= Match.scoreCheckpoint[0] || Match.scoreLap[1] < Match.scoreLap[0];
    long scoreStunt0 = Math.round(Match.scoreStunt[0] * .0005), scoreStunt1 = Math.round(Match.scoreStunt[1] * .0005);
    skipStunts = !V.landStuntsBothSides && !TE.checkpoints.isEmpty() && !Maps.name.equals(D.Maps.summitOfEpic) &&
-   (V.index < I.vehiclesInMatch >> 1 ? scoreStunt0 > scoreStunt1 : scoreStunt1 > scoreStunt0);
+   (V.index < I.halfThePlayers() ? scoreStunt0 > scoreStunt1 : scoreStunt1 > scoreStunt0);
    if (driveTrackBackwards) {
     int setPoint = point - 1;
     while (setPoint < 0) setPoint += TE.points.size();
@@ -124,7 +122,7 @@ public class AI {
     aimAheadTarget = aimAheadTarget < 0 || aimAheadTarget > 10 ? U.random(10.) : aimAheadTarget;
    }
    shooting = false;
-   for (Special special : V.specials) {//<-'shooting' gets engaged within block
+   for (var special : V.specials) {//<-'shooting' gets engaged within block
     if (special.type == Special.Type.forcefield) {
      runForcefieldStrike(special);
     } else if (special.type == Special.Type.mine) {
@@ -206,12 +204,12 @@ public class AI {
     V.drive = V.drive2 = V.reverse = V.reverse2 = false;
     nukeWait -= U.tick;
    }
-   for (Special special : V.specials) {
+   for (var special : V.specials) {
     if (special.type == Special.Type.phantom) {
-     for (Vehicle vehicle : I.vehicles) {
-      if (!U.sameTeam(V, vehicle)) {
-       for (Special otherSpecial : vehicle.specials) {
-        for (Shot shot : otherSpecial.shots) {
+     for (var vehicle : I.vehicles) {
+      if (!I.sameTeam(V, vehicle)) {
+       for (var otherSpecial : vehicle.specials) {
+        for (var shot : otherSpecial.shots) {
          if (shot.stage > 0 && U.distance(shot, V) < 2000 + shot.absoluteRadius) {
           special.fire = true;
           break;
@@ -219,7 +217,7 @@ public class AI {
         }
         special.fire = (otherSpecial.fire && otherSpecial.type == Special.Type.particledisintegrator) || special.fire;
        }
-       for (Explosion explosion : vehicle.explosions) {
+       for (var explosion : vehicle.explosions) {
         if (explosion.stage > 0 && U.distance(explosion, V) < 2000 + explosion.absoluteRadius) {
          special.fire = true;
          break;
@@ -262,18 +260,18 @@ public class AI {
  private void runSwitchTarget() {
   Vehicle targetV = I.vehicles.get(target);
   if (supportInfrastructure) {
-   if (target == V.index || targetV.destroyed || !U.sameTeam(V.index, target)) {
+   if (target == V.index || targetV.destroyed || !I.sameTeam(V.index, target)) {
     engagingOthers = true;//<-Always run it--why not?
     target = U.random(I.vehiclesInMatch);
-    for (Vehicle vehicle : I.vehicles) {
-     if (!U.sameVehicle(V, vehicle) && U.sameTeam(V, vehicle) &&
+    for (var vehicle : I.vehicles) {
+     if (!I.sameVehicle(V, vehicle) && I.sameTeam(V, vehicle) &&
      vehicle.isIntegral() && vehicle.getDamage(true) > I.vehicles.get(target).getDamage(true)) {
       target = vehicle.index;
      }
     }
    }
   } else {
-   if (target == V.index || targetV.destroyed || U.sameTeam(V.index, target) ||
+   if (target == V.index || targetV.destroyed || I.sameTeam(V.index, target) ||
    ((targetV.dealsMassiveDamage() || targetV.spinner != null) && !V.hasShooting && !V.dealsMassiveDamage() && !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.P.wrathEngaged) ||//<-Not worth attacking
    (E.viewableMapDistance < Double.POSITIVE_INFINITY && !V.isFixed() && U.distance(V, targetV) > E.viewableMapDistance) ||//<-Out of visible range
    (driveTrackBackwards && !guardCheckpoint && !V.hasShooting && U.distanceXZ(V, targetV) > Math.min(E.viewableMapDistance, 10000)) ||//<-Too far away when running track backwards
@@ -281,8 +279,8 @@ public class AI {
     engagingOthers = false;
     target = U.random(I.vehiclesInMatch);
     if (U.random() < .5) {
-     for (Vehicle vehicle : I.vehicles) {
-      if (!U.sameTeam(V, vehicle) && Bonus.holder == vehicle.index) {
+     for (var vehicle : I.vehicles) {
+      if (!I.sameTeam(V, vehicle) && Bonus.holder == vehicle.index) {
        target = vehicle.index;
       }
      }
@@ -372,7 +370,7 @@ public class AI {
     }
    }
    if (V.getDamage(false) > 0 && V.airPush > 0 && !vehicularFalls) {//Really old, RaR-era code block. Could probably be chucked
-    for (RepairPoint.Instance repairPoint : RepairPoint.instances) {
+    for (var repairPoint : RepairPoint.instances) {
      if (U.distance(V, repairPoint) < 10000) {
       V.handbrake = V.Y + V.clearanceY < -300 - V.P.localGround && V.P.mode != Physics.Mode.stunt;
       if (Math.abs(V.speedZ) > Math.abs(V.speedX) && ((V.speedZ > 0 && repairPoint.Z > V.Z) || (V.speedZ < 0 && repairPoint.Z < V.Z))) {
@@ -511,7 +509,7 @@ public class AI {
      if (engagingOthers) {
       double altitudeFloor = V.P.localGround -
       Math.max(I.vehicles.get(target).absoluteRadius, (Boulder.instances.isEmpty() ? 0 : (Boulder.instances.get(0).S.getRadius() * 2) + (V.collisionRadius * 2)));
-      for (RepairPoint.Instance repairPoint : RepairPoint.instances) {
+      for (var repairPoint : RepairPoint.instances) {
        altitudeFloor = Math.min(altitudeFloor, repairPoint.Y);
       }
       if (V.Y > altitudeFloor) {
@@ -573,12 +571,12 @@ public class AI {
  private void runJuke() {
   if (!V.isFixed() && !U.equals(Maps.name, D.Maps.XYLand, D.Maps.devilsStairwell, D.Maps.tunnelOfDoom) && !V.dealsMassiveDamage()) {
    boolean racingSafely = !Maps.name.equals(D.Maps.summitOfEpic) && !engagingOthers;
-   for (Vehicle vehicle : I.vehicles) {
+   for (var vehicle : I.vehicles) {
     double avoidDistance = V.collisionRadius + vehicle.collisionRadius + vehicle.othersAvoidAt;
     boolean theyHaveSpinner = vehicle.spinner != null,
     notWorthCrashing = V.damageDealt < 4 && (V.fragility > .5 || vehicle.durability > V.durability);
     avoidDistance += theyHaveSpinner ? vehicle.renderRadius * 2 * Math.abs(vehicle.spinner.speed) : 0;
-    if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) < avoidDistance &&
+    if (!I.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) < avoidDistance &&
     (theyHaveSpinner || vehicle.dealsMassiveDamage() || (racingSafely && notWorthCrashing &&
     (vehicle.damageDealt > 7.5 || !U.equals(Maps.name, D.Maps.lapsOfGlory, "the Checkpoint!", D.Maps.vehicularFalls, "Zip n' Cross", D.Maps.theBottleneck, "Railing Against", D.Maps.testOfDamage, D.Maps.matrix2x3))))) {//<-Racers ignoring risk on these maps
      if (V.P.mode != Physics.Mode.fly) {
@@ -586,7 +584,7 @@ public class AI {
       V.reverse = V.handbrake = false;
      }
      boolean usePhantom = false;
-     for (Special special : V.specials) {
+     for (var special : V.specials) {
       if (special.type == Special.Type.phantom) {
        special.fire = usePhantom = true;
        break;
@@ -660,8 +658,8 @@ public class AI {
    accuracyRangeYZ = special.aimType == Special.AimType.auto ? Math.abs(V.VT.YZ - vehicleTurretDirectionYZ) : 0;
    boolean shoot = false;
    if (accuracyRangeXZ < special.AIAimPrecision && accuracyRangeYZ < special.AIAimPrecision) {
-    for (Vehicle vehicle : I.vehicles) {
-     if (!vehicle.destroyed && (supportInfrastructure ? !U.sameVehicle(V, vehicle) && U.sameTeam(V, vehicle) : !U.sameTeam(V, vehicle))) {
+    for (var vehicle : I.vehicles) {
+     if (!vehicle.destroyed && (supportInfrastructure ? !I.sameVehicle(V, vehicle) && I.sameTeam(V, vehicle) : !I.sameTeam(V, vehicle))) {
       shoot = true;
       break;
      }
@@ -685,7 +683,7 @@ public class AI {
 
  private void runMineDeploy(Special special) {
   special.fire = false;
-  for (Checkpoint checkpoint : TE.checkpoints) {
+  for (var checkpoint : TE.checkpoints) {
    if (U.distance(V, checkpoint) < 500) {
     special.fire = true;
     break;
@@ -694,8 +692,8 @@ public class AI {
  }
 
  private void runForcefieldStrike(Special special) {
-  for (Vehicle vehicle : I.vehicles) {
-   if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) <= special.diameter + vehicle.collisionRadius) {//<-Don't skimp on bounds--Lightning Rod wouldn't fire at MarcoPolo bus, for example
+  for (var vehicle : I.vehicles) {
+   if (!I.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) <= special.diameter + vehicle.collisionRadius) {//<-Don't skimp on bounds--Lightning Rod wouldn't fire at MarcoPolo bus, for example
     special.fire = true;
     break;
    }
@@ -749,8 +747,8 @@ public class AI {
   if (I.vehiclesInMatch > 2) {//<-Otherwise there's no teammate to pass to, obviously
    V.passBonus = false;
    double yourDamage = V.getDamage(true);
-   for (Vehicle otherV : I.vehicles) {
-    if (!U.sameVehicle(otherV, V) && U.sameTeam(V, otherV) && !otherV.destroyed && U.distance(V, otherV) < V.collisionRadius + otherV.collisionRadius &&
+   for (var otherV : I.vehicles) {
+    if (!I.sameVehicle(otherV, V) && I.sameTeam(V, otherV) && !otherV.destroyed && U.distance(V, otherV) < V.collisionRadius + otherV.collisionRadius &&
     otherV.durability > V.durability && V.fragility > otherV.fragility && (yourDamage > otherV.getDamage(true) || V.selfRepair < otherV.selfRepair)) {//<-Trying to guess what's the best reasoning for an AI passing the bonus to another teammate
      V.passBonus = true;
      break;

@@ -1,16 +1,20 @@
 package ve.vehicles.specials;
 
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.*;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.MeshView;
+import javafx.scene.shape.TriangleMesh;
 import ve.effects.Effects;
 import ve.environment.E;
-import ve.environment.FrustumMound;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.instances.I;
 import ve.trackElements.TE;
 import ve.ui.Match;
-import ve.utilities.*;
+import ve.utilities.Images;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
 import ve.vehicles.explosions.Explosion;
@@ -156,7 +160,7 @@ public class Shot extends CoreAdvanced {
      if (U.outOfBounds(this, 500)) {
       hit = 1;
      } else {
-      for (FrustumMound FM : TE.mounds) {
+      for (var FM : TE.mounds) {
        if (FM.objectInside(this)) {//fixme--Major lag source if there are lots of active shots and lots of mounds!
         hit = 1;
         break;
@@ -253,8 +257,8 @@ public class Shot extends CoreAdvanced {
   if (S.homing) {
    int shotTarget = I.userPlayerIndex;
    double compareDistance = Double.POSITIVE_INFINITY;
-   for (Vehicle vehicle : I.vehicles) {
-    if (!U.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(this, vehicle) < compareDistance) {
+   for (var vehicle : I.vehicles) {
+    if (!I.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(this, vehicle) < compareDistance) {
      shotTarget = vehicle.index;
      compareDistance = U.distance(this, vehicle);
     }

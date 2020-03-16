@@ -29,9 +29,9 @@ public class Spark extends CoreAdvanced {
   Y = sourceY;
   Z = sourceZ;
   U.setScale(C, sparkSpeed);
-  speedX = .1 * Math.max(-sparkSpeed, Math.min(U.randomPlusMinus(sparkSpeed * 2.), sparkSpeed));
-  speedY = .1 * Math.max(-sparkSpeed, Math.min(U.randomPlusMinus(sparkSpeed * 2.), sparkSpeed));
-  speedZ = .1 * Math.max(-sparkSpeed, Math.min(U.randomPlusMinus(sparkSpeed * 2.), sparkSpeed));
+  speedX = .5 * U.randomPlusMinus(sparkSpeed);
+  speedY = .5 * U.randomPlusMinus(sparkSpeed);
+  speedZ = .5 * U.randomPlusMinus(sparkSpeed);
   stage = Double.MIN_VALUE;
  }
 
@@ -43,9 +43,9 @@ public class Spark extends CoreAdvanced {
    } else {
     boolean show = false;
     if (gamePlay) {
-     X += speedX;
-     Y += speedY;
-     Z += speedZ;
+     X += speedX * U.tick;
+     Y += speedY * U.tick;
+     Z += speedZ * U.tick;
     }
     if (U.render(this, false, true)) {
      U.setTranslate(C, this);

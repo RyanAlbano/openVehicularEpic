@@ -8,7 +8,10 @@ import javafx.scene.shape.TriangleMesh;
 import ve.effects.GroundBurst;
 import ve.environment.E;
 import ve.ui.UI;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.Images;
+import ve.utilities.Nodes;
+import ve.utilities.U;
 import ve.utilities.sound.Sound;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
@@ -90,7 +93,7 @@ public enum Lightning {
     Z = Camera.C.Z + U.randomPlusMinus(200000.);
     strikeStage = 0;
    }
-   for (GroundBurst burst : groundBursts) {
+   for (var burst : groundBursts) {
     burst.run();
    }
   }

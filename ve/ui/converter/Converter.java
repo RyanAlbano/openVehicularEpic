@@ -1,12 +1,17 @@
 package ve.ui.converter;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-
 import javafx.scene.paint.Color;
 import ve.utilities.D;
 import ve.utilities.U;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 class Converter {
 
@@ -14,7 +19,7 @@ class Converter {
  static final String /*.*/obj = ".obj", triangulationError = ".OBJ must be fully Triangulated";
 
  static void saveFile(File file, CharSequence content) {
-  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(MainFrame.convertedFileFolder + File.separator + file.getName().replace(obj, ""))))) {
+  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(MainFrame.convertedFileFolder + File.separator + file.getName().replace(obj, "")), U.standardChars))) {
    bufferedWriter.write(content.toString());
   } catch (IOException e) {
    e.printStackTrace();
@@ -29,21 +34,21 @@ class Converter {
   List<Vector3<Double>> vertices = new ArrayList<>();
   List<double[]> faces = new ArrayList<>();
   boolean hasMaterial = true;
-  try (BufferedReader reader = new BufferedReader(new FileReader(file.getAbsolutePath().replace(obj, ".mtl")))) {
+  try (BufferedReader reader = new BufferedReader(new FileReader(file.getAbsolutePath().replace(obj, ".mtl"), U.standardChars))) {
    for (String line; (line = reader.readLine()) != null; ) {
     String[] split = line.split(" ");
     if (split[0].startsWith("newmtl")) {
      materialName.add(split[1]);
     } else if (split[0].startsWith("Kd")) {
-     materialColor.add(new Color(Double.parseDouble(split[1]), Double.parseDouble(split[2]), Double.parseDouble(split[3]), 1.));
+     materialColor.add(U.getColor(Double.parseDouble(split[1]), Double.parseDouble(split[2]), Double.parseDouble(split[3]), 1.));
     }
    }
   } catch (IOException e) {
    hasMaterial = false;
   }
-  try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file))) {
+  try (BufferedReader BR = new BufferedReader(new FileReader(file, U.standardChars))) {
    int materialIndex = 0;
-   for (String S; (S = bufferedReader.readLine()) != null; ) {
+   for (String S; (S = BR.readLine()) != null; ) {
     if (S.startsWith("v ")) {
      gettingVertices = true;
      vertices.add(new Vector3(valueOBJ(S, 0), valueOBJ(S, 1), valueOBJ(S, 2)));
@@ -79,7 +84,7 @@ class Converter {
    SB.append(s2);
   }
   File newFile = new File(MainFrame.convertedFileFolder + File.separator + file.getName().replace(obj, ""));
-  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(newFile))) {
+  try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(newFile, U.standardChars))) {
    bufferedWriter.write(SB.toString());
   } catch (IOException e) {
    e.printStackTrace(System.err);
@@ -90,7 +95,7 @@ class Converter {
  private static StringBuilder optimize(File file) {
   StringBuilder SB = new StringBuilder();
   String lastColor = "";
-  try (BufferedReader BR = new BufferedReader(new FileReader(file))) {
+  try (BufferedReader BR = new BufferedReader(new FileReader(file, U.standardChars))) {
    for (String s; (s = BR.readLine()) != null; ) {
     if (s.startsWith("(")) {
      SB.append(s).append(U.lineSeparator);

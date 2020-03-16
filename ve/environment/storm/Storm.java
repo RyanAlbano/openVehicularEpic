@@ -4,7 +4,10 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.Sphere;
 import ve.effects.GroundBurst;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.utilities.sound.Sound;
 
 public enum Storm {

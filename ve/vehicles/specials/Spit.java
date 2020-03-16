@@ -1,7 +1,9 @@
 package ve.vehicles.specials;
 
-import javafx.scene.paint.*;
-import javafx.scene.shape.*;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.MeshView;
+import javafx.scene.shape.TriangleMesh;
 import ve.effects.Effects;
 import ve.instances.Core;
 import ve.utilities.Nodes;

@@ -25,7 +25,7 @@ public enum Star {
  }
 
  public static void run() {
-  for (Instance star : instances) {
+  for (var star : instances) {
    star.run();
   }
  }

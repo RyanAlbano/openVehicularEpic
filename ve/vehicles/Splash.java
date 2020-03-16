@@ -20,7 +20,7 @@ public class Splash extends CoreAdvanced {
   C = new Cylinder(1, 1);
   U.setMaterialSecurely(C, new PhongMaterial());
   if (Pool.type == Pool.Type.lava) {
-   ((PhongMaterial) C.getMaterial()).setSelfIlluminationMap(Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
+   ((PhongMaterial) C.getMaterial()).setSelfIlluminationMap(Phong.getSelfIllumination(E.lavaSelfIllumination));
   }
   Nodes.add(C);
   C.setVisible(false);

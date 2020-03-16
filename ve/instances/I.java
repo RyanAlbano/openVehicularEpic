@@ -1,13 +1,5 @@
 package ve.instances;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
-
 import javafx.scene.paint.Color;
 import ve.ui.Maps;
 import ve.ui.Viewer;
@@ -16,11 +8,14 @@ import ve.utilities.Network;
 import ve.utilities.Nodes;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
-import ve.vehicles.VehiclePart;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public enum I {//<-handles Instances
  ;
- public static final int maxPlayers = (int) Math.round(Math.max(Network.maxPlayers, Runtime.getRuntime().maxMemory() * .00000001125));
+ public static final int maxPlayers = (int) Math.round(Math.max(Network.maxPlayers, U.maxMemory * .00000001125));
  public static List<String> vehicleModels;
  public static final List<Vehicle> vehicles = new ArrayList<>(maxPlayers);
  public static int vehiclePerspective;
@@ -86,7 +81,7 @@ public enum I {//<-handles Instances
   vehicles.clear();
   vehicles.add(new Vehicle(v, 0, false, show));
   vehicles.get(0).lightBrightness = Maps.defaultVehicleLightBrightness;
-  for (VehiclePart part : vehicles.get(0).parts) {
+  for (var part : vehicles.get(0).parts) {
    Nodes.add(part.MV);
    part.MV.setVisible(true);
    part.setDrawMode(Viewer.Vehicle.showWireframe);
@@ -95,11 +90,27 @@ public enum I {//<-handles Instances
 
  public static void removeVehicleModel() {
   if (!vehicles.isEmpty() && vehicles.get(0) != null) {
-   for (VehiclePart part : vehicles.get(0).parts) {
+   for (var part : vehicles.get(0).parts) {
     Nodes.remove(part.MV);
     Nodes.removePointLight(part.pointLight);
    }
   }
+ }
+
+ public static boolean sameVehicle(Vehicle V1, Vehicle V2) {
+  return V1.index == V2.index;
+ }
+
+ public static boolean sameTeam(Vehicle V1, Vehicle V2) {
+  return sameTeam(V1.index, V2.index);
+ }
+
+ public static boolean sameTeam(long index1, long index2) {
+  return index1 < halfThePlayers() == index2 < halfThePlayers();
+ }
+
+ public static double halfThePlayers() {
+  return vehiclesInMatch >> 1;
  }
 
  public static void resetWhoIsIn() {

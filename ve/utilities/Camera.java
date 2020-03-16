@@ -143,7 +143,7 @@ public enum Camera {//*No need to extend core--a Core for calling location is de
     while (Math.abs(playerV.X - C.X) > 10000) C.X += playerV.X > C.X ? 20000 : -20000;
     while (Math.abs(playerV.Z - C.Z) > 10000) C.Z += playerV.Z > C.Z ? 20000 : -20000;
     while (Math.abs(playerV.Y - C.Y) > 10000) C.Y += playerV.Y > C.Y ? 20000 : -20000;
-    C.Y = Math.min(C.Y, Ground.level - playerV.collisionRadius + (Pool.exists && U.distanceXZ(Pool.core) < Pool.C[0].getRadius() ? Pool.depth : 0));
+    C.Y = Math.min(C.Y, Ground.level - playerV.collisionRadius + (Pool.exists && U.distanceXZ(Pool.core) < Pool.surface.getRadius() ? Pool.depth : 0));
    }
    double vehicleCameraDistanceX = playerV.X - C.X, vehicleCameraDistanceZ = playerV.Z - C.Z, vehicleCameraDistanceY = playerV.Y - C.Y;
    XZ = -((90 + (vehicleCameraDistanceX >= 0 ? 180 : 0)) + U.arcTan(vehicleCameraDistanceZ / vehicleCameraDistanceX));
@@ -237,7 +237,7 @@ public enum Camera {//*No need to extend core--a Core for calling location is de
  private static void runShake() {
   if (shake) {
    double shakeXZ = 0, shakeYZ = 0;
-   for (Vehicle vehicle : I.vehicles) {
+   for (var vehicle : I.vehicles) {
     if (vehicle.cameraShake > 0) {
      double distance = Math.max(1, U.distance(vehicle) * .1);
      shakeXZ += U.randomPlusMinus(vehicle.cameraShake * vehicle.cameraShake) / distance;

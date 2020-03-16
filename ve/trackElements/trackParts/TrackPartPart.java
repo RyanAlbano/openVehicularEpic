@@ -2,8 +2,10 @@ package ve.trackElements.trackParts;
 
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.*;
-import javafx.scene.transform.*;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.DrawMode;
+import javafx.scene.shape.MeshView;
+import javafx.scene.transform.Rotate;
 import ve.effects.Effects;
 import ve.environment.E;
 import ve.environment.Terrain;
@@ -13,7 +15,12 @@ import ve.trackElements.TE;
 import ve.ui.Maps;
 import ve.ui.UI;
 import ve.ui.options.Options;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.D;
+import ve.utilities.Images;
+import ve.utilities.Matrix4x3;
+import ve.utilities.Phong;
+import ve.utilities.U;
 
 public class TrackPartPart extends InstancePart {
 

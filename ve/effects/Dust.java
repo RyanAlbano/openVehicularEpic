@@ -2,13 +2,15 @@ package ve.effects;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
-import ve.environment.*;
+import ve.environment.Boulder;
+import ve.environment.Ground;
+import ve.environment.Wind;
 import ve.instances.CoreAdvanced;
 import ve.utilities.Nodes;
 import ve.utilities.Phong;
 import ve.utilities.D;
 import ve.utilities.U;
-import ve.vehicles.*;
+import ve.vehicles.Vehicle;
 
 public class Dust extends CoreAdvanced {
 

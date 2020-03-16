@@ -1,8 +1,10 @@
 package ve.vehicles;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
-import ve.effects.*;
+import ve.effects.Spark;
 import ve.instances.CoreAdvanced;
 import ve.utilities.U;
 
@@ -38,7 +40,7 @@ public /*Must be public, or fails in Tsunami!*/class Wheel extends CoreAdvanced 
    sparkZ = rotateZ[0] + V.Z;
   }
   double sparkSpeed = V.P.getNetSpeed();
-  for (Spark spark : sparks) {
+  for (var spark : sparks) {
    if (U.random() < .25) {
     spark.deploy(sparkX, sparkY, sparkZ, sparkSpeed);
    }

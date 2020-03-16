@@ -1,13 +1,19 @@
 package ve.trackElements.trackParts;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
-import javafx.scene.paint.*;
-import javafx.scene.shape.*;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.Cylinder;
+import javafx.scene.shape.Sphere;
 import ve.environment.Tornado;
-import ve.instances.*;
+import ve.instances.CoreAdvanced;
 import ve.ui.Maps;
-import ve.utilities.*;
+import ve.utilities.Images;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 
 public enum RepairPoint {
  ;
@@ -69,7 +75,7 @@ public enum RepairPoint {
   }
 
   private void runShocks(double depth) {
-   for (Cylinder shock : shocks) {
+   for (var shock : shocks) {
     if (depth > -absoluteRadius) {
      U.randomRotate(shock);
      U.setTranslate(shock, this);
@@ -83,8 +89,8 @@ public enum RepairPoint {
 
  public static void notifyDuplicates() {
   if (!Tornado.movesRepairPoints) {
-   for (Instance sourceRepair : instances) {
-    for (Instance targetRepair : instances) {
+   for (var sourceRepair : instances) {
+    for (var targetRepair : instances) {
      if (sourceRepair != targetRepair && sourceRepair.X == targetRepair.X && sourceRepair.Y == targetRepair.Y && sourceRepair.Z == targetRepair.Z) {
       System.out.println("DUPLICATE repair singularities detected! (" + Maps.name + ")");
      }

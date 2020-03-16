@@ -8,7 +8,12 @@ import javafx.scene.shape.TriangleMesh;
 import ve.effects.Effects;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.D;
+import ve.utilities.Images;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.utilities.sound.FireAndForget;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Physics;
@@ -152,7 +157,7 @@ public enum Volcano {
    if (!rocks.isEmpty()) {//<-If active volcano
     if (eruptionStage > 0) {
      long rocksLanded = 0;
-     for (Rock rock : rocks) {
+     for (var rock : rocks) {
       if (rock.groundHit) {
        rock.Y = -U.random(46000.);
        rocksLanded++;
@@ -172,14 +177,14 @@ public enum Volcano {
      }
      eruptionStage = rocksLanded >= rocks.size() ? 0 : eruptionStage + U.tick;
     } else if (updateIfMatchBegan) {
-     for (Rock rock : rocks) {
+     for (var rock : rocks) {
       rock.deploy();
      }
      eruptionStage = 1;
      setCameraShake();
      sound.play(Math.sqrt(U.distance(Camera.C.X, C.X, Camera.C.Y, -height, Camera.C.Z, C.Z)) * Sounds.standardGain(Sounds.gainMultiples.volcano));
     }
-    for (Rock rock : rocks) {
+    for (var rock : rocks) {
      rock.run();
     }
     cameraShake -= cameraShake > 0 ? U.tick : 0;
@@ -209,7 +214,7 @@ public enum Volcano {
  }
 
  public static void rockVehicleInteract(Vehicle V) {
-  for (Rock rock : rocks) {
+  for (var rock : rocks) {
    double vehicleVolcanoRockDistance = U.distance(V, rock);
    if (vehicleVolcanoRockDistance < (V.collisionRadius + rock.S.getRadius()) * 1.5) {
     V.addDamage(V.durability * .5 + (vehicleVolcanoRockDistance < V.collisionRadius + rock.S.getRadius() ? V.durability : 0));

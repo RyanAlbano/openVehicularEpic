@@ -9,7 +9,8 @@ import ve.utilities.sound.Sound;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Special {
 
@@ -220,12 +221,12 @@ public class Special {
     shots.add(new Shot(V, this));
    }
    if (!type.name().contains(Type.blaster.name()) && type != Type.raygun && type != Type.forcefield && type != Type.mine && type != Type.thewrath) {
-    for (Port port : ports) {
+    for (var port : ports) {
      port.spit = new Spit(this, port);
     }
    }
    if (smokeyWeapon) {
-    for (Port port : ports) {
+    for (var port : ports) {
      port.addSmokes(this);
     }
    }
@@ -270,19 +271,19 @@ public class Special {
     }
    }
    if (!V.destroyed && type == Type.flamethrower) {
-    for (Port port : ports) {
+    for (var port : ports) {
      port.spit.deploy(V_sinXY, V_cosXY);
     }
    }
-   for (Shot shot : shots) {
+   for (var shot : shots) {
     shot.runLogic(gamePlay);
    }
-   for (Port port : ports) {
+   for (var port : ports) {
     if (port.spit != null) {
      port.spit.runLogic(gamePlay, V_sinXZ, V_cosXZ, V_sinYZ, V_cosYZ, V_sinXY, V_cosXY);
     }
     if (port.smokes != null) {
-     for (PortSmoke smoke : port.smokes) {
+     for (var smoke : port.smokes) {
       smoke.runLogic();
      }
     }
@@ -291,7 +292,7 @@ public class Special {
  }
 
  private void fire(double V_sinXZ, double V_cosXZ, double V_sinYZ, double V_cosYZ, double V_sinXY, double V_cosXY) {
-  for (Port port : ports) {
+  for (var port : ports) {
    shots.get(currentShot).deploy(port, V_sinXZ, V_cosXZ, V_sinYZ, V_cosYZ, V_sinXY, V_cosXY);
    currentShot = ++currentShot >= Shot.defaultQuantity ? 0 : currentShot;
    if (port.spit != null) {

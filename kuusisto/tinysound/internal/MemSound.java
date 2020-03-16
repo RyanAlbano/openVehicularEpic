@@ -142,7 +142,7 @@ public class MemSound implements Sound {
    * @param soundID ID of the MemSound for which this is a reference
    */
   MemSoundReference(byte[] left, byte[] right, double volume,
-                           double pan, int soundID) {
+                    double pan, int soundID) {
    this.left = left;
    this.right = right;
    this.volume = (volume >= 0.0) ? volume : 1.0;

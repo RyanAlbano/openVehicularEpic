@@ -1,13 +1,20 @@
 package ve.environment;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
 import ve.effects.Effects;
 import ve.instances.CoreAdvanced;
 import ve.ui.Match;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.D;
+import ve.utilities.Images;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.utilities.sound.Controlled;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
@@ -27,13 +34,13 @@ public enum Meteor {
  }
 
  static void run(boolean update) {
-  for (Instance instance : instances) {
+  for (var instance : instances) {
    instance.run(update);
   }
  }
 
  public static void vehicleInteract(Vehicle V) {
-  for (Instance meteor : instances) {
+  for (var meteor : instances) {
    Instance.Part MP = meteor.parts.get(0);
    double vehicleMeteorDistance = U.distance(V, MP);
    if (vehicleMeteorDistance < (V.collisionRadius + MP.S.getRadius()) * 4) {
@@ -78,7 +85,7 @@ public enum Meteor {
    speedX = U.random() < .5 ? speedsXZ : -speedsXZ;
    speedsXZ -= globalSpeed * 2;
    speedZ = U.random() < .5 ? speedsXZ : -speedsXZ;
-   for (Part meteorPart : parts) {
+   for (var meteorPart : parts) {
     meteorPart.rotation[0] = U.randomPlusMinus(45.);
     meteorPart.rotation[1] = U.randomPlusMinus(45.);
    }
@@ -106,7 +113,7 @@ public enum Meteor {
    for (int n = parts.size(); --n > 0; ) {
     parts.get(n).onFire = parts.get(n - 1).onFire;
    }
-   for (Part meteorPart : parts) {
+   for (var meteorPart : parts) {
     meteorPart.run();
    }
    if (!Match.muteSound && update) {

@@ -3,17 +3,14 @@ package ve.ui;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
 import ve.environment.E;
-import ve.environment.FrustumMound;
 import ve.environment.Ground;
 import ve.environment.Sun;
 import ve.instances.I;
 import ve.trackElements.Bonus;
 import ve.trackElements.TE;
 import ve.trackElements.trackParts.RepairPoint;
-import ve.trackElements.trackParts.TrackPart;
 import ve.utilities.*;
 import ve.utilities.sound.Sounds;
-import ve.vehicles.VehiclePart;
 
 public enum Viewer {
  ;
@@ -138,7 +135,7 @@ public enum Viewer {
      }
     } else if (UI.selected == 2) {
      showWireframe = !showWireframe;
-     for (VehiclePart part : I.vehicles.get(0).parts) {
+     for (var part : I.vehicles.get(0).parts) {
       part.setDrawMode(showWireframe);
      }
     } else if (UI.selected == 3) {
@@ -162,7 +159,7 @@ public enum Viewer {
     I.userRandomRGB = U.getColor(U.random(), U.random(), U.random());
     I.addVehicleModel(VS.chosen[0], true);
    }
-   UI.gameFPS = Double.POSITIVE_INFINITY;
+   UI.gameFPS = 60;//<-Needed to prevent insane adjustment levels. U.tick not sufficient since exact adjust-gradients (e.g. '10') are desired
    E.renderType = E.RenderType.fullDistance;
   }
  }
@@ -192,13 +189,13 @@ public enum Viewer {
    U.setTranslate(E.mapViewerLight, Camera.C.X, Camera.C.Y, Camera.C.Z);
   }
   E.run(gamePlay);
-  for (TrackPart trackPart : TE.trackParts) {
+  for (var trackPart : TE.trackParts) {
    trackPart.runGraphics(false);
   }
-  for (RepairPoint.Instance repairPoint : RepairPoint.instances) {
+  for (var repairPoint : RepairPoint.instances) {
    repairPoint.run();
   }
-  for (FrustumMound mound : TE.mounds) {
+  for (var mound : TE.mounds) {
    mound.runGraphics();
   }
   U.fillRGB(0, 0, 0, UI.colorOpacity.minimal);
@@ -235,7 +232,7 @@ public enum Viewer {
    UI.sound.play(1, 0);
   }
   Bonus.run();
-  UI.gameFPS = Double.POSITIVE_INFINITY;
+  UI.gameFPS = 60;//<-Needed to prevent insane adjustment levels. U.tick not sufficient since exact adjust-gradients (e.g. '10') are desired
   E.renderType = E.RenderType.fullDistance;
  }
 }

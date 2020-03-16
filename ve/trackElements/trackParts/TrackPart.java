@@ -1,11 +1,10 @@
 package ve.trackElements.trackParts;
 
-import java.io.*;
-import java.util.*;
-
-import javafx.scene.paint.*;
-import javafx.scene.shape.*;
-import javafx.scene.transform.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.Sphere;
+import javafx.scene.transform.Rotate;
 import ve.environment.E;
 import ve.environment.Ground;
 import ve.environment.Terrain;
@@ -14,6 +13,13 @@ import ve.instances.InstancePart;
 import ve.trackElements.TE;
 import ve.ui.UI;
 import ve.utilities.*;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 public class TrackPart extends Instance {
  public final Collection<TrackPartPart> parts = new ArrayList<>();
@@ -258,7 +264,7 @@ public class TrackPart extends Instance {
     boundsX = boundsZ;
     boundsZ = storeBoundsX;
    }
-   for (TrackPartPart part : parts) {
+   for (var part : parts) {
     if (!Double.isNaN(part.fastCull)) {
      if (XZ > 45 && XZ < 135) {
       part.fastCull = --part.fastCull < -1 ? 2 : part.fastCull;
@@ -287,7 +293,7 @@ public class TrackPart extends Instance {
     U.setMaterialSecurely(foliageSphere, PM);
     Nodes.add(foliageSphere);
    }
-   for (TrackPlane trackPlane : trackPlanes) {
+   for (var trackPlane : trackPlanes) {
     if (Math.abs(XZ) > 135) {
      trackPlane.YZ *= -1;
      trackPlane.XY *= -1;
@@ -411,7 +417,7 @@ public class TrackPart extends Instance {
 
  public void runGraphics(boolean renderALL) {
   if (rainbow) {
-   for (TrackPartPart part : parts) {
+   for (var part : parts) {
     U.setTranslate(part.MV, Camera.C.X + X, Camera.C.Y + Y, Camera.C.Z + Z);
     part.MV.setVisible(true);
    }
@@ -426,11 +432,11 @@ public class TrackPart extends Instance {
     }
     double distanceToCameraTimesFOV = U.distance(this) * Camera.FOV;
     if (vehicleModel) {
-     for (TrackPartPart part : parts) {
+     for (var part : parts) {
       part.runAsVehiclePart(distanceToCameraTimesFOV, renderALL);
      }
     } else {
-     for (TrackPartPart part : parts) {
+     for (var part : parts) {
       part.runAsTrackPart(distanceToCameraTimesFOV, renderALL);
      }
     }
@@ -443,12 +449,12 @@ public class TrackPart extends Instance {
    if (foliageSphere != null) {
     foliageSphere.setVisible(showFoliageSphere);
    }
-   for (TrackPartPart part : parts) {
+   for (var part : parts) {
     part.MV.setVisible(part.visible);
     part.visible = false;
    }
    if (roadRocks != null) {
-    for (RoadRock rock : roadRocks) {
+    for (var rock : roadRocks) {
      rock.run();
     }
    }

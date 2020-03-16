@@ -1,11 +1,8 @@
 package ve.ui;
 
+import javafx.animation.AnimationTimer;
 import javafx.application.Application;
-import javafx.scene.Cursor;
-import javafx.scene.Group;
-import javafx.scene.Scene;
-import javafx.scene.SceneAntialiasing;
-import javafx.scene.SubScene;
+import javafx.scene.*;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
@@ -14,32 +11,43 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import kuusisto.tinysound.TinySound;
-import ve.environment.*;
+import ve.environment.E;
+import ve.environment.Pool;
+import ve.environment.Sun;
 import ve.instances.I;
 import ve.trackElements.Arrow;
+import ve.trackElements.Bonus;
 import ve.trackElements.TE;
+import ve.trackElements.trackParts.RepairPoint;
+import ve.ui.options.GraphicsOptions;
 import ve.ui.options.Options;
+import ve.ui.options.SoundOptions;
 import ve.ui.options.Units;
+import ve.utilities.Camera;
 import ve.utilities.*;
 import ve.utilities.sound.FireAndForget;
 import ve.utilities.sound.Sounds;
+import ve.vehicles.Physics;
+import ve.vehicles.explosions.MaxNukeBlast;
+import ve.vehicles.specials.Special;
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class UI/*UserInterface*/ extends Application {
 
  public static Scene scene;
  public static SubScene scene3D;
  public static final Group group = new Group();
- static Canvas canvas;
+ private static Canvas canvas;
  public static GraphicsContext GC;
  public static double width, height;
  public static double errorTimer;
  public static double gameFPS = Double.POSITIVE_INFINITY;
  public static long userFPS = U.refreshRate;
  private static String initialization = "Loading V.E.";
- static String error = "";
+ private static String error = "";
  public static final String[] playerNames = new String[I.maxPlayers];
  public static Status status = Status.mainMenu;
  static Status lastStatus;
@@ -53,8 +61,8 @@ public class UI/*UserInterface*/ extends Application {
  }
 
  public static long selected;
- static double selectionWait;
- static double selectionTimer;
+ private static double selectionWait;
+ private static double selectionTimer;
  public static long page;
  public static final double selectionHeight = .03;
  public static final double clickRangeY = selectionHeight * .5;
@@ -130,8 +138,372 @@ public class UI/*UserInterface*/ extends Application {
   primaryStage.show();//<-Don't call before this level!
   Nodes.reset();
   Nodes.addPointLight(Sun.light);
-  new GameLoop(primaryStage).start();
+  new AnimationTimer() {
+   public void handle(long now) {
+    try {
+     int n;
+     GC.clearRect(0, 0, width, height);
+     E.GC.clearRect(0, 0, width, height);
+     E.renderLevel = U.clamp(10000, E.renderLevel * (U.FPS < 30 ? .75 : 1.05), 40000);
+     if (U.goodFPS(true)) {//<-Better devices don't need to cut back on rendering
+      E.renderLevel = Double.POSITIVE_INFINITY;
+     }
+     Camera.FOV = Math.min(Camera.FOV * Camera.adjustFOV, 170);
+     Camera.FOV = Camera.restoreZoom[0] && Camera.restoreZoom[1] ? Camera.defaultFOV : Camera.FOV;
+     Camera.PC.setFieldOfView(Camera.FOV);
+     if (I.userPlayerIndex < I.vehicles.size() && I.vehicles.get(I.userPlayerIndex) != null) {
+      I.vehicles.get(I.userPlayerIndex).lightBrightness = U.clamp(I.vehicles.get(I.userPlayerIndex).lightBrightness + Match.vehicleLightBrightnessChange);
+     }
+     E.lightsAdded = 0;//<-Must come before any lights get added, obviously
+     if (Mouse.click) {
+      Mouse.mouse = Keys.left = Keys.right = Keys.enter = false;
+     }
+     boolean gamePlay = status == UI.Status.play || status == UI.Status.replay,//<-All 'gamePlay' calls in the entire project are determined by this!
+     renderALL = E.renderType == E.RenderType.ALL;
+     if (Mouse.mouse && (!gamePlay || !Match.started)) {
+      if (Mouse.X < .375) {
+       Keys.left = true;
+      } else if (Mouse.X > .625) {
+       Keys.right = true;
+      } else {
+       Keys.enter = Mouse.click = true;
+      }
+      Mouse.click = status != UI.Status.vehicleSelect && status != UI.Status.mapJump && !status.name().contains("options") || Mouse.click;
+     }
+     selectionTimer += U.tick;
+     if (width != primaryStage.getWidth() || height != primaryStage.getHeight()) {
+      width = primaryStage.getWidth();
+      height = primaryStage.getHeight();
+      scene3D.setWidth(width);
+      scene3D.setHeight(height);
+      Arrow.scene.setWidth(width);
+      Arrow.scene.setHeight(height);
+      canvas.setWidth(width);
+      canvas.setHeight(height);
+      E.canvas.setWidth(width);
+      E.canvas.setHeight(height);
+     }
+     if (gamePlay || status == UI.Status.paused || status == UI.Status.optionsMatch) {
+      for (var vehicle : I.vehicles) {//*These are SPLIT so that energy towers can empower specials before the affected vehicles fire, and to make shots render correctly
+       for (var special : vehicle.specials) {
+        if (special.type == Special.Type.energy) {
+         special.EB.run(gamePlay);//*
+        }
+       }
+      }
+      //Energization before runMiscellaneous() is called
+      for (var vehicle : I.vehicles) {
+       vehicle.runMiscellaneous(gamePlay);
+      }
+      if (Match.started) {
+       if (gamePlay && Match.cursorDriving) {
+        Mouse.steerX = 100 * (.5 - Mouse.X);
+        Mouse.steerY = 100 * (Mouse.Y - .5);
+        if (I.vehicles.get(I.userPlayerIndex).P.mode != Physics.Mode.fly && !I.vehicles.get(I.userPlayerIndex).isFixed()) {
+         if (Mouse.Y < .5) {
+          Keys.down = false;
+          Keys.up = true;
+         } else if (Mouse.Y > .75) {
+          Keys.up = false;
+          Keys.down = true;
+         } else {
+          Keys.up = Keys.down = false;
+         }
+        }
+        Keys.space = Mouse.mouse;
+       }
+       if (Network.mode != Network.Mode.OFF) {
+        Network.matchDataOut();
+       }
+       if (gamePlay) {
+        for (var vehicle : I.vehicles) {
+         vehicle.getPlayerInput();
+         vehicle.P.run();
+        }
+        for (n = I.vehiclesInMatch; --n >= 0; ) {
+         Recorder.vehicles.get(n).recordVehicle(I.vehicles.get(n));
+        }
+       }
+       for (var vehicle : I.vehicles) {
+        for (var explosion : vehicle.explosions) {
+         explosion.run(gamePlay);
+        }
+        double
+        sinXZ = U.sin(vehicle.XZ), cosXZ = U.cos(vehicle.XZ),
+        sinYZ = U.sin(vehicle.YZ), cosYZ = U.cos(vehicle.YZ),
+        sinXY = U.sin(vehicle.XY), cosXY = U.cos(vehicle.XY);
+        for (var special : vehicle.specials) {
+         special.run(gamePlay, sinXZ, cosXZ, sinYZ, cosYZ, sinXY, cosXY);//*
+        }
+       }
+       if (gamePlay) {
+        for (var vehicle : I.vehicles) {
+         vehicle.P.runCollisions();
+        }
+        for (var vehicle : I.vehicles) {
+         if (vehicle.destroyed && vehicle.P.vehicleHit > -1) {
+          Match.scoreKill[vehicle.index < I.halfThePlayers() ? 1 : 0] += status == UI.Status.replay ? 0 : 1;
+          if (vehicle.index != I.userPlayerIndex) {
+           vehicle.AI.target = U.random(I.vehiclesInMatch);//<-Needed!
+          }
+          vehicle.P.vehicleHit = -1;
+         }
+         vehicle.energyMultiple = 1;//<-Reset vehicle energy levels for next frame
+        }
+        if (status == UI.Status.play) {
+         Recorder.recordGeneral();
+         if (Network.mode == Network.Mode.OFF) {
+          for (var vehicle : I.vehicles) {
+           vehicle.AI.run();
+          }
+         }
+        }
+       }
+       Recorder.updateFrame();
+      } else {
+       for (var vehicle : I.vehicles) {
+        vehicle.setTurretY();
+       }
+       Network.preMatchCommunication(gamePlay);
+       Match.cursorDriving = false;
+       if (Network.waiting) {
+        U.font(.02);
+        U.fillRGB(U.yinYang ? 0 : 1);
+        if (I.vehiclesInMatch < 3) {
+         U.text("..Waiting on " + playerNames[Network.mode == Network.Mode.HOST ? 1 : 0] + "..", .5, .25);
+        } else {
+         U.text("..Waiting for all Players to Start..", .5, .25);
+        }
+        long whoIsReady = 0;
+        for (n = I.vehiclesInMatch; --n >= 0; ) {
+         whoIsReady += Network.ready[n] ? 1 : 0;
+        }
+        if (whoIsReady >= I.vehiclesInMatch) {
+         if (Network.mode == Network.Mode.HOST) {
+          for (n = I.vehiclesInMatch; --n > 0; ) {
+           Network.gamePlay(n);
+          }
+         } else {
+          Network.gamePlay(0);
+         }
+         Match.started = true;
+         Network.waiting = false;
+        }
+       } else if (Keys.space) {
+        sound.play(1, 0);
+        Camera.view = Camera.lastView;
+        if (Network.mode == Network.Mode.OFF) {
+         Match.started = true;
+        } else {
+         Network.ready[I.userPlayerIndex] = Network.waiting = true;
+         if (Network.mode == Network.Mode.HOST) {
+          for (var PW : Network.out) {
+           PW.println(D.Ready + "0");
+           PW.println(D.Ready + "0");
+          }
+         } else {
+          Network.out.get(0).println(D.Ready);
+          Network.out.get(0).println(D.Ready);
+         }
+        }
+        Keys.space = false;
+       }
+       if (!Network.waiting) {
+        U.font(.02);
+        U.fillRGB(U.yinYang ? 0 : 1);
+        if (I.vehicles.get(I.vehiclePerspective).isFixed() && (I.vehiclesInMatch < 2 || I.vehiclePerspective < I.halfThePlayers())) {
+         U.text("Use Arrow Keys and < and > to place your infrastructure, then", .2);
+         if (Keys.up || Keys.down || Keys.left || Keys.right) {
+          movementSpeedMultiple = Math.max(10, movementSpeedMultiple * 1.05);
+          I.vehicles.get(I.vehiclePerspective).Z += Keys.up ? movementSpeedMultiple * U.tick : 0;
+          I.vehicles.get(I.vehiclePerspective).Z -= Keys.down ? movementSpeedMultiple * U.tick : 0;
+          I.vehicles.get(I.vehiclePerspective).X -= Keys.left ? movementSpeedMultiple * U.tick : 0;
+          I.vehicles.get(I.vehiclePerspective).X += Keys.right ? movementSpeedMultiple * U.tick : 0;
+         } else {
+          movementSpeedMultiple = 0;
+         }
+        }
+        U.text("Press SPACE to Begin" + (Tournament.stage > 0 ? " Round " + Tournament.stage : ""), .25);
+       }
+       if (Keys.escape) {
+        escapeToLast(true);
+       }
+      }
+      Recorder.playBack();
+      //RENDERING begins here
+      Camera.run(I.vehicles.get(I.vehiclePerspective), gamePlay);
+      MaxNukeBlast.runLighting();//<-Just after camera is placed, but before any other environmental/vehicular lights get added
+      E.run(gamePlay);
+      for (var vehicle : I.vehicles) {
+       for (var special : vehicle.specials) {
+        for (var shot : special.shots) {
+         shot.runRender();
+        }
+        for (var port : special.ports) {
+         if (port.spit != null) {
+          port.spit.runRender();
+         }
+         if (port.smokes != null) {
+          for (var smoke : port.smokes) {
+           smoke.runRender();
+          }
+         }
+        }
+        if (special.EB != null) {
+         special.EB.renderMesh();
+        }
+       }
+       for (var part : vehicle.parts) {
+        Nodes.removePointLight(part.pointLight);
+       }
+      }
+      if (Maps.defaultVehicleLightBrightness > 0) {
+       for (var vehicle : I.vehicles) {
+        Nodes.removePointLight(vehicle.burnLight);
+       }
+      }
+      if (I.vehiclesInMatch < 2) {
+       I.vehicles.get(I.vehiclePerspective).runRender(gamePlay);
+      } else {
+       int closest = I.vehiclePerspective;
+       double compareDistance = Double.POSITIVE_INFINITY;
+       for (var vehicle : I.vehicles) {
+        if (vehicle.index != I.vehiclePerspective && U.distance(I.vehicles.get(I.vehiclePerspective), vehicle) < compareDistance) {
+         closest = vehicle.index;
+         compareDistance = U.distance(I.vehicles.get(I.vehiclePerspective), vehicle);
+        }
+       }
+       if (I.vehicles.get(I.vehiclePerspective).lightBrightness >= I.vehicles.get(closest).lightBrightness) {
+        I.vehicles.get(I.vehiclePerspective).runRender(gamePlay);
+        I.vehicles.get(closest).runRender(gamePlay);
+       } else {
+        I.vehicles.get(closest).runRender(gamePlay);
+        I.vehicles.get(I.vehiclePerspective).runRender(gamePlay);
+       }
+       for (var vehicle : I.vehicles) {
+        if (vehicle.index != I.vehiclePerspective && vehicle.index != closest) {
+         vehicle.runRender(gamePlay);
+        }
+       }
+      }
+      for (var trackPart : TE.trackParts) {
+       trackPart.runGraphics(renderALL);
+      }
+      for (var repairPoint : RepairPoint.instances) {
+       repairPoint.run();
+      }
+      for (var mound : TE.mounds) {
+       mound.runGraphics();
+      }
+      Bonus.run();
+      Match.run(gamePlay);
+      if (Camera.toUserPerspective[0] && Camera.toUserPerspective[1]) {
+       I.vehiclePerspective = I.userPlayerIndex;
+      }
+      gameFPS = Double.POSITIVE_INFINITY;
+      E.renderType = E.RenderType.standard;
+     } else {
+      Pool.runVision();//<-Not called in-match HERE because it would draw over screenFlash
+     }
+     if (status == UI.Status.paused) {
+      runPaused();
+     } else if (status == UI.Status.optionsMatch || status == UI.Status.optionsMenu) {
+      Options.run();
+     } else if (status == UI.Status.optionsGraphics) {
+      GraphicsOptions.run();
+     } else if (status == UI.Status.optionsSound) {
+      SoundOptions.run();
+     } else if (status == UI.Status.vehicleViewer) {
+      Viewer.Vehicle.run(gamePlay);
+     } else if (status == UI.Status.mapViewer) {
+      Viewer.runMapViewer(gamePlay);
+     } else if (status == UI.Status.credits) {
+      Credits.run();
+     } else if (status == UI.Status.mainMenu) {
+      runMainMenu();
+     } else if (status == UI.Status.howToPlay) {
+      HowToPlay.run();
+     } else if (status == UI.Status.vehicleSelect) {
+      VS.run(gamePlay);
+     } else if (status == UI.Status.loadLAN) {
+      runLANMenu();
+     } else if (status == UI.Status.mapError) {
+      Maps.runErrored();
+     } else if (status == UI.Status.mapJump) {
+      Maps.runQuickSelect(gamePlay);
+     } else if (status == UI.Status.mapView) {
+      Maps.runView(gamePlay);
+     } else if (status == UI.Status.mapLoadPass0 || status == UI.Status.mapLoadPass1 || status == UI.Status.mapLoadPass2 || status == UI.Status.mapLoadPass3 || status == UI.Status.mapLoadPass4) {
+      Maps.load();
+      Keys.falsify();
+     }
+     U.yinYang = !U.yinYang;
+     U.timerBase20 = (U.timerBase20 += U.tick) > 20 ? 0 : U.timerBase20;
+     selectionTimer = (selectionTimer > selectionWait ? 0 : selectionTimer) + 5 * U.tick;
+     if (Keys.left || Keys.right || Keys.up || Keys.down || Keys.space || Keys.enter) {
+      if (selectionWait == -1) {
+       selectionWait = 30;
+       selectionTimer = 0;
+      }
+      if (selectionWait > 0) {
+       selectionWait -= U.tick;
+      }
+     } else {
+      selectionWait = -1;
+      selectionTimer = 0;
+     }
+     double targetFPS = Math.min(gameFPS, userFPS), dividedFPS = 1000 / targetFPS,
+     difference = System.currentTimeMillis() - U.FPSTime;
+     if (difference < dividedFPS) {
+      U.zZz(dividedFPS - difference);
+     }
+     U.setFPS();
+     if (Options.showAppInfo) {
+      U.fillRGB(0, 0, 0, UI.colorOpacity.minimal);
+      U.fillRectangle(.25, .9625, .15, .05);
+      U.fillRectangle(.75, .9625, .15, .05);
+      U.fillRGB(1);
+      U.font(.015);
+      U.text("Nodes: " + (group.getChildren().size() + Arrow.group.getChildren().size() + E.lights.getChildren().size()), .25, .965);
+      U.font(.02);
+      U.text(Math.round(U.averageFPS) + " FPS", .75, .965);
+     }
+     long time = System.nanoTime();
+     U.tick = Math.min((time - U.lastTime) * .00000002, 1);//<-todo--start migrating to .00000001 standard? (will be long and brutal)
+     U.tickSeconds = U.tick * .05;//<-Incrementing/decrementing some value by this value per frame should change its value by '1.0' over the course of 1 second
+     U.lastTime = time;
+    } catch (Exception E) {//<-It's for the entire loop--a general exception is probably most surefire
+     try (PrintWriter PW = new PrintWriter(new File("V.E. EXCEPTION"), U.standardChars)) {
+      E.printStackTrace(PW);
+     } catch (IOException ignored) {
+     }
+     E.printStackTrace();
+     handleException();
+    }
+   }
+  }.start();
   boot(primaryStage);
+ }
+
+ private static void handleException() {
+  error = "An Exception Occurred!" + U.lineSeparator + "A File with the exception has been saved to the game folder";
+  status = UI.Status.mainMenu;
+  Tournament.stage = selected = 0;
+  Nodes.reset();
+  Sounds.reset();
+  Keys.falsify();
+  for (int n = VS.chosen.length; --n >= 0; ) {//<-Prevents recursive shutout from Vehicle Select if a bugged vehicle is causing such
+   VS.chosen[n] = U.random(I.vehicleModels.size());
+  }
+  if (Network.mode == Network.Mode.HOST) {
+   for (var PW : Network.out) {
+    PW.println(D.CANCEL);
+    PW.println(D.CANCEL);
+   }
+  } else if (Network.mode == Network.Mode.JOIN) {
+   Network.out.get(0).println(D.CANCEL);
+   Network.out.get(0).println(D.CANCEL);
+  }
  }
 
  private static void boot(Stage stage) {
@@ -231,7 +603,7 @@ public class UI/*UserInterface*/ extends Application {
     TE.Paved.setTexture();
     initialization = loadingTheRest;
     stage.setOnCloseRequest((WindowEvent WE) -> {
-     for (PrintWriter PW : Network.out) {
+     for (var PW : Network.out) {
       PW.println(D.END);
       PW.println(D.END);
       PW.println(D.CANCEL);
@@ -252,7 +624,7 @@ public class UI/*UserInterface*/ extends Application {
   if (Network.mode == Network.Mode.OFF) {
    status = UI.Status.mainMenu;
   } else {
-   for (PrintWriter PW : Network.out) {
+   for (var PW : Network.out) {
     PW.println(D.CANCEL);
     PW.println(D.CANCEL);
    }
@@ -267,7 +639,7 @@ public class UI/*UserInterface*/ extends Application {
   }
  }
 
- static void runMainMenu() {
+ private static void runMainMenu() {
   boolean loaded = initialization.isEmpty();
   scene.setCursor(loaded ? Cursor.CROSSHAIR : Cursor.WAIT);
   if (loaded) {
@@ -387,7 +759,7 @@ public class UI/*UserInterface*/ extends Application {
   gameFPS = U.refreshRate * .5;
  }
 
- static void runPaused() {
+ private static void runPaused() {
   if (selectionReady()) {
    if (Keys.up) {
     selected = --selected < 0 ? 4 : selected;
@@ -448,7 +820,7 @@ public class UI/*UserInterface*/ extends Application {
    } else {
     int n;
     if (Network.mode == Network.Mode.HOST) {
-     for (PrintWriter PW : Network.out) {
+     for (var PW : Network.out) {
       PW.println(D.END);
       PW.println(D.END);
      }
@@ -469,10 +841,10 @@ public class UI/*UserInterface*/ extends Application {
       if (Network.client != null) {
        Network.client.close();
       }
-      for (BufferedReader in : Network.in) {
+      for (var in : Network.in) {
        in.close();
       }
-      for (PrintWriter PW : Network.out) {
+      for (var PW : Network.out) {
        PW.close();
       }
      } catch (IOException e) {
@@ -509,7 +881,7 @@ public class UI/*UserInterface*/ extends Application {
   "END MATCH", .55 + textOffset);
  }
 
- static void runLANMenu() {
+ private static void runLANMenu() {
   U.fillRGB(0, 0, 0, colorOpacity.maximal);
   U.fillRectangle(.5, .5, 1, 1);
   int n;
@@ -517,11 +889,11 @@ public class UI/*UserInterface*/ extends Application {
    Network.mode = Network.Mode.OFF;
    I.vehiclesInMatch = (int) U.clamp(2, I.vehiclesInMatch, Network.maxPlayers);
    try {
-    for (BufferedReader in : Network.in) {
+    for (var in : Network.in) {
      in.close();
     }
     Network.in.clear();
-    for (PrintWriter PW : Network.out) {
+    for (var PW : Network.out) {
      PW.close();
     }
     Network.out.clear();

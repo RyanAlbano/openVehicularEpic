@@ -1,12 +1,15 @@
 package ve.environment;
 
-import javafx.scene.shape.*;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.TriangleMesh;
 import org.fxyz3d.shapes.primitives.FrustumMesh;
 import ve.instances.Core;
 import ve.instances.I;
 import ve.instances.InstancePart;
 import ve.trackElements.TE;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.Nodes;
+import ve.utilities.U;
 
 public class FrustumMound extends Core {//NOTE: Small mounds follow the vehicles around the map--'re-perspectived' vehicles may appear to have sank through these mounds while another vehicle far away had perspective!
  public final boolean wraps;

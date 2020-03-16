@@ -1,14 +1,22 @@
 package ve.trackElements;
 
 import javafx.scene.paint.PhongMaterial;
-import ve.environment.*;
+import ve.environment.E;
+import ve.environment.FrustumMound;
+import ve.environment.MapBounds;
+import ve.environment.Sun;
+import ve.environment.Volcano;
 import ve.instances.Core;
 import ve.instances.I;
 import ve.trackElements.trackParts.RepairPoint;
 import ve.trackElements.trackParts.TrackPart;
-import ve.ui.*;
+import ve.ui.Maps;
+import ve.ui.Match;
 import ve.ui.options.Options;
-import ve.utilities.*;
+import ve.utilities.D;
+import ve.utilities.Images;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Physics;
 import ve.vehicles.Vehicle;
@@ -64,7 +72,7 @@ public enum TE {//TrackElements
   }
  }
 
- public static void addTrackPart(String s, Enum model, double summedPositionX, double summedPositionY, double summedPositionZ, double optionalRotation) {
+ public static void addTrackPart(String s, TE.Models model, double summedPositionX, double summedPositionY, double summedPositionZ, double optionalRotation) {
   double[] X = {summedPositionX};
   double[] Y = {summedPositionY};
   double[] Z = {summedPositionZ};
@@ -133,12 +141,15 @@ public enum TE {//TrackElements
      Z[0] = randomPosition == 2 ? 150000 : Z[0];
     }
    } else if (Maps.name.equals("the Machine is Out of Control")) {
-    boolean inside = true;//todo--should use force existing void if possible
+    boolean inside = true;
     while (inside) {
      inside = Math.abs(X[0]) < 30000 && Math.abs(Z[0]) < 30000;
-     for (TrackPart trackPart : trackParts) {
-      inside = U.equals(trackPart.modelName, Models.pyramid.name(), Models.cube.name(), Models.ramptriangle.name()) &&
-      Math.abs(X[0] - trackPart.X) <= trackPart.renderRadius && Math.abs(Z[0] - trackPart.Z) <= trackPart.renderRadius || inside;
+     for (var trackPart : trackParts) {
+      if (U.equals(trackPart.modelName, Models.pyramid.name(), Models.cube.name(), Models.ramptriangle.name()) &&
+      Math.abs(X[0] - trackPart.X) <= trackPart.renderRadius && Math.abs(Z[0] - trackPart.Z) <= trackPart.renderRadius) {
+       inside = true;
+       break;
+      }
      }
      if (inside) {
       X[0] = U.getValue(s, 1) + U.randomPlusMinus(randomX);
@@ -217,7 +228,7 @@ public enum TE {//TrackElements
   while (inside) {
    inside = false;
    if (targets != null) {
-    for (TrackPart trackPart : trackParts) {
+    for (var trackPart : trackParts) {
      if (U.contains(trackPart.modelName, targets) &&
      Math.abs(Y[0] - trackPart.Y) <= trackPart.boundsY * tolerance &&
      Math.abs(X[0] - trackPart.X) <= trackPart.boundsX * tolerance &&
@@ -235,7 +246,7 @@ public enum TE {//TrackElements
   }
  }
 
- public static int getTrackPartIndex(String s) {
+ public static int getTrackPartIndex(String s) {//<-Could probably be chucked
   try {
    return Models.valueOf(s).ordinal();
   } catch (IllegalArgumentException E) {
@@ -253,7 +264,7 @@ public enum TE {//TrackElements
   V.Z = U.random(Math.min(50000., MapBounds.forward)) + U.random(Math.max(-50000., MapBounds.backward));
   V.XZ = !V.isFixed()/*<-Fixed units face forward for less confusing placement*/ && Maps.randomVehicleStartAngle ? U.randomPlusMinus(180.) : 0;
   if (Maps.name.equals("Vicious Versus V3") && I.vehiclesInMatch > 1) {
-   boolean green = V.index < I.vehiclesInMatch >> 1;
+   boolean green = V.index < I.halfThePlayers();
    if (green) {
     V.Z = -10000;
     V.XZ = 0;
@@ -395,9 +406,9 @@ public enum TE {//TrackElements
       Sounds.checkpoint.play(0);
      }
     }
-    Match.scoreCheckpoint[V.index < I.vehiclesInMatch >> 1 ? 0 : 1] += replay ? 0 : 1;
+    Match.scoreCheckpoint[V.index < I.halfThePlayers() ? 0 : 1] += replay ? 0 : 1;
     if (V.checkpointsPassed >= checkpoints.size()) {
-     Match.scoreLap[V.index < I.vehiclesInMatch >> 1 ? 0 : 1] += replay ? 0 : 1;
+     Match.scoreLap[V.index < I.halfThePlayers() ? 0 : 1] += replay ? 0 : 1;
      V.checkpointsPassed = V.point = 0;
     }
    }
@@ -414,9 +425,9 @@ public enum TE {//TrackElements
       Sounds.checkpoint.play(0);
      }
     }
-    Match.scoreCheckpoint[V.index < I.vehiclesInMatch >> 1 ? 0 : 1] += replay ? 0 : 1;
+    Match.scoreCheckpoint[V.index < I.halfThePlayers() ? 0 : 1] += replay ? 0 : 1;
     if (V.checkpointsPassed >= checkpoints.size()) {
-     Match.scoreLap[V.index < I.vehiclesInMatch >> 1 ? 0 : 1] += replay ? 0 : 1;
+     Match.scoreLap[V.index < I.halfThePlayers() ? 0 : 1] += replay ? 0 : 1;
      V.checkpointsPassed = V.point = 0;
     }
    }
@@ -431,7 +442,7 @@ public enum TE {//TrackElements
 
  public static void runVehicleRepairPointInteraction(Vehicle V, boolean gamePlay) {
   if (V.repairSpheres.get(U.random(V.repairSpheres.size())).stage <= 0 && !V.phantomEngaged) {
-   for (RepairPoint.Instance part : RepairPoint.instances) {
+   for (var part : RepairPoint.instances) {
     if (Physics.advancedCollisionCheck(V, part, part.absoluteRadius)) {
      V.repair(gamePlay);
     }

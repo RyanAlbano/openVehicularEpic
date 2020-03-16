@@ -2,7 +2,7 @@ package ve.vehicles.specials;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
-import ve.environment.*;
+import ve.environment.Wind;
 import ve.instances.CoreAdvanced;
 import ve.utilities.Phong;
 import ve.utilities.U;

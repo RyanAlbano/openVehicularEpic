@@ -3,7 +3,11 @@ package ve.environment;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import ve.utilities.*;
+import ve.utilities.D;
+import ve.utilities.Images;
+import ve.utilities.Phong;
+import ve.utilities.Texture;
+import ve.utilities.U;
 
 public enum Terrain {
  ;

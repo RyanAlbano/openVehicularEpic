@@ -3,7 +3,13 @@ package ve.utilities.sound;
 import kuusisto.tinysound.TinySound;
 import ve.effects.Echo;
 
-import javax.sound.sampled.*;
+import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.FloatControl;
+import javax.sound.sampled.Line;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;

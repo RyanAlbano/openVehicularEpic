@@ -9,7 +9,6 @@ import ve.instances.I;
 import ve.trackElements.Bonus;
 import ve.ui.UI;
 import ve.utilities.D;
-import ve.vehicles.Vehicle;
 
 public enum Sounds {
  ;
@@ -42,7 +41,7 @@ public enum Sounds {
  public static FireAndForget nuke;
  public static FireAndForget nukeMax;
  //
- public static final int maxSoftwareBasedLayeredEngines = 3;//<-3 is ideal--idle, max reverse rev, max forward rev
+ public static final int maxSoftwareBasedLayeredEngines = 9;//<-9 still allows 'standard' 9-tone harmonic engines to sound correctly
 
  public static void loadSoftwareBasedGlobals() {
   if (softwareBased) {
@@ -77,7 +76,7 @@ public enum Sounds {
    TinySound.mixer.clearMusic();
    TinySound.mixer.clearSounds();
   }
-  for (Vehicle vehicle : I.vehicles) {
+  for (var vehicle : I.vehicles) {
    if (vehicle != null) {//<-This is likely needed--there's a brief period on map-load where null 'placeholder' Vehicles are added to the list. A crash there would cause a nullPointer here as well
     vehicle.VA.close();
    }
@@ -85,13 +84,13 @@ public enum Sounds {
   Rain.closeSound();
   Tornado.closeSound();
   Tsunami.closeSound();
-  for (Fire.Instance fire : Fire.instances) {
+  for (var fire : Fire.instances) {
    fire.closeSound();
   }
-  for (Boulder.Instance boulder : Boulder.instances) {
+  for (var boulder : Boulder.instances) {
    boulder.closeSound();
   }
-  for (Meteor.Instance meteor : Meteor.instances) {
+  for (var meteor : Meteor.instances) {
    meteor.closeSound();
   }
   Lightning.closeSound();

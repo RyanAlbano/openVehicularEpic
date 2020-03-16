@@ -2,8 +2,11 @@ package ve.ui.options;
 
 import kuusisto.tinysound.TinySound;
 import ve.instances.I;
-import ve.ui.*;
-import ve.utilities.*;
+import ve.ui.Keys;
+import ve.ui.Mouse;
+import ve.ui.Tournament;
+import ve.ui.UI;
+import ve.utilities.U;
 import ve.utilities.sound.Sounds;
 
 public enum SoundOptions {

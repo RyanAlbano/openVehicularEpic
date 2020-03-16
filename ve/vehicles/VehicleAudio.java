@@ -5,7 +5,9 @@ import ve.environment.Tsunami;
 import ve.instances.I;
 import ve.ui.Match;
 import ve.ui.Mouse;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.D;
+import ve.utilities.U;
 import ve.utilities.sound.FireAndForget;
 import ve.utilities.sound.Controlled;
 import ve.utilities.sound.Sound;
@@ -35,13 +37,13 @@ public class VehicleAudio {
 
  enum EngineTuning {equalTemperament, harmonicSeries}
 
- //*Keep here so we can make sure everything's being closed at a glance
+ //*Must be a general 'Sound' class
  Controlled burn;
- Sound land;//<-Must be a general Sound class
+ Sound land;//*
  FireAndForget repair;
  private Controlled grind;
  private Controlled boost;
- Sound gate;
+ Sound gate;//*
  Controlled turret;
  private Controlled splash;
  private Controlled splashOverSurface;
@@ -71,8 +73,8 @@ public class VehicleAudio {
  FireAndForget nuke, nukeMax;//<-Keeping these split, because it's easier
 
  //Keep order identical between declarations and 'close()'!
- public void close() {//*
-  for (Special special : V.specials) {
+ public void close() {
+  for (var special : V.specials) {
    if (special.sound != null) {
     special.sound.close();
    }
@@ -220,11 +222,11 @@ public class VehicleAudio {
     splashOverSurface = new Controlled("splashOver");
     splashing = 0;
    }
-   gate = new Controlled("gateSpeed");
+   gate = new Sound("gateSpeed");
    gate.addClip("gateSlow");
   }
   boolean loadHitExplosive = false, loadMineExplosion = false;
-  for (Special special : V.specials) {
+  for (var special : V.specials) {
    loadHitExplosive = special.type.name().contains(Special.Type.shell.name()) || special.type == Special.Type.missile || special.type == Special.Type.bomb || special.type == Special.Type.mine || V.explosionType.name().startsWith(Vehicle.ExplosionType.nuclear.name()) || loadHitExplosive;
    loadMineExplosion = special.type == Special.Type.mine || loadMineExplosion;
   }
@@ -310,7 +312,7 @@ public class VehicleAudio {
      if (driveGet || reverseGet || V.P.mode == Physics.Mode.fly) {
       n =
       driveGet && !(V.P.flipped() && V.P.mode.name().startsWith(D.drive)) && V.P.mode != Physics.Mode.fly &&
-      U.containsEnum(V.engine, Vehicle.Engine.prop, Vehicle.Engine.jet, Vehicle.Engine.turbine, Vehicle.Engine.rocket) ?
+      U.contains(V.engine, Vehicle.Engine.prop, Vehicle.Engine.jet, Vehicle.Engine.turbine, Vehicle.Engine.rocket) ?
       engineClipQuantity - 1 :
       Math.max((int) (engineClipQuantity * (Math.abs(V.P.speed) / V.topSpeeds[1])), V.floats ? 0 : 1);
       engineDiscord = grind != null && V.P.mode == Physics.Mode.driveSolid && V.P.againstWall();//<-Ignoring drivePool, since engine probably wouldn't 'grind' in it
@@ -419,7 +421,7 @@ public class VehicleAudio {
    }
   }
   if (Match.muteSound || !V.isIntegral() || !gamePlay) {
-   for (Special special : V.specials) {
+   for (var special : V.specials) {
     if (special.type == Special.Type.phantom) {
      special.sound.stop();
     }

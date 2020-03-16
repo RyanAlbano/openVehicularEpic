@@ -2,7 +2,7 @@ package ve.effects;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
-import ve.environment.*;
+import ve.environment.Ground;
 import ve.instances.CoreAdvanced;
 import ve.utilities.Nodes;
 import ve.utilities.Phong;

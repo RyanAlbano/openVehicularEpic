@@ -144,6 +144,6 @@ enum Credits {
   U.font(.03);
   U.text(UI._LAST, .1, .75);
   U.text(UI.NEXT_, .9, .75);
-  UI.gameFPS = Double.POSITIVE_INFINITY;
+  UI.gameFPS = U.refreshRate;
  }
 }

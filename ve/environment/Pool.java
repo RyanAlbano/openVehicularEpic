@@ -1,10 +1,16 @@
 package ve.environment;
 
-import javafx.scene.paint.*;
-import javafx.scene.shape.*;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.Cylinder;
 import ve.instances.Core;
 import ve.ui.Maps;
-import ve.utilities.*;
+import ve.utilities.Camera;
+import ve.utilities.D;
+import ve.utilities.Images;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 
 public enum Pool {
  ;
@@ -12,16 +18,14 @@ public enum Pool {
  public static boolean exists;
  static final PhongMaterial PM = new PhongMaterial();
  public static double depth;
- public static final Cylinder[] C = new Cylinder[2];
+ public static final Cylinder basin = new Cylinder(), surface = new Cylinder();
  public static Type type;
 
  static {
-  C[0] = new Cylinder();
-  C[1] = new Cylinder();
-  C[0].setHeight(0);
-  U.setMaterialSecurely(C[0], PM);
-  U.setMaterialSecurely(C[1], PM);
-  C[1].setCullFace(CullFace.FRONT);
+  surface.setHeight(0);
+  U.setMaterialSecurely(surface, PM);
+  U.setMaterialSecurely(basin, PM);
+  basin.setCullFace(CullFace.FRONT);
  }
 
  public enum Type {water, lava, acid}
@@ -30,16 +34,16 @@ public enum Pool {
   if (s.startsWith("pool(")) {
    core.X = U.getValue(s, 0);
    core.Z = U.getValue(s, 1);
-   C[0].setRadius(U.getValue(s, 2));
-   C[1].setRadius(U.getValue(s, 2));
+   surface.setRadius(U.getValue(s, 2));
+   basin.setRadius(U.getValue(s, 2));
    depth = U.getValue(s, 3);
-   C[1].setHeight(depth);
-   Nodes.add(C[0], C[1]);
+   basin.setHeight(depth);
+   Nodes.add(surface, basin);
    double R = 0, G = .25, B = .75;
    PM.setSelfIlluminationMap(null);
    if (s.contains("lava")) {
     type = Pool.Type.lava;
-    PM.setSelfIlluminationMap(Phong.getSelfIllumination(E.lavaSelfIllumination[0], E.lavaSelfIllumination[1], E.lavaSelfIllumination[2]));
+    PM.setSelfIlluminationMap(Phong.getSelfIllumination(E.lavaSelfIllumination));
    } else if (s.contains("acid")) {
     type = Pool.Type.acid;
     R = B = .25;
@@ -53,7 +57,7 @@ public enum Pool {
  }
 
  public static void runVision() {
-  if (exists && Camera.C.Y > 0 && Camera.C.Y <= depth && U.distanceXZ(core) < C[0].getRadius()) {
+  if (exists && Camera.C.Y > 0 && Camera.C.Y <= depth && U.distanceXZ(core) < surface.getRadius()) {
    if (type == Pool.Type.lava) {
     U.fillRGB(E.GC, 1, .5 + U.random(.25), 0, .75);
    } else if (type == Pool.Type.acid) {

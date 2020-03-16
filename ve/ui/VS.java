@@ -9,8 +9,6 @@ import ve.utilities.*;
 import ve.vehicles.Vehicle;
 import ve.vehicles.specials.Special;
 
-import java.io.PrintWriter;
-
 public enum VS {//VehicleSelect
  ;
  public static int index;
@@ -30,7 +28,7 @@ public enum VS {//VehicleSelect
    }
    if (Network.mode == Network.Mode.HOST) {
     if (U.timerBase20 <= 0) {
-     for (PrintWriter PW : Network.out) {
+     for (var PW : Network.out) {
       PW.println(D.Vehicle + "0" + "(" + I.vehicles.get(0).name);
      }
     }
@@ -41,7 +39,7 @@ public enum VS {//VehicleSelect
      } else if (s.startsWith(D.Vehicle + "(")) {
       chosen[n] = I.getVehicleIndex(U.getString(s, 0));
       if (I.vehiclesInMatch > 2) {
-       for (PrintWriter out : Network.out) {
+       for (var out : Network.out) {
         out.println(D.Vehicle + n + "(" + U.getString(s, 0));
        }
       }
@@ -111,7 +109,7 @@ public enum VS {//VehicleSelect
    }
    U.font(.0125);
    if (I.vehiclesInMatch > 2) {
-    if (index < I.vehiclesInMatch >> 1) {
+    if (index < I.halfThePlayers()) {
      U.fillRGB(0, 1, 0);
      U.text(Network.mode == Network.Mode.OFF ? "(GREEN TEAM)" : "You're on the GREEN TEAM", .1);
     } else {
@@ -256,7 +254,7 @@ public enum VS {//VehicleSelect
    if (V.type != Vehicle.Type.turret) {
     U.textR("Top Speed:", lineLL, Y1);
     boolean hasWrath = false;
-    for (Special special : V.specials) {
+    for (var special : V.specials) {
      if (special.type == Special.Type.thewrath) {
       hasWrath = true;
       break;
@@ -282,7 +280,7 @@ public enum VS {//VehicleSelect
   if (!V.specials.isEmpty()) {
    U.textR("Special(s):", lineLL, Y5);
    StringBuilder specials = new StringBuilder();
-   for (Special special : V.specials) {
+   for (var special : V.specials) {
     specials.append(special.type.name()).append(", ");
     hasForceField = special.type == Special.Type.forcefield || hasForceField;
    }

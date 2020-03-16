@@ -26,35 +26,16 @@
  */
 package kuusisto.tinysound;
 
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import kuusisto.tinysound.internal.Mixer;
+import kuusisto.tinysound.internal.*;
+import ve.utilities.U;
+import ve.utilities.sound.Sounds;
+
+import javax.sound.sampled.*;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Objects;
-
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.SourceDataLine;
-import javax.sound.sampled.UnsupportedAudioFileException;
-
-import kuusisto.tinysound.internal.ByteList;
-import kuusisto.tinysound.internal.MemMusic;
-import kuusisto.tinysound.internal.MemSound;
-import kuusisto.tinysound.internal.Mixer;
-import kuusisto.tinysound.internal.StreamInfo;
-import kuusisto.tinysound.internal.StreamMusic;
-import kuusisto.tinysound.internal.StreamSound;
-import kuusisto.tinysound.internal.UpdateRunner;
-import ve.utilities.U;
-import ve.utilities.sound.Sounds;
 
 /**
  * TinySound is the main class of the TinySound system.  In order to use the
@@ -557,17 +538,12 @@ public enum TinySound {
   */
  private static byte[] readAllBytesOneChannel(AudioInputStream stream) {
   //read all the bytes (assuming 1-channel)
-  byte[] data = null;
-  try {
+  byte[] data;
+  try (stream) {
    data = getBytes(stream);
   } catch (IOException e) {
    System.err.println(errorReadingAllBytes);
    return null;
-  } finally {
-   try {
-    stream.close();
-   } catch (IOException ignored) {
-   }
   }
   return data;
  }
@@ -581,7 +557,7 @@ public enum TinySound {
  private static byte[][] readAllBytesTwoChannel(AudioInputStream stream) {
   //read all the bytes (assuming 16-bit, 2-channel)
   byte[][] data;
-  try {
+  try (stream) {
    byte[] allBytes = getBytes(stream);
    byte[] left = new byte[allBytes.length / 2];
    byte[] right = new byte[allBytes.length / 2];
@@ -598,11 +574,6 @@ public enum TinySound {
   } catch (IOException e) {
    System.err.println(errorReadingAllBytes);
    return null;
-  } finally {
-   try {
-    stream.close();
-   } catch (IOException ignored) {
-   }
   }
   return data;
  }
@@ -694,7 +665,7 @@ public enum TinySound {
  private static AudioInputStream convertMono8Bit(AudioInputStream stream) {
   //assuming 8-bit, 1-channel to 16-bit, 1-channel
   byte[] newData;
-  try {
+  try (stream) {
    byte[] data = getBytes(stream);
    int newNumBytes = data.length << 1;
    //check if size overflowed
@@ -721,11 +692,6 @@ public enum TinySound {
   } catch (IOException e) {
    System.err.println(errorReadingAllBytes);
    return null;
-  } finally {
-   try {
-    stream.close();
-   } catch (IOException ignored) {
-   }
   }
   AudioFormat mono16 = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
   44100, 16, 1, 2, 44100, false);
@@ -743,7 +709,7 @@ public enum TinySound {
  private static AudioInputStream convertStereo8Bit(AudioInputStream stream) {
   //assuming 8-bit, 2-channel to 16-bit, 2-channel
   byte[] newData;
-  try {
+  try (stream) {
    byte[] data = getBytes(stream);
    int newNumBytes = data.length * 2 * 2;
    //check if size overflowed
@@ -781,11 +747,6 @@ public enum TinySound {
   } catch (IOException e) {
    System.err.println(errorReadingAllBytes);
    return null;
-  } finally {
-   try {
-    stream.close();
-   } catch (IOException ignored) {
-   }
   }
   AudioFormat stereo16 = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
   44100, 16, 2, 4, 44100, false);

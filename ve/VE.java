@@ -26,12 +26,12 @@ enum VE {
  ;
 
  public static void main(String[] s) {
-  System.setProperty("sun.java2d.opengl", "true");//<-Is this even necessary?
-  System.setProperty("javafx.animation.fullspeed", "true");//<-Capping the FPS manually seems to actually do a better job than the AnimationTimer at 75Hz--this also lets the user max out the FPS, which is great
+  String trueString = "true";
+  System.setProperty("sun.java2d.opengl", trueString);//<-Is this even necessary?
+  System.setProperty("javafx.animation.fullspeed", trueString);//<-Capping the FPS manually seems to actually do a better job than the AnimationTimer at 75Hz--this also lets the user max out the FPS, which is great
   //Properties must be set BEFORE this point!
   UI.run(s);
  }
  //FIXME--Mini Cooper and the Love of God model files can fail to load on Linux?
- //TODO--Bring 'var' back and update everything to Java 13--PointLights are verified to work--we'll probably never need Java 8 again
  //DON'T FORGET TO UPDATE THE .JAR!
 }

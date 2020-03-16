@@ -1,10 +1,13 @@
 package ve.vehicles.explosions;
 
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
 
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.MeshView;
+import javafx.scene.shape.TriangleMesh;
 import ve.effects.Effects;
 import ve.instances.Core;
 import ve.instances.I;
@@ -12,7 +15,7 @@ import ve.ui.Match;
 import ve.utilities.Nodes;
 import ve.utilities.Phong;
 import ve.utilities.U;
-import ve.vehicles.*;
+import ve.vehicles.Vehicle;
 
 public class Explosion extends Core {
 
@@ -67,7 +70,7 @@ public class Explosion extends Core {
   for (int n = I.vehiclesInMatch; --n >= 0; ) {
    doneDamaging[n] = false;
   }
-  for (ExplosionPart explosionPart : explosionParts) {
+  for (var explosionPart : explosionParts) {
    explosionPart.deploy();
   }
  }
@@ -97,7 +100,7 @@ public class Explosion extends Core {
     }
    }
   }
-  for (ExplosionPart explosionPart : explosionParts) {
+  for (var explosionPart : explosionParts) {
    explosionPart.run(gamePlay);
   }
  }

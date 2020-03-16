@@ -10,7 +10,10 @@ import ve.instances.CoreAdvanced;
 import ve.instances.I;
 import ve.ui.Match;
 import ve.ui.UI;
-import ve.utilities.*;
+import ve.utilities.Images;
+import ve.utilities.Nodes;
+import ve.utilities.Phong;
+import ve.utilities.U;
 import ve.utilities.sound.Controlled;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
@@ -19,7 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 public class MaxNukeBlast extends Core {//fixme--there's still a slight delay in the sphere/blast placement, but this is probably only due to the logic being run in runMiscellaneous()
- private static final PointLight[] light = new PointLight[2];//<-todo--List is probably cleaner than array
+ private static final PointLight[] light = new PointLight[2];//<-Just keep array for now
  public static int whoIsLit;
  private final Vehicle V;
  private final Sphere sphere;
@@ -57,7 +60,7 @@ public class MaxNukeBlast extends Core {//fixme--there's still a slight delay in
   X = V.X;
   Y = V.Y;
   Z = V.Z;
-  for (BlastPart part : parts) {
+  for (var part : parts) {
    part.X = X;
    part.Y = Y;
    part.Z = Z;
@@ -87,7 +90,7 @@ public class MaxNukeBlast extends Core {//fixme--there's still a slight delay in
    travel.stop();
   }
   ((PhongMaterial) sphere.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
-  for (BlastPart part : parts) {
+  for (var part : parts) {
    part.runLogic(gamePlay, speed);
   }
  }
@@ -100,15 +103,15 @@ public class MaxNukeBlast extends Core {//fixme--there's still a slight delay in
    sphere.setVisible(false);
   }
   ((PhongMaterial) sphere.getMaterial()).setSelfIlluminationMap(Effects.fireLight());
-  for (BlastPart part : parts) {
+  for (var part : parts) {
    part.runRender();
   }
  }
 
  public void runHitOthers(boolean greenTeam) {
   boolean replay = UI.status == UI.Status.replay;
-  for (Vehicle vehicle : I.vehicles) {
-   if (!U.sameTeam(V, vehicle) && !othersBlasted[vehicle.index] && !vehicle.reviveImmortality && U.distance(V.MNB, vehicle) < V.MNB.sphereSize + vehicle.collisionRadius && !vehicle.phantomEngaged) {
+  for (var vehicle : I.vehicles) {
+   if (!I.sameTeam(V, vehicle) && !othersBlasted[vehicle.index] && !vehicle.reviveImmortality && U.distance(V.MNB, vehicle) < V.MNB.sphereSize + vehicle.collisionRadius && !vehicle.phantomEngaged) {
     V.P.hitCheck(vehicle);
     vehicle.setDamage(vehicle.damageCeiling());
     Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : vehicle.durability;
