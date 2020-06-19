@@ -1,7 +1,7 @@
 package ve.utilities;
 
 /**
- * A dictionary which holds all duplicate String literals for the project, as well as duplicate map names. Don't EVER change the texts!
+ * A dictionary which holds all duplicate String literals for the project, as well as duplicate map names.
  */
 public enum D {
  ;

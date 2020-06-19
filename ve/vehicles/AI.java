@@ -119,7 +119,9 @@ public class AI {
    }
    if (driveTrackBackwards && !V.hasShooting) {
     aimAheadTarget += U.random() < .05 ? U.randomPlusMinus(10.) : 0;
-    aimAheadTarget = aimAheadTarget < 0 || aimAheadTarget > 10 ? U.random(10.) : aimAheadTarget;
+    if (aimAheadTarget < 0 || aimAheadTarget > 10) {
+     aimAheadTarget = U.random(10.);
+    }
    }
    shooting = false;
    for (var special : V.specials) {//<-'shooting' gets engaged within block
@@ -176,6 +178,7 @@ public class AI {
     double nX = hasSize ? TE.points.get(point).X : 0, nZ = hasSize ? TE.points.get(point).Z : 0;
     directionXZ = (nX - V.X >= 0 ? 270 : 90) + U.arcTan((nZ - V.Z) / (nX - V.X));
    }
+   runSetAmphibious();
    while (Math.abs(V.XZ - directionXZ) > 180) {
     directionXZ += directionXZ < V.XZ ? 360 : -360;
    }
@@ -739,6 +742,20 @@ public class AI {
      V.reverse2 = false;
      V.drive2 = true;
     }
+   }
+  }
+ }
+
+ private void runSetAmphibious() {
+  if (V.amphibious != null) {
+   if (engagingOthers) {
+    V.amphibious =
+    V.Y > I.vehicles.get(target).Y ? Vehicle.Amphibious.ON :
+    Vehicle.Amphibious.OFF;
+   } else if (!TE.checkpoints.isEmpty()) {
+    V.amphibious =
+    V.Y > TE.checkpoints.get(V.checkpointsPassed).Y ? Vehicle.Amphibious.ON :
+    Vehicle.Amphibious.OFF;
    }
   }
  }

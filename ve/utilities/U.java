@@ -463,6 +463,10 @@ public enum U {//Low-level utilities, such as math functions
   return (useAverage ? averageFPS : FPS) > 59;//<-'59' allows reaching 'true' on standard 60-Hz devices
  }
 
+ public static double timesTick(double in, double times) {//todo--Implement void wherever possible
+  return in + (in * times * tick);
+ }
+
  /*public static void cache(Node N) {
   N.setCache(true);
   N.setCacheHint(CacheHint.QUALITY);

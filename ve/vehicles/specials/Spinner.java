@@ -34,7 +34,10 @@ public class Spinner {
     }
     if (runSpinner) {
      double speedChange = U.tick * .005 * V.energyMultiple;
-     speed += speed > 0 ? speedChange : speed < 0 ? -speedChange : (U.random() < .5 ? -1 : 1) * Double.MIN_VALUE;
+     speed +=
+     speed > 0 ? speedChange :
+     speed < 0 ? -speedChange :
+     ((U.random() < .5 ? -1 : 1) * Double.MIN_VALUE);
     }
    }
   }
@@ -49,7 +52,7 @@ public class Spinner {
    }
   }
   if (gamePlay) {
-   speed -= speed * .002 * U.tick;
+   speed = U.timesTick(speed, -.002);
    if (spinSound >= 0) {
     V.VA.spinner.loop(spinSound, V.VA.distanceVehicleToCamera);
    }

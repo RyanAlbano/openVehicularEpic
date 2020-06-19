@@ -57,7 +57,7 @@ import java.util.Objects;
 public enum Maps {
  ;
  public static int map;
- public static final List<String> maps = new ArrayList<>(Arrays.asList(D.basic, "lapsGlory", D.checkpoint, "gunpowder", "underOver", D.antigravity, "versus1", "versus2", "versus3", "trackless", "desert", "3DRace", "trip", "raceNowhere", "moonlight", "bottleneck", "railing", "twisted", "deathPit", "falls", "pyramid", "combustion", "darkDivide", "arctic", "scenicRoute", "winterMode", "mountainHop", "damage", "crystalCavern", "southPole", "aerialControl", "matrix", "mist", "vansLand", "dustDevil", "forest", "columns", "zipCross", "highlands", "coldFury", D.tornado, "volcanic", D.tsunami, D.boulder, "sands", D.meteor, "speedway", "endurance", "tunnel", "circle", "circleXL", "circles", "everything", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "lastStand", "parkingLot", "city", "machine", "military", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "space3", "summit", "portal", "blackHole", "doomsday", "+UserMap & TUTORIAL+"));
+ public static final List<String> maps = new ArrayList<>(Arrays.asList(D.basic, "lapsGlory", D.checkpoint, "gunpowder", "underOver", D.antigravity, "versus1", "versus2", "versus3", "trackless", "desert", "3DRace", "trip", "raceNowhere", "moonlight", "bottleneck", "railing", "twisted", "deathPit", "falls", "pyramid", "combustion", "darkDivide", "arctic", "scenicRoute", "winterMode", "mountainHop", "damage", "crystalCavern", "southPole", "aerialControl", "matrix", "mist", "vansLand", "dustDevil", "forest", "columns", "zipCross", "highlands", "coldFury", D.tornado, "volcanic", D.tsunami, D.boulder, "sands", D.meteor, "speedway", "submersion", "endurance", "tunnel", "circle", "circleXL", "circles", "everything", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "lastStand", "parkingLot", "city", "machine", "military", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "space3", "summit", "portal", "blackHole", "doomsday", "+UserMap & TUTORIAL+"));
  public static String name = "";
  public static boolean randomVehicleStartAngle, guardCheckpointAI;
  public static double defaultVehicleLightBrightness;
@@ -144,8 +144,7 @@ public enum Maps {
       for (n = 0; n < U.getValue(s, 0); n++) {
        TE.trackParts.add(
        U.random() < .5 ?
-       new TrackPart(TE.Models.tree0.name(), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0, 1 + Math.sqrt(U.random(16.)), TE.instanceScale)
-       :
+       new TrackPart(TE.Models.tree0.name(), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0, 1 + Math.sqrt(U.random(16.)), TE.instanceScale) :
        new TrackPart(U.random() < .5 ? TE.Models.tree1.name() : TE.Models.tree2.name(), U.randomPlusMinus(TE.wrapDistance), 0, U.randomPlusMinus(TE.wrapDistance), 0));
       }
      } else if (s.startsWith("palmTrees(")) {

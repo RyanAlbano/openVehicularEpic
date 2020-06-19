@@ -189,7 +189,9 @@ public enum E {//<-Static game-environment content
         core.Y = trackY - trackPlane.radiusY;
        } else if (trackPlane.wall == TrackPlane.Wall.none) {
         if (trackPlane.YZ == 0 && trackPlane.XY == 0) {
-         core.Y = Math.min(core.Y, trackY);
+         if (trackPlane.radiusY > 0) {//<-So that turrets are not lifted to ceilings!
+          core.Y = Math.min(core.Y, trackY);
+         }
         } else {
          if (trackPlane.YZ != 0) {
           core.Y = Math.min(trackY + (core.Z - trackZ) * (trackPlane.radiusY / trackPlane.radiusZ) * (trackPlane.YZ > 0 ? 1 : trackPlane.YZ < 0 ? -1 : 0), core.Y);

@@ -808,7 +808,7 @@ public class Vehicle extends Instance {
  public void setTurretY() {
   if (isFixed()) {
    Y = 0;
-   if (!U.equals(Maps.name, D.Maps.everybodyEverything, D.Maps.devilsStairwell)) {
+   if (!U.equals(Maps.name, D.Maps.everybodyEverything)) {
     E.setTerrainSit(this, true);
    }
    Y -= turretBaseY;

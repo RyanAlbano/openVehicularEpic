@@ -1267,7 +1267,7 @@ public class Physics {
     speed -= speed * .01 * U.tick;
    }
    if (V.destroyed) {
-    speed *= .9;//<-fixme--make tick based
+    speed = U.timesTick(speed, -.1);
     if (Math.abs(speed) < 2 * U.tick) {
      speed = 0;
     } else {
@@ -1277,7 +1277,7 @@ public class Physics {
   }
   speed = U.clamp(-V.topSpeeds[2], speed, V.topSpeeds[2]);
   if (againstWall() && V.highGrip()) {
-   speed -= speed * .25 * U.tick;
+   speed = U.timesTick(speed, -.25);
   }
   if (V.drag != 0) {
    if (Math.abs(speed) < V.drag * U.tick) {
@@ -1321,15 +1321,25 @@ public class Physics {
       V.XY += V.XY < 180 - U.tick ? U.tick : 0;//*
      }
     }
-    double centerOut = mode == Mode.drivePool ? .9375 : .25;
+    boolean drivePool = mode == Mode.drivePool;
+    double centerOut = drivePool ? -.0625 : .25;//<-The variable is really being used in 2 different ways depending on the mode--somewhat confusing
     if (Math.abs(V.XY) <= 90) {
-     V.XY *= centerOut;
+     if (drivePool) {
+      V.XY = U.timesTick(V.XY, centerOut);
+     } else {
+      V.XY *= centerOut;//*
+     }
     }
+    //*The centering of the vehicle is a hardcoded multiple when hitting the ground, but is tick-based for the pool
     if (!moundHugPrevent()) {
      if (Math.abs(V.YZ) <= 90) {
       V.YZ -= V.YZ > 0 ? U.tick : 0;//*
       V.YZ += V.YZ < 0 ? U.tick : 0;//*
-      V.YZ *= centerOut;
+      if (drivePool) {
+       V.YZ = U.timesTick(V.YZ, centerOut);
+      } else {
+       V.YZ *= centerOut;//*
+      }
      } else {
       V.YZ += (V.YZ > 90 && V.YZ < 180 - U.tick ? 1 : V.YZ < -90 && V.YZ > -180 + U.tick ? -1 : 0) * U.tick;
      }

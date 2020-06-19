@@ -17,7 +17,7 @@ import ve.vehicles.Vehicle;
 import java.util.ArrayList;
 import java.util.List;
 
-public enum Tornado {
+public enum Tornado {//todo--tornado's location should be recorded for replays
  ;
  public static boolean movesRepairPoints;
  private static double maxTravelDistance;

@@ -263,6 +263,7 @@ public enum TE {//TrackElements
   V.X = U.random(Math.min(50000., MapBounds.right)) + U.random(Math.max(-50000., MapBounds.left));
   V.Z = U.random(Math.min(50000., MapBounds.forward)) + U.random(Math.max(-50000., MapBounds.backward));
   V.XZ = !V.isFixed()/*<-Fixed units face forward for less confusing placement*/ && Maps.randomVehicleStartAngle ? U.randomPlusMinus(180.) : 0;
+  boolean regularPlacement = !V.isFixed() && !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name());
   if (Maps.name.equals("Vicious Versus V3") && I.vehiclesInMatch > 1) {
    boolean green = V.index < I.halfThePlayers();
    if (green) {
@@ -302,15 +303,20 @@ public enum TE {//TrackElements
   } else if (Maps.name.equals(D.Maps.XYLand)) {
    V.X = V.isFixed() ? V.X : U.random(23000.) - U.random(25000.);
   } else if (Maps.name.equals(D.Maps.matrix2x3)) {
-   if (!V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.isFixed()) {
+   if (regularPlacement) {
     V.X = U.randomPlusMinus(14000.);
     V.Z = -U.random(31000.);
    }
   } else if (Maps.name.equals("Cold Fury")) {
    V.Y = -4000;
+  } else if (Maps.name.equals("the Test of Submersion")) {
+   if (regularPlacement) {
+    V.X = 0;
+    V.Z = U.randomPlusMinus(20000.);
+   }
   } else if (Maps.name.equals(D.Maps.tunnelOfDoom)) {
-   if (!V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.isFixed()) {
-    V.X = 0;//<-Zero is best--train was beached against walls at match start
+   if (regularPlacement) {
+    V.X = 0;//<-Zero is best--train was 'beached' against walls at match start
     V.Z = U.random(6000.) - U.random(10000.);
    }
   } else if (Maps.name.equals(D.Maps.everybodyEverything)) {
@@ -341,7 +347,7 @@ public enum TE {//TrackElements
     V.X = U.random() < .5 ? 2000 : -2000;
    }
   } else if (Maps.name.equals(D.Maps.summitOfEpic)) {
-   V.X = !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.isFixed() ? 0 : V.X;
+   V.X = regularPlacement ? 0 : V.X;
    boolean random = U.random() < .5;
    V.XZ = random ? 180 : 0;
    V.Z = random ? 1050000 : -1050000;
