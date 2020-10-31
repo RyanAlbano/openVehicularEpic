@@ -1,23 +1,17 @@
 package ve.environment;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
 import ve.effects.Effects;
 import ve.instances.CoreAdvanced;
-import ve.ui.Match;
-import ve.utilities.Camera;
-import ve.utilities.D;
-import ve.utilities.Images;
-import ve.utilities.Nodes;
-import ve.utilities.Phong;
-import ve.utilities.U;
+import ve.utilities.*;
 import ve.utilities.sound.Controlled;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 public enum Meteor {
  ;
@@ -116,7 +110,7 @@ public enum Meteor {
    for (var meteorPart : parts) {
     meteorPart.run();
    }
-   if (!Match.muteSound && update) {
+   if (!Sounds.mute && update) {
     sound.loop(Math.sqrt(U.distance(parts.get(0))) * Sounds.standardGain(1));
    } else {
     sound.stop();

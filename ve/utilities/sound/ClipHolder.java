@@ -39,7 +39,7 @@ class ClipHolder {
     AudioSystem.write(convertedAIS, AudioFileFormat.Type.WAVE, F);
     tinySingle = support == Sound.Support.loop ? null : TinySound.loadSound(F);
     tinyLoop = support == Sound.Support.fireAndForget ? null : TinySound.loadMusic(F);
-    if (Echo.presence > 0) {
+    if (Echo.presence > 0 && Sounds.useEcho) {
      tinySingleEcho = support == Sound.Support.loop ? null : TinySound.loadSound(F);
      if (support != Sound.Support.fireAndForget) {
       tinyLoopEcho = TinySound.loadMusic(F);
@@ -52,7 +52,7 @@ class ClipHolder {
     gain = (FloatControl) sampled.getControl(FloatControl.Type.MASTER_GAIN);
    }
   }
-  if (Echo.presence > 0 && !Sounds.softwareBased) {
+  if (Echo.presence > 0 && Sounds.useEcho && !Sounds.softwareBased) {
    try (AudioInputStream AIS = AudioSystem.getAudioInputStream(new BufferedInputStream(new FileInputStream(new File(sound))))) {
     AudioFormat AF = AIS.getFormat();
     AudioInputStream AIS2 = AudioSystem.getAudioInputStream(

@@ -3,10 +3,10 @@ package ve.ui;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import ve.instances.I;
-import ve.trackElements.Arrow;
 import ve.ui.options.Options;
 import ve.utilities.Camera;
 import ve.utilities.U;
+import ve.utilities.sound.Sounds;
 
 public enum Keys {
  ;
@@ -82,11 +82,6 @@ public enum Keys {
     VS.allSame = !VS.allSame;
    } else if (KC == KeyCode.D) {
     D = true;
-   } else if (KC == KeyCode.C) {
-    Arrow.status =
-    Arrow.status == Arrow.Status.racetrack ? Arrow.Status.vehicles :
-    Arrow.status == Arrow.Status.vehicles ? Arrow.Status.locked :
-    Arrow.Status.racetrack;
    } else if (KC == KeyCode.COMMA) {
     I.vehiclePerspective = --I.vehiclePerspective < 0 ? I.vehiclesInMatch - 1 : I.vehiclePerspective;
     Camera.toUserPerspective[1] = true;
@@ -98,7 +93,7 @@ public enum Keys {
    } else if (KC == KeyCode.H) {
     Options.headsUpDisplay = !Options.headsUpDisplay;
    } else if (KC == KeyCode.L) {
-    DestructionLog.inUse = !DestructionLog.inUse;
+    MatchLog.inUse = !MatchLog.inUse;
    } else if (KC == KeyCode.P) {
     passBonus = true;
    } else if (KC == KeyCode.SHIFT) {
@@ -108,7 +103,7 @@ public enum Keys {
     Camera.adjustFOV = 1 + (U.tick * .05);
     Camera.restoreZoom[0] = true;
    } else if (KC == KeyCode.M) {
-    Match.muteSound = !Match.muteSound;
+    Sounds.mute = !Sounds.mute;
    } else if (KC == KeyCode.T || KC == KeyCode.G || KC == KeyCode.U || KC == KeyCode.J) {
     Viewer.heightChange = KC == KeyCode.J ? 10 : KC == KeyCode.U ? -10 : Viewer.heightChange;
     Viewer.depthChange = KC == KeyCode.T ? 10 : KC == KeyCode.G ? -10 : Viewer.depthChange;

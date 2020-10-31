@@ -1,10 +1,8 @@
 package ve.environment.storm;
 
 import javafx.scene.shape.Cylinder;
-
 import ve.environment.Wind;
 import ve.instances.Core;
-import ve.ui.Match;
 import ve.utilities.Camera;
 import ve.utilities.D;
 import ve.utilities.Nodes;
@@ -35,7 +33,7 @@ public enum Rain {
    for (var raindrop : raindrops) {
     raindrop.run();
    }
-   if (!Match.muteSound && update) {
+   if (!Sounds.mute && update) {
     sound.loop(Math.sqrt(U.distance(0, 0, Camera.C.Y, 0, 0, 0)) * Sounds.standardGain(1));//Should never be called since rain doesn't exist
    } else {
     sound.stop();

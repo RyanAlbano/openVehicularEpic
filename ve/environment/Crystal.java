@@ -38,7 +38,7 @@ public enum Crystal {
       compareDistance = U.distance(crystal);
      }
     }
-    instances.get(closest).addLight();//<-fixme--'closest' can be -1 (incorrect) for some reason
+    instances.get(closest).addLight();
     for (var crystal : instances) {
      crystal.addLight();
     }

@@ -38,7 +38,7 @@ public class VehicleAudio {
  enum EngineTuning {equalTemperament, harmonicSeries}
 
  //*Must be a general 'Sound' class
- Controlled burn;
+ Controlled burn;//<-todo--remove?
  Sound land;//*
  FireAndForget repair;
  private Controlled grind;
@@ -188,13 +188,13 @@ public class VehicleAudio {
    force = Sounds.softwareBased ? Sounds.force : new FireAndForget(D.force, Double.POSITIVE_INFINITY);
   }
   death = Sounds.softwareBased ? Sounds.death : new FireAndForget(D.death);
-  if (V.explosionsWhenDestroyed > 0 && !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name())) {
+  if (V.explosionsWhenDestroyed > 0 && !V.isNuclear()) {
    deathExplode = Sounds.softwareBased ? Sounds.deathExplode : new FireAndForget(D.deathExplode, Double.POSITIVE_INFINITY);
   }
   crashHard = Sounds.softwareBased ? Sounds.crashHard : new FireAndForget(D.crashHard, Double.POSITIVE_INFINITY);
   crashDestroy = Sounds.softwareBased ? Sounds.crashDestroy : new FireAndForget(D.crashDestroy, Double.POSITIVE_INFINITY);
   crashSoft = Sounds.softwareBased ? Sounds.crashSoft : new FireAndForget(D.crashSoft, Double.POSITIVE_INFINITY);
-  if (V.type == Vehicle.Type.aircraft && !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.floats) {
+  if (V.type == Vehicle.Type.aircraft && !V.isNuclear() && !V.floats) {
    fly = new Controlled("fly", Double.POSITIVE_INFINITY);
   }
   if (V.speedBoost > 0 && V.engine != Vehicle.Engine.turbine) {
@@ -227,7 +227,7 @@ public class VehicleAudio {
   }
   boolean loadHitExplosive = false, loadMineExplosion = false;
   for (var special : V.specials) {
-   loadHitExplosive = special.type.name().contains(Special.Type.shell.name()) || special.type == Special.Type.missile || special.type == Special.Type.bomb || special.type == Special.Type.mine || V.explosionType.name().startsWith(Vehicle.ExplosionType.nuclear.name()) || loadHitExplosive;
+   loadHitExplosive = special.type.name().contains(Special.Type.shell.name()) || special.type == Special.Type.missile || special.type == Special.Type.bomb || special.type == Special.Type.mine || V.isNuclear() || loadHitExplosive;
    loadMineExplosion = special.type == Special.Type.mine || loadMineExplosion;
   }
   if (loadHitExplosive) {
@@ -252,7 +252,7 @@ public class VehicleAudio {
   if (hasSpinner || V.dealsMassiveDamage()) {
    massiveHit = Sounds.softwareBased ? Sounds.massiveHit : new FireAndForget(D.massiveHit, Double.POSITIVE_INFINITY);
   }
-  if (V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name())) {
+  if (V.isNuclear()) {
    if (V.explosionType == Vehicle.ExplosionType.maxnuclear) {
     nukeMax = Sounds.softwareBased ? Sounds.nukeMax : new FireAndForget(D.nukeMax);
     V.MNB.travel = new Controlled("nukeMaxTravel");
@@ -305,7 +305,9 @@ public class VehicleAudio {
    if (!V.isFixed()) {
     int n = 0;
     if (V.P.mode != Physics.Mode.stunt) {
-     n = V.type == Vehicle.Type.vehicle && V.steerInPlace && (V.turnL || V.turnR) ? 1 : n;
+     if (V.type == Vehicle.Type.vehicle && V.steerInPlace && (V.turnL || V.turnR)) {
+      n = 1;
+     }
      boolean aircraft = V.type == Vehicle.Type.aircraft, flying = V.P.mode == Physics.Mode.fly,
      driveGet = !flying && aircraft ? V.drive || V.drive2 : flying ? V.drive2 : V.drive,
      reverseGet = !flying && aircraft ? V.reverse || V.reverse2 : flying ? V.reverse2 : V.reverse;
@@ -340,7 +342,7 @@ public class VehicleAudio {
     boost.stop();
    }
   }
-  if (turret != null && V.isFixed()) {//<-Checking null is not sufficient because vehicles with turrets borrow the turret field
+  if (turret != null && V.isFixed()) {//<-Checking null is not sufficient because vehicles with turrets borrow the same audio object
    if (gamePlay && !V.destroyed && (V.turnL || V.turnR || V.drive || V.reverse || V.steerByMouse)) {
     turret.loop(distanceVehicleToCamera);
    } else {
@@ -413,14 +415,14 @@ public class VehicleAudio {
     exhaustIndex = engineIndex;
    }
   }
-  if (Match.muteSound || !V.destroyed || !gamePlay) {
+  if (Sounds.mute || !V.destroyed || !gamePlay) {
    if (V.explosionType == Vehicle.ExplosionType.maxnuclear) {
     V.MNB.travel.stop();
    } else {
     burn.stop();//<-No burn sound on max nukes
    }
   }
-  if (Match.muteSound || !V.isIntegral() || !gamePlay) {
+  if (Sounds.mute || !V.isIntegral() || !gamePlay) {
    for (var special : V.specials) {
     if (special.type == Special.Type.phantom) {
      special.sound.stop();

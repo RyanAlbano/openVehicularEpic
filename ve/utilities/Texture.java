@@ -6,7 +6,7 @@ import ve.environment.Terrain;
 import ve.trackElements.TE;
 import ve.ui.UI;
 
-public class Texture {
+public class Texture {//todo--make specular maps for the existing textures
  private final Image original;
  private Image lowResolution;
  public static long userMaxResolution;
@@ -35,7 +35,7 @@ public class Texture {
    ImageView IV = new ImageView(I);
    IV.setScaleX(Math.min(userMaxResolution / I.getWidth(), 1));//*Don't exceed the original size!
    IV.setScaleY(Math.min(userMaxResolution / I.getHeight(), 1));//*
-   return IV.snapshot(null, null);//snapshot call prevents this void from being called outside the JavaFX application thread
+   return IV.snapshot(null, null);//<-snapshot call prevents this void from being called outside the JavaFX application thread
   }
   return null;
  }

@@ -6,20 +6,18 @@ import ve.environment.E;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.instances.I;
+import ve.ui.MatchLog;
 import ve.ui.Match;
+import ve.ui.UI;
 import ve.ui.options.Options;
-import ve.utilities.D;
-import ve.utilities.Network;
-import ve.utilities.Nodes;
-import ve.utilities.Phong;
-import ve.utilities.U;
+import ve.utilities.*;
 import ve.utilities.sound.Controlled;
 import ve.vehicles.Vehicle;
 
 import java.util.ArrayList;
 import java.util.Collection;
 
-public enum Bonus {//<-fixme--balls drifted away from vehicle (on Linux)
+public enum Bonus {
  ;
  public static final Core C = new Core();
  public static int holder = -1;
@@ -111,6 +109,14 @@ public enum Bonus {//<-fixme--balls drifted away from vehicle (on Linux)
  }
 
  public static void setHolder(Vehicle vehicle) {
+  if (holder != vehicle.index) {//<-Block would fire multiple times on the log
+   MatchLog.update();
+   String s = Network.mode == Network.Mode.OFF ? vehicle.name : UI.playerNames[vehicle.index];
+   int current = MatchLog.listQuantity - 1;
+   MatchLog.names[current][0] = s;
+   MatchLog.nameColors[current][0] = I.onGreen(vehicle) ? U.getColor(0, 1, 0) : U.getColor(1, 0, 0);
+   MatchLog.middleText[current] = MatchLog.hasBonus;
+  }
   holder = vehicle.index;
   for (var ball : balls) {
    ball.S.setRadius(I.vehicles.get(holder).absoluteRadius * .02);

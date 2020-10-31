@@ -15,7 +15,6 @@ import ve.environment.E;
 import ve.environment.Pool;
 import ve.environment.Sun;
 import ve.instances.I;
-import ve.trackElements.Arrow;
 import ve.trackElements.Bonus;
 import ve.trackElements.TE;
 import ve.trackElements.trackParts.RepairPoint;
@@ -128,28 +127,31 @@ public class UI/*UserInterface*/ extends Application {
   width = primaryStage.getWidth();
   height = primaryStage.getHeight();
   scene3D = new SubScene(group, width, height, true, antiAliasing ? SceneAntialiasing.BALANCED : SceneAntialiasing.DISABLED);
-  Arrow.scene = new SubScene(Arrow.group, width, height, false, antiAliasing ? SceneAntialiasing.BALANCED : SceneAntialiasing.DISABLED);
   canvas = new Canvas(width, height);
   E.canvas = new Canvas(width, height);
   GC = canvas.getGraphicsContext2D();
   E.GC = E.canvas.getGraphicsContext2D();
-  scene = new Scene(new StackPane(scene3D, E.canvas, Arrow.scene, canvas), width, height, false, SceneAntialiasing.DISABLED);
+  scene = new Scene(new StackPane(scene3D, E.canvas, canvas), width, height, false, SceneAntialiasing.DISABLED);
   primaryStage.setScene(scene);
   primaryStage.show();//<-Don't call before this level!
   Nodes.reset();
   Nodes.addPointLight(Sun.light);
-  new AnimationTimer() {
+  new AnimationTimer() {//<-Don't make static class
    public void handle(long now) {
     try {
      int n;
      GC.clearRect(0, 0, width, height);
      E.GC.clearRect(0, 0, width, height);
-     E.renderLevel = U.clamp(10000, E.renderLevel * (U.FPS < 30 ? .75 : 1.05), 40000);
-     if (U.goodFPS(true)) {//<-Better devices don't need to cut back on rendering
-      E.renderLevel = Double.POSITIVE_INFINITY;
+     if (U.FPS < 30) {
+      E.renderLevel = 10000;
+     } else if (U.goodFPS(false)) {
+      E.renderLevel += 500 * U.tick;
      }
+     E.renderLevel = Math.max(10000, E.renderLevel);
      Camera.FOV = Math.min(Camera.FOV * Camera.adjustFOV, 170);
-     Camera.FOV = Camera.restoreZoom[0] && Camera.restoreZoom[1] ? Camera.defaultFOV : Camera.FOV;
+     if (Camera.restoreZoom[0] && Camera.restoreZoom[1]) {
+      Camera.FOV = Camera.defaultFOV;
+     }
      Camera.PC.setFieldOfView(Camera.FOV);
      if (I.userPlayerIndex < I.vehicles.size() && I.vehicles.get(I.userPlayerIndex) != null) {
       I.vehicles.get(I.userPlayerIndex).lightBrightness = U.clamp(I.vehicles.get(I.userPlayerIndex).lightBrightness + Match.vehicleLightBrightnessChange);
@@ -176,8 +178,6 @@ public class UI/*UserInterface*/ extends Application {
       height = primaryStage.getHeight();
       scene3D.setWidth(width);
       scene3D.setHeight(height);
-      Arrow.scene.setWidth(width);
-      Arrow.scene.setHeight(height);
       canvas.setWidth(width);
       canvas.setHeight(height);
       E.canvas.setWidth(width);
@@ -242,7 +242,6 @@ public class UI/*UserInterface*/ extends Application {
         }
         for (var vehicle : I.vehicles) {
          if (vehicle.destroyed && vehicle.P.vehicleHit > -1) {
-          Match.scoreKill[vehicle.index < I.halfThePlayers() ? 1 : 0] += status == UI.Status.replay ? 0 : 1;
           if (vehicle.index != I.userPlayerIndex) {
            vehicle.AI.target = U.random(I.vehiclesInMatch);//<-Needed!
           }
@@ -308,23 +307,6 @@ public class UI/*UserInterface*/ extends Application {
         }
         Keys.space = false;
        }
-       if (!Network.waiting) {
-        U.font(.02);
-        U.fillRGB(U.yinYang ? 0 : 1);
-        if (I.vehicles.get(I.vehiclePerspective).isFixed() && (I.vehiclesInMatch < 2 || I.vehiclePerspective < I.halfThePlayers())) {
-         U.text("Use Arrow Keys and < and > to place your infrastructure, then", .2);
-         if (Keys.up || Keys.down || Keys.left || Keys.right) {
-          movementSpeedMultiple = Math.max(10, movementSpeedMultiple * 1.05);
-          I.vehicles.get(I.vehiclePerspective).Z += Keys.up ? movementSpeedMultiple * U.tick : 0;
-          I.vehicles.get(I.vehiclePerspective).Z -= Keys.down ? movementSpeedMultiple * U.tick : 0;
-          I.vehicles.get(I.vehiclePerspective).X -= Keys.left ? movementSpeedMultiple * U.tick : 0;
-          I.vehicles.get(I.vehiclePerspective).X += Keys.right ? movementSpeedMultiple * U.tick : 0;
-         } else {
-          movementSpeedMultiple = 0;
-         }
-        }
-        U.text("Press SPACE to Begin" + (Tournament.stage > 0 ? " Round " + Tournament.stage : ""), .25);
-       }
        if (Keys.escape) {
         escapeToLast(true);
        }
@@ -334,6 +316,7 @@ public class UI/*UserInterface*/ extends Application {
       Camera.run(I.vehicles.get(I.vehiclePerspective), gamePlay);
       MaxNukeBlast.runLighting();//<-Just after camera is placed, but before any other environmental/vehicular lights get added
       E.run(gamePlay);
+      getClosests();
       for (var vehicle : I.vehicles) {
        for (var special : vehicle.specials) {
         for (var shot : special.shots) {
@@ -365,7 +348,7 @@ public class UI/*UserInterface*/ extends Application {
       if (I.vehiclesInMatch < 2) {
        I.vehicles.get(I.vehiclePerspective).runRender(gamePlay);
       } else {
-       int closest = I.vehiclePerspective;
+       int closest = I.vehiclePerspective;//Not replacing with I.closest here--it gets too complicated!
        double compareDistance = Double.POSITIVE_INFINITY;
        for (var vehicle : I.vehicles) {
         if (vehicle.index != I.vehiclePerspective && U.distance(I.vehicles.get(I.vehiclePerspective), vehicle) < compareDistance) {
@@ -464,7 +447,7 @@ public class UI/*UserInterface*/ extends Application {
       U.fillRectangle(.75, .9625, .15, .05);
       U.fillRGB(1);
       U.font(.015);
-      U.text("Nodes: " + (group.getChildren().size() + Arrow.group.getChildren().size() + E.lights.getChildren().size()), .25, .965);
+      U.text("Nodes: " + (group.getChildren().size() + E.lights.getChildren().size()), .25, .965);
       U.font(.02);
       U.text(Math.round(U.averageFPS) + " FPS", .75, .965);
      }
@@ -506,13 +489,22 @@ public class UI/*UserInterface*/ extends Application {
   }
  }
 
+ private static void getClosests() {
+  int[] hold = new int[I.vehiclesInMatch];
+  for (int n = I.vehiclesInMatch; --n >= 0; ) {
+   for (int n1 = n; --n1 >= 0; ) {
+    hold[U.distance(I.vehicles.get(n)) > U.distance(I.vehicles.get(n1)) ? n : n1]++;
+   }
+   I.closest[hold[n]] = n;
+  }
+ }
+
  private static void boot(Stage stage) {
   Thread secondaryLoad = new Thread(() -> {
    try {
     int n;
     scene3D.setFill(U.getColor(0));
-    Arrow.scene.setFill(Color.color(0, 0, 0, 0));
-    initialization = "Loading Settings";
+    initialization = "Loading GameSettings";
     String s;
     try (BufferedReader BR = new BufferedReader(new InputStreamReader(new FileInputStream(D.GameSettings), U.standardChars))) {
      for (String s1; (s1 = BR.readLine()) != null; ) {
@@ -537,8 +529,14 @@ public class UI/*UserInterface*/ extends Application {
       Texture.type = s.startsWith("TextureResolution(") ? Texture.Resolution.valueOf(U.getString(s, 0)) : Texture.type;
       Texture.userMaxResolution = s.startsWith("TextureResolutionLimit(") ? Math.round(U.getValue(s, 0)) : Texture.userMaxResolution;
       //SOUND
-      Sounds.softwareBased = s.startsWith("SoftwareBased(yes") || Sounds.softwareBased;
-      Sounds.channels = s.startsWith("Channels(") ? (int) Math.round(U.getValue(s, 0)) : Sounds.channels;
+      if (s.startsWith("SoftwareBased(")) {
+       if (s.contains("yes")) {
+        Sounds.softwareBased = true;
+       } else if (s.contains("no")) {
+        Sounds.softwareBased = false;
+       }
+      }
+      Sounds.useEcho = s.startsWith("UseEcho(yes") || Sounds.useEcho;
       Sounds.bitDepth = s.startsWith("BitDepth(") ? (int) Math.round(U.getValue(s, 0)) : Sounds.bitDepth;
       Sounds.sampleRate = s.startsWith("SampleRate(") ? U.getValue(s, 0) : Sounds.sampleRate;
       Sounds.bufferSize = s.startsWith("BufferSize(") ? U.getValue(s, 0) : Sounds.bufferSize;
@@ -570,6 +568,8 @@ public class UI/*UserInterface*/ extends Application {
     initialization = "Loading Images";
     Images.RA = Images.load(D.RA);
     Images.white = Images.load(D.white);
+    Images.red = Images.load("red");
+    Images.green = Images.load("green");
     Images.fireLight = Images.load(D.firelight, Double.POSITIVE_INFINITY);
     Images.blueJet = Images.load(D.blueJet, Double.POSITIVE_INFINITY);
     Images.blink = Images.load(D.blink, Double.POSITIVE_INFINITY);
@@ -643,11 +643,13 @@ public class UI/*UserInterface*/ extends Application {
   boolean loaded = initialization.isEmpty();
   scene.setCursor(loaded ? Cursor.CROSSHAIR : Cursor.WAIT);
   if (loaded) {
-   Tournament.wins[0] = Tournament.wins[1] = I.userPlayerIndex = 0;
+   I.userPlayerIndex = 0;
+   if (Tournament.finished) {
+    Tournament.stage = 0;
+   }
+   Tournament.reset(Math.min(Tournament.stage, 1));
+   Network.waiting = Viewer.inUse = false;
    Network.mode = Network.Mode.OFF;
-   Tournament.stage = Tournament.finished ? 0 : Tournament.stage;
-   Tournament.finished = Network.waiting = Viewer.inUse = false;
-   Arrow.MV.setVisible(false);
    if (selectionReady()) {
     if (Keys.up) {
      selected = --selected < 0 ? 6 : selected;
@@ -760,13 +762,17 @@ public class UI/*UserInterface*/ extends Application {
  }
 
  private static void runPaused() {
+  U.fillRGB(0, 0, 0, colorOpacity.minimal);
+  U.fillRectangle(.5, .5, .375, .375);
+  boolean rematch = Network.mode == Network.Mode.OFF && (Tournament.finished || (Tournament.stage < 1 && Match.timeLeft <= 0));
   if (selectionReady()) {
+   long wrap = rematch ? 5 : 4;
    if (Keys.up) {
-    selected = --selected < 0 ? 4 : selected;
+    selected = --selected < 0 ? wrap : selected;
     sound.play(0, 0);
    }
    if (Keys.down) {
-    selected = ++selected > 4 ? 0 : selected;
+    selected = ++selected > wrap ? 0 : selected;
     sound.play(0, 0);
    }
   }
@@ -778,6 +784,7 @@ public class UI/*UserInterface*/ extends Application {
    Math.abs(.5 - baseClickOffset - Mouse.Y) < clickRangeY ? 2 :
    Math.abs(.525 - baseClickOffset - Mouse.Y) < clickRangeY ? 3 :
    Math.abs(.55 - baseClickOffset - Mouse.Y) < clickRangeY ? 4 :
+   rematch && Math.abs(.575 - baseClickOffset - Mouse.Y) < clickRangeY ? 5 :
    selected;
   }
   if (Keys.enter || Keys.space) {
@@ -793,7 +800,7 @@ public class UI/*UserInterface*/ extends Application {
    } else if (selected == 3) {
     lastStatus = UI.Status.paused;
     status = UI.Status.howToPlay;
-   } else if (selected == 4) {
+   } else if (selected > 3) {
     ending = true;
    }
    sound.play(1, 0);
@@ -801,17 +808,22 @@ public class UI/*UserInterface*/ extends Application {
   }
   if (Keys.escape) {
    ending = true;
-   Keys.escape = false;
+   Keys.escape = rematch = false;
   }
   if (ending) {
-   if (Network.mode == Network.Mode.OFF) {
-    scene.setCursor(Cursor.WAIT);
-    if (Tournament.stage > 0 && Match.timeLeft <= 0 && !Tournament.finished) {
+   scene.setCursor(Cursor.WAIT);
+   if (rematch && selected == 5) {
+    status = UI.Status.mapJump;
+    Tournament.reset(Tournament.stage > 0 ? 1 : 0);
+   } else if (Network.mode == Network.Mode.OFF) {
+    if (Tournament.stage > 0 && !Tournament.finished && Match.timeLeft <= 0/*<-Needed!*/) {
      status = UI.Status.mapJump;
-     Tournament.stage++;
+     if (!Match.tied()) {
+      Tournament.stage++;
+     }
     } else {
      status = UI.Status.mainMenu;
-     Tournament.stage = 0;
+     Tournament.reset(0);
     }
     Camera.lastView = Camera.view;
     selected = 0;
@@ -826,7 +838,6 @@ public class UI/*UserInterface*/ extends Application {
      }
     }
     if (Network.hostLeftMatch || Network.mode == Network.Mode.HOST) {
-     scene.setCursor(Cursor.WAIT);
      for (n = Network.maxPlayers; --n >= 0; ) {
       Network.runGameThread[n] = false;
      }
@@ -865,6 +876,9 @@ public class UI/*UserInterface*/ extends Application {
   } else if (selected == 4) {
    U.fillRectangle(.5, .55, .2, selectionHeight);
   }
+  if (selected == 5 && rematch) {
+   U.fillRectangle(.5, .575, .2, selectionHeight);
+  }
   U.font(.03);
   String title = "MATCH PAUSED";
   U.fillRGB(0);
@@ -876,9 +890,13 @@ public class UI/*UserInterface*/ extends Application {
   U.text("REPLAY", .475 + textOffset);
   U.text(D.OPTIONS, .5 + textOffset);
   U.text(HOW_TO_PLAY, .525 + textOffset);
-  U.text(Tournament.stage > 0 ? (Match.timeLeft > 0 ? "CANCEL TOURNAMENT" : Tournament.finished ? BACK_TO_MAIN_MENU : "NEXT ROUND") :
+  U.text(
+  Tournament.stage > 0 ? (Match.timeLeft > 0 ? "CANCEL TOURNAMENT" : Tournament.finished ? BACK_TO_MAIN_MENU : "NEXT ROUND") :
   Network.mode == Network.Mode.JOIN && !Network.hostLeftMatch ? "Please Wait for Host to exit Match first" :
   "END MATCH", .55 + textOffset);
+  if (rematch) {
+   U.text("REMATCH!", .575 + textOffset);
+  }
  }
 
  private static void runLANMenu() {

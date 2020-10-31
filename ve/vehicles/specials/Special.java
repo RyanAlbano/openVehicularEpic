@@ -41,7 +41,7 @@ public class Special {
   blaster, heavyblaster, forcefield,
   phantom, teleport,
   particledisintegrator, particlereintegrator, spinner, thewrath, energy,
-  bumpIgnore
+  bumpIgnore, selfDestruct
  }
 
  public final AimType aimType;
@@ -51,7 +51,8 @@ public class Special {
  public Special(Vehicle vehicle, String s) {
   V = vehicle;
   type = Special.Type.valueOf(U.getString(s, 0));
-  if (V.realVehicle/*<-Memory leak possible if this is not checked!*/ && !type.name().contains(D.particle) && type != Special.Type.spinner && type != Type.bumpIgnore) {
+  if (V.realVehicle/*<-Memory leak possible if this is not checked!*/ &&
+  !type.name().contains(D.particle) && type != Special.Type.spinner && type != Type.bumpIgnore && type != Type.selfDestruct) {
    if (type == Type.energy) {
     sound = new Sound(type.name(), Double.POSITIVE_INFINITY);
    } else {
@@ -68,8 +69,9 @@ public class Special {
  }
 
  private boolean hasShots() {
-  return type != Type.bumpIgnore && type != Type.spinner && type != Type.phantom && type != Type.teleport && type != Type.energy &&
-  !type.name().contains(D.particle);
+  return type != Type.bumpIgnore && type != Type.spinner && type != Type.energy &&
+  type != Type.phantom && type != Type.teleport &&
+  !type.name().contains(D.particle) && type != Type.selfDestruct;
  }
 
  public void load() {
@@ -94,7 +96,6 @@ public class Special {
    speed = 3000;
    diameter = 10;
    damageDealt = 25;
-   pushPower = 0;
    width = 2;
    length = width * 4;
    ricochets = useSmallHits = V.hasShooting = smokeyWeapon = true;
@@ -118,7 +119,6 @@ public class Special {
    speed = 15000;
    diameter = 10;
    damageDealt = 100;//<-Multiplied by tick in-game
-   pushPower = 0;
    width = 50;
    length = width * 10;
    useSmallHits = V.hasShooting = true;
@@ -126,7 +126,7 @@ public class Special {
    speed = 500;
    diameter = 100;
    damageDealt = 1500;
-   pushPower = 1000;
+   pushPower = 750;
    width = 12;
    length = width * 2;
    V.explosionType = Vehicle.ExplosionType.normal;
@@ -146,7 +146,7 @@ public class Special {
    speed = 0;
    diameter = 100;
    damageDealt = 1500;
-   pushPower = 1000;
+   pushPower = 750;
    width = 12;
    length = width * 2;
    V.explosionType = Vehicle.ExplosionType.normal;
@@ -154,7 +154,7 @@ public class Special {
    speed = 20000;
    diameter = 500;
    damageDealt = 7500;
-   pushPower = 1000;
+   pushPower = 500;
    width = 10;
    length = width * 3;
    AIAimPrecision = 5;
@@ -163,7 +163,7 @@ public class Special {
    speed = 500;
    diameter = 100;
    damageDealt = 1000;
-   pushPower = 1000;
+   pushPower = 750;
    width = 6;
    length = width * 4;
    V.explosionType = Vehicle.ExplosionType.normal;
@@ -188,7 +188,6 @@ public class Special {
    speed = 250;
    diameter = 500;
    damageDealt = 250;//<-Multiplied by tick in-game
-   pushPower = 0;
    width = 10;
    length = width;
    V.hasShooting = true;
@@ -211,7 +210,9 @@ public class Special {
    width = V.absoluteRadius * 2;
    AIAimPrecision = 10;
   }
-  AIAimPrecision = homing ? Long.MAX_VALUE : AIAimPrecision;
+  if (homing) {
+   AIAimPrecision = Long.MAX_VALUE;
+  }
   if (type == Type.bumpIgnore) {
    V.bumpIgnore = true;
   } else if (type == Type.energy) {
@@ -245,7 +246,9 @@ public class Special {
  }
 
  public void run(boolean gamePlay, double V_sinXZ, double V_cosXZ, double V_sinYZ, double V_cosYZ, double V_sinXY, double V_cosXY) {
-  if (type != Type.energy && !type.name().contains(D.particle) && type != Type.spinner && type != Type.phantom && type != Type.teleport) {
+  if (type == Type.selfDestruct && fire) {
+   V.setDamage(V.damageCeiling());
+  } else if (type != Type.energy && !type.name().contains(D.particle) && type != Type.spinner && type != Type.phantom && type != Type.teleport) {
    if (gamePlay) {
     if (timer <= 0) {
      if (fire && !V.destroyed) {
@@ -264,7 +267,7 @@ public class Special {
     if (V.P.wrathEngaged) {
      fire(V_sinXZ, V_cosXZ, V_sinYZ, V_cosYZ, V_sinXY, V_cosXY);
      V.thrusting = true;
-     V.P.speed = Math.min(V.P.speed + ((U.random() < .5 ? V.accelerationStages[0] : V.accelerationStages[1]) * 4 * U.tick), V.topSpeeds[2]);
+     V.P.speed = Math.min(V.P.speed + ((U.random() < .5 ? V.accelerationStages[0] : V.accelerationStages[1]) * 4 * U.tick), V.maximumSpeed);
      V.setDamage(Math.min(V.getDamage(false), V.durability));
      V.screenFlash = (.5 + U.random(.5)) / Math.max(Math.sqrt(U.distance(V)) * .015, 1);
      V.P.wrathEngaged = !(timer < 850) && V.P.wrathEngaged;

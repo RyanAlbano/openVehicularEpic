@@ -14,7 +14,7 @@ public enum Images {
  public static final String folder = "images";
  public static final String extension = ".png";
  private static final String exception = "Image-loading Exception: ";
- public static Image RA, white, amphibious;
+ public static Image RA, white, red, green, amphibious;
  public static Texture paved, rock, metal, brightmetal, wood, grid, ground1, ground2, sand, grass, foliage, cactus, water,
  pavedN, rockN, metalN, brightmetalN, woodN, ground1N, ground2N, sandN, grassN, foliageN, cactusN;
  public static List<Image> blink, fireLight, blueJet;

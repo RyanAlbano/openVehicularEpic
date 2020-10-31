@@ -252,7 +252,7 @@ public enum Network {
       V.XY = U.getValue(vehicleData[n], 5);
       V.P.speed = U.getValue(vehicleData[n], 6);
       V.setDamage(U.getValue(vehicleData[n], 7));
-      V.checkpointsPassed = (int) Math.round(U.getValue(vehicleData[n], 8));
+      V.waypointsPassed = (int) Math.round(U.getValue(vehicleData[n], 8));
       V.lightBrightness = U.getValue(vehicleData[n], 9);
       V.drive = vehicleData[n].contains(" ^ ");
       V.reverse = vehicleData[n].contains(" v ");
@@ -283,7 +283,7 @@ public enum Network {
         vehicle.XY = U.getValue(vehicleData[vehicle.index], 5);
         vehicle.P.speed = U.getValue(vehicleData[vehicle.index], 6);
         vehicle.setDamage(U.getValue(vehicleData[vehicle.index], 7));
-        vehicle.checkpointsPassed = (int) Math.round(U.getValue(vehicleData[vehicle.index], 8));
+        vehicle.waypointsPassed = (int) Math.round(U.getValue(vehicleData[vehicle.index], 8));
         vehicle.lightBrightness = U.getValue(vehicleData[vehicle.index], 9);
         vehicle.drive = vehicleData[vehicle.index].contains(" ^ ");
         vehicle.reverse = vehicleData[vehicle.index].contains(" v ");
@@ -302,7 +302,7 @@ public enum Network {
      }
     }
     try {
-     Thread.sleep(1);//todo<-Remove?
+     Thread.sleep(1);//<-Remove?
     } catch (InterruptedException ignored) {
     }
    }
@@ -329,7 +329,7 @@ public enum Network {
   V.boost = Keys.boost;
   String s;
   if (UI.status == UI.Status.play) {
-   s = "(" + V.X + "," + V.Y + "," + V.Z + "," + V.XZ + "," + V.YZ + "," + V.XY + "," + V.P.speed + "," + V.getDamage(false) + "," + V.checkpointsPassed + "," + V.lightBrightness + ")";
+   s = "(" + V.X + "," + V.Y + "," + V.Z + "," + V.XZ + "," + V.YZ + "," + V.XY + "," + V.P.speed + "," + V.getDamage(false) + "," + V.waypointsPassed + "," + V.lightBrightness + ")";
    s += V.drive ? " ^ " : "";
    s += V.reverse ? " v " : "";
    s += V.turnL ? " < " : "";

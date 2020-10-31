@@ -2,7 +2,6 @@ package ve.utilities.sound;
 
 import ve.effects.Echo;
 import ve.environment.E;
-import ve.ui.Match;
 import ve.utilities.U;
 
 import java.io.File;
@@ -112,22 +111,22 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  }
 
  public void play(double index, double gain) {
-  if (!Match.muteSound) {
+  if (!Sounds.mute) {
    setCurrentIndex(index);
    if (currentIndex < clipHolders.size()) {
     if (Sounds.softwareBased) {
      gain = Sounds.decibelToLinear(-gain * E.soundMultiple);
      clipHolders.get(currentIndex).tinySingle.play(gain);
     } else {
-     clipHolders.get(currentIndex).sampled.stop();//<-Could add overhead. But Linux tests show it also improves sound-restart reliability!
+     clipHolders.get(currentIndex).sampled.stop();//<-Improves sound-restart reliability, so don't remove
      gain *= E.soundMultiple;
      if (gain < Sounds.sampledGainLimit) {
       clipHolders.get(currentIndex).gain.setValue((float) -gain);
       clipHolders.get(currentIndex).sampled.setFramePosition(0);
       clipHolders.get(currentIndex).sampled.loop(0);
      }
-     playEcho(currentIndex);
     }
+    playEcho(currentIndex);
    }
   }
  }
@@ -160,7 +159,7 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  }
 
  public void playIfNotPlaying(double index, double gain) {
-  if (!Match.muteSound) {
+  if (!Sounds.mute) {
    setCurrentIndex(index);
    if (currentIndex < clipHolders.size()) {
     if (Sounds.softwareBased) {
@@ -216,7 +215,7 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  }
 
  public void loop(double index, double gain) {
-  if (!Match.muteSound) {
+  if (!Sounds.mute) {
    setCurrentIndex(index);
    if (currentIndex < clipHolders.size()) {
     if (Sounds.softwareBased) {
@@ -270,7 +269,7 @@ public class Sound {//Both TinySound and javax.sound.sampled implementations exi
  }//Keep
 
  public void resume(double index, double gain) {
-  if (!Match.muteSound) {
+  if (!Sounds.mute) {
    setCurrentIndex(index);
    if (currentIndex < clipHolders.size()) {
     if (Sounds.softwareBased) {

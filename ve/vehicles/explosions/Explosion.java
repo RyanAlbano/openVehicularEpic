@@ -1,21 +1,19 @@
 package ve.vehicles.explosions;
 
 import javafx.scene.paint.PhongMaterial;
-
-import java.util.ArrayList;
-import java.util.Collection;
-
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import ve.effects.Effects;
 import ve.instances.Core;
 import ve.instances.I;
-import ve.ui.Match;
 import ve.utilities.Nodes;
 import ve.utilities.Phong;
 import ve.utilities.U;
 import ve.vehicles.Vehicle;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 public class Explosion extends Core {
 
@@ -23,9 +21,7 @@ public class Explosion extends Core {
  public Vehicle focusVehicle;
  private final boolean nuclear;
  private final MeshView MV;
- public double inX;
- public double inY;
- public double inZ;
+ public double inX, inY, inZ;
  public double stage;
  private final boolean[] doneDamaging;
  private final Collection<ExplosionPart> explosionParts = new ArrayList<>();
@@ -33,7 +29,7 @@ public class Explosion extends Core {
 
  public Explosion(Vehicle vehicle) {
   V = vehicle;
-  nuclear = V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name());
+  nuclear = V.isNuclear();
   absoluteRadius = nuclear ? 20000 : 1500;
   TriangleMesh TM = new TriangleMesh();
   TM.getPoints().setAll(
@@ -112,7 +108,7 @@ public class Explosion extends Core {
     vehicle.addDamage(V.P.explosionDamage);
     if (!nuclear) {
      if (vehicle.isIntegral() && !replay) {
-      Match.scoreDamage[greenTeam ? 0 : 1] += V.P.explosionDamage;
+      V.scoreDamage += V.P.explosionDamage;
      }
      doneDamaging[vehicle.index] = true;
     }

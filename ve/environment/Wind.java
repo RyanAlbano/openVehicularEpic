@@ -1,9 +1,9 @@
 package ve.environment;
 
-import ve.ui.Match;
 import ve.ui.UI;
 import ve.utilities.U;
 import ve.utilities.sound.Controlled;
+import ve.utilities.sound.Sounds;
 
 public enum Wind {
  ;
@@ -34,7 +34,7 @@ public enum Wind {
    for (double n = stormPower * .025; --n >= 0; ) {
     E.GC.fillOval(-dustWidth + U.random(UI.width + dustWidth), -dustHeight + U.random(UI.height + dustHeight), dustWidth, dustHeight);
    }
-   if (!Match.muteSound && update) {
+   if (!Sounds.mute && update) {
     storm.loop(40 - (Math.min(40, 3 * StrictMath.pow(stormPower, .25))));
    } else {
     storm.stop();

@@ -8,7 +8,6 @@ import ve.environment.E;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.instances.I;
-import ve.ui.Match;
 import ve.ui.UI;
 import ve.utilities.Images;
 import ve.utilities.Nodes;
@@ -108,13 +107,13 @@ public class MaxNukeBlast extends Core {//fixme--there's still a slight delay in
   }
  }
 
- public void runHitOthers(boolean greenTeam) {
+ public void runHitOthers() {
   boolean replay = UI.status == UI.Status.replay;
   for (var vehicle : I.vehicles) {
    if (!I.sameTeam(V, vehicle) && !othersBlasted[vehicle.index] && !vehicle.reviveImmortality && U.distance(V.MNB, vehicle) < V.MNB.sphereSize + vehicle.collisionRadius && !vehicle.phantomEngaged) {
     V.P.hitCheck(vehicle);
     vehicle.setDamage(vehicle.damageCeiling());
-    Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : vehicle.durability;
+    V.scoreDamage += replay ? 0 : vehicle.durability;
     if (vehicle.getsPushed >= 0) {
      vehicle.speedX += blastSpeed * Double.compare(vehicle.X, X) * (1 + U.random(.5));
      vehicle.speedZ += blastSpeed * Double.compare(vehicle.Z, Z) * (1 + U.random(.5));

@@ -1,8 +1,5 @@
 package ve.environment;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
 import javafx.scene.PointLight;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.CullFace;
@@ -11,13 +8,16 @@ import javafx.scene.shape.TriangleMesh;
 import ve.effects.Effects;
 import ve.instances.Core;
 import ve.instances.CoreAdvanced;
-import ve.ui.Match;
 import ve.utilities.D;
 import ve.utilities.Nodes;
 import ve.utilities.Phong;
 import ve.utilities.U;
 import ve.utilities.sound.Controlled;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 public enum Fire {
  ;
@@ -142,7 +142,7 @@ public enum Fire {
     }
    }
    if (sound != null) {
-    if (!Match.muteSound && update) {
+    if (!Sounds.mute && update) {
      sound.loop(Math.sqrt(fireToCameraDistance) * .16);
     } else {
      sound.stop();

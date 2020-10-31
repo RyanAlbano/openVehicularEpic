@@ -45,7 +45,7 @@ public enum Phong {
   PM.setSpecularColor(Color.color(U.clamp(R), U.clamp(G), U.clamp(B)));
  }
 
- public static void setSpecularRGB(PhongMaterial PM, double R, double G, double B, double transparency) {//<-Keep method in case we need it later
+ public static void setSpecularRGB(PhongMaterial PM, double R, double G, double B, double transparency) {
   PM.setSpecularColor(Color.color(U.clamp(R), U.clamp(G), U.clamp(B), U.clamp(transparency)));
  }
 

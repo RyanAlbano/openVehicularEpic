@@ -26,7 +26,6 @@ public class TrackPartPart extends InstancePart {
 
  private final TrackPart TP;
  Rotate rotateXZ;
- private final boolean checkpoint, checkpointWord, lapWord;
 
  public TrackPartPart(TrackPart i, double[] i_X, double[] i_Y, double[] i_Z, int vertexQuantity, Color i_RGB, String type, String textureType) {
   TP = i;
@@ -37,10 +36,7 @@ public class TrackPartPart extends InstancePart {
   double[] storeZ = new double[vertexQuantity];
   light = type.contains(D.thick(D.light));
   blink = type.contains(D.thick(D.blink));
-  checkpointWord = type.contains(D.thick(D.checkPointWord));
-  lapWord = type.contains(D.thick(D.lapWord));
-  checkpoint = checkpointWord || lapWord;
-  selfIlluminate = type.contains(D.thick(D.selfIlluminate)) || checkpoint;
+  selfIlluminate = type.contains(D.thick(D.selfIlluminate));
   base = type.contains(D.thick(D.base));
   controller = type.contains(D.thick(D.controller));
   for (n = vertexQuantity; --n >= 0; ) {
@@ -95,7 +91,7 @@ public class TrackPartPart extends InstancePart {
    fastCull = type.contains(D.thick(D.fastCullL)) ? 1 : fastCull;
   }
   flickPolarity = type.contains(D.thick(D.flick1)) ? 1 : type.contains(D.thick(D.flick2)) ? 2 : flickPolarity;
-  setRenderSizeRequirement(storeX, storeY, storeZ, vertexQuantity, checkpoint || light || blink);// || true);//<-Use 'true' when getting logo image
+  setRenderSizeRequirement(storeX, storeY, storeZ, vertexQuantity, light || blink);// || true);//<-Use 'true' when getting logo image
   MV.setVisible(false);
   if (matrix != null) {
    MV.getTransforms().setAll(matrix);
@@ -199,8 +195,7 @@ public class TrackPartPart extends InstancePart {
 
  void runAsTrackPart(double distanceTrackPartCameraTimesFOV, boolean renderALL) {
   if (renderALL || ((E.renderType == E.RenderType.fullDistance || size * E.renderLevel >= distanceTrackPartCameraTimesFOV) &&
-  ((!checkpoint || TP.checkpointNumber == TE.currentCheckpoint) && !(checkpointWord && TE.lapCheckpoint) && !(lapWord && !TE.lapCheckpoint) &&
-  !(flickPolarity == 1 && U.yinYang) && !(flickPolarity == 2 && !U.yinYang)))) {
+  !(flickPolarity == 1 && U.yinYang) && !(flickPolarity == 2 && !U.yinYang))) {
    boolean render = true;
    if (!Double.isNaN(fastCull) && !renderALL) {
     if (fastCull == 0) {
@@ -216,12 +211,6 @@ public class TrackPartPart extends InstancePart {
    if (renderALL || (render && U.getDepth(TP) > -renderRadius)) {
     if (blink) {
      PM.setSelfIlluminationMap(Effects.blink());
-    }
-    if (checkpoint) {
-     rotateXZ.setAngle(-TP.XZ + (TP.checkpointSignRotation ? 180 : 0));
-     if (lapWord) {
-      PM.setSelfIlluminationMap(U.yinYang ? Images.white : null);
-     }
     }
     U.setTranslate(MV, TP);
     visible = true;

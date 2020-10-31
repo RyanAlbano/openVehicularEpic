@@ -4,7 +4,6 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.Cylinder;
 import ve.instances.Core;
-import ve.ui.Match;
 import ve.utilities.D;
 import ve.utilities.Nodes;
 import ve.utilities.Phong;
@@ -17,12 +16,16 @@ import ve.vehicles.Vehicle;
 import java.util.ArrayList;
 import java.util.List;
 
-public enum Tornado {//todo--tornado's location should be recorded for replays
+public enum Tornado {
  ;
  public static boolean movesRepairPoints;
  private static double maxTravelDistance;
  public static final List<Part> parts = new ArrayList<>();
  private static Controlled sound;
+
+ public static boolean exists() {
+  return !parts.isEmpty();
+ }
 
  public static void load(String s) {
   if (s.startsWith("tornado(")) {
@@ -45,7 +48,7 @@ public enum Tornado {//todo--tornado's location should be recorded for replays
  }
 
  static void run(boolean update) {
-  if (!parts.isEmpty()) {
+  if (exists()) {
    if (Wind.maxPotency > 0 && update) {
     parts.get(0).X += Wind.speedX * U.tick;
     parts.get(0).Z += Wind.speedZ * U.tick;
@@ -63,7 +66,7 @@ public enum Tornado {//todo--tornado's location should be recorded for replays
    for (var part : parts) {
     part.run();
    }
-   if (!Match.muteSound && update) {
+   if (!Sounds.mute && update) {
     sound.loop(Math.sqrt(U.distance(parts.get(0))) * Sounds.standardGain(1));
    } else {
     sound.stop();
@@ -101,7 +104,7 @@ public enum Tornado {//todo--tornado's location should be recorded for replays
   if (sound != null) sound.close();
  }
 
- public /*<-Do NOT weaken access--will fail in 'TrackPart'!*/ static class Part extends Core {
+ /*<-Do NOT weaken access--will fail in 'TrackPart'!*/ public static class Part extends Core {
 
   final Cylinder C;
   Cylinder groundDustC;

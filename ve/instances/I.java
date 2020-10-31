@@ -16,6 +16,7 @@ import java.util.List;
 public enum I {//<-handles Instances
  ;
  public static final int maxPlayers = (int) Math.round(Math.max(Network.maxPlayers, U.maxMemory * .00000001125));
+ public static final int[] closest = new int[maxPlayers];
  public static List<String> vehicleModels;
  public static final List<Vehicle> vehicles = new ArrayList<>(maxPlayers);
  public static int vehiclePerspective;
@@ -97,8 +98,12 @@ public enum I {//<-handles Instances
   }
  }
 
- public static boolean sameVehicle(Vehicle V1, Vehicle V2) {
+ public static boolean samePlayer(Vehicle V1, Vehicle V2) {
   return V1.index == V2.index;
+ }
+
+ public static boolean sameVehicle(Vehicle V1, Vehicle V2) {
+  return V1.name.equals(V2.name);//<-good enough for now
  }
 
  public static boolean sameTeam(Vehicle V1, Vehicle V2) {
@@ -109,8 +114,12 @@ public enum I {//<-handles Instances
   return index1 < halfThePlayers() == index2 < halfThePlayers();
  }
 
- public static double halfThePlayers() {
+ public static int halfThePlayers() {
   return vehiclesInMatch >> 1;
+ }
+
+ public static boolean onGreen(Vehicle V) {
+  return V.index < halfThePlayers();
  }
 
  public static void resetWhoIsIn() {

@@ -24,7 +24,7 @@ public class Physics {
  private double driftXZ;
  public double cameraXZ;
  private double airSpinXZ;
- final double[] wheelSpin = new double[2];
+ double wheelSpinL, wheelSpinR;
  private double hitOtherX, hitOtherZ;
  double destructTimer;
  double massiveHitTimer;
@@ -51,7 +51,8 @@ public class Physics {
  public String terrainProperties = "";
  public double explosionDiameter;
  public double explosionDamage;
- public double explosionPush;
+ public double explosionPush;//todo--reduce push for missiles (and shells)?
+ private boolean[] structureBaseHit;
  public long polarity;
  static final double angleToSteerVelocity = .2;
  private static final double airAngleToSteerVelocity = angleToSteerVelocity * 1.25;//<-.25
@@ -73,6 +74,9 @@ public class Physics {
  Physics(Vehicle vehicle) {
   V = vehicle;
   minimumFlightSpeedWithoutStall = V.floats ? 0 : E.gravity * (V.engine == Vehicle.Engine.propsmall ? .25 : .5) * 100;
+  if (V.isFixed()) {
+   structureBaseHit = new boolean[I.vehiclesInMatch];
+  }
  }
 
  void resetLocalGround() {
@@ -114,7 +118,7 @@ public class Physics {
  }
 
  public void runCollisions() {
-  boolean replay = UI.status == UI.Status.replay, greenTeam = V.index < I.halfThePlayers();
+  boolean replay = UI.status == UI.Status.replay;
   if (!V.phantomEngaged) {
    if (!V.destroyed && !V.reviveImmortality) {
     for (var otherV : I.vehicles) {
@@ -123,10 +127,10 @@ public class Physics {
        if (V.getsLifted > 0 && V.Y < otherV.Y) {
         V.speedY -= E.gravity * 1.5 * U.tick;
        }
-       double yourDamage = Math.abs(netSpeed - otherV.P.netSpeed) * otherV.damageDealt * otherV.energyMultiple;//<-Damage now RECEIVING from other vehicles--not vice versa
+       double yourDamage = Math.abs(netSpeed - otherV.P.netSpeed) * otherV.damageDealt * otherV.energyMultiple;//<-Damage is RECEIVING from other vehicles--not vice versa
        //Don't multiply 'yourDamage' by a constant at initialization or it'll skew scores!
        if (V.isIntegral()) {
-        Match.scoreDamage[greenTeam ? 1 : 0] += replay ? 0 : yourDamage;
+        otherV.scoreDamage += replay ? 0 : yourDamage;
        }
        hitCheck(otherV);
        double theirPushX = 0, theirPushZ = 0, yourPushX = 0, yourPushZ = 0;
@@ -163,16 +167,20 @@ public class Physics {
        otherV.speedZ += yourPushZ;
        V.speedX -= theirPushX;
        V.speedZ -= theirPushZ;
+       double pushLimit = Math.max(V.maximumSpeed, otherV.maximumSpeed);
+       V.speedX = U.clamp(-pushLimit, V.speedX, pushLimit);
+       V.speedZ = U.clamp(-pushLimit, V.speedZ, pushLimit);
+       V.speedY = U.clamp(-pushLimit, V.speedY, pushLimit);
        crash(yourDamage, true);
-       if (V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name())) {
+       if (V.isNuclear()) {
         V.setDamage(V.damageCeiling());
         otherV.setDamage(otherV.damageCeiling());
-        Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : otherV.durability;
+        V.scoreDamage += replay ? 0 : otherV.durability;
         V.setCameraShake(Camera.shakeIntensity.normalNuclear);
        }
        if (V.dealsMassiveDamage() && (massiveHitTimer <= 0 || otherV.isIntegral())) {
         otherV.setDamage(otherV.damageCeiling());
-        Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : otherV.durability;
+        V.scoreDamage += replay ? 0 : otherV.durability;
         V.VA.massiveHit.play(Double.NaN, V.VA.distanceVehicleToCamera);
         massiveHitTimer = U.random(5.);
         otherV.deformParts();
@@ -191,7 +199,7 @@ public class Physics {
      if (!I.sameTeam(V, vehicle) && (!vehicle.destroyed || wrathEngaged) && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
       boolean throughWeapon = special.throughWeapon();
       for (var shot : special.shots) {
-       shot.vehicleInteract(vehicle, throughWeapon, replay, greenTeam);
+       shot.vehicleInteract(vehicle, throughWeapon, replay);
       }
       if (V.isFixed() && Bonus.holder < 0 && V.isIntegral()) {
        double collideAt = special.diameter + Bonus.big.getRadius();
@@ -222,37 +230,45 @@ public class Physics {
     }
    }
    if (V.explosionType != Vehicle.ExplosionType.none) {
-    if (V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name())) {
+    if (V.isNuclear()) {
      explosionDiameter = U.random(20000.);
      explosionDamage = 2500 + U.random(5000.);
     }
     for (var vehicle : I.vehicles) {
      if (!I.sameTeam(V, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
       for (var explosion : V.explosions) {
-       explosion.vehicleInteract(vehicle, replay, greenTeam);
+       explosion.vehicleInteract(vehicle, replay, V.greenTeam);
       }
      }
     }
    }
    if (!V.destroyed) {
-    if (V.isFixed()) {
+    if (V.isFixed()) {//<-Turret base collisions
      for (var vehicle : I.vehicles) {
-      if (!I.sameTeam(V, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && U.distance(V.X, vehicle.X, V.Y + (V.turretBaseY * .5), vehicle.Y, V.Z, vehicle.Z) < V.collisionRadius * .5 + vehicle.collisionRadius && !vehicle.phantomEngaged) {
-       hitCheck(vehicle);
-       if (vehicle.fragility > 0) {
-        vehicle.addDamage(V.structureBaseDamageDealt * vehicle.fragility);
-        Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : V.structureBaseDamageDealt * vehicle.fragility;
-       }
+      if (!I.sameTeam(V, vehicle) && !vehicle.destroyed && !vehicle.reviveImmortality && U.distance(V.X, vehicle.X, V.Y + (V.turretBaseY * .5), vehicle.Y, V.Z, vehicle.Z) < V.collisionRadius + vehicle.collisionRadius && !vehicle.phantomEngaged) {
        vehicle.speedX += U.randomPlusMinus(500.);
        vehicle.speedZ += U.randomPlusMinus(500.);
        vehicle.speedY += U.randomPlusMinus(200.);
-       if (vehicle.fragility > 0) {
-        vehicle.deformParts();
+       if (V.structureBaseDamageDealt > 0) {//<-Skips if there's no damage dealt added to the turret structure
+        if (!structureBaseHit[vehicle.index]) {//*<-The actual damage is only applied once until the vehicle moves out of the turret's spot
+         hitCheck(vehicle);
+         double damage = V.structureBaseDamageDealt * vehicle.fragility;
+         vehicle.addDamage(damage);
+         V.scoreDamage += replay ? 0 : damage;
+         if (!vehicle.isFixed()) {
+          structureBaseHit[vehicle.index] = true;
+         }
+        }
+        if (vehicle.fragility > 0) {
+         vehicle.deformParts();
+        }
+        vehicle.throwChips(vehicle.P.netSpeed, true);
+        V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
+        V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
+        V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
        }
-       vehicle.throwChips(vehicle.P.netSpeed, true);
-       V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
-       V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
-       V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
+      } else {
+       structureBaseHit[vehicle.index] = false;//*
       }
      }
     }
@@ -261,7 +277,7 @@ public class Physics {
       if (special.type.name().contains(D.particle) && special.fire) {
        boolean disintegrate = special.type == Special.Type.particledisintegrator;
        for (var vehicle : I.vehicles) {
-        if ((disintegrate ? !I.sameTeam(V, vehicle) : !I.sameVehicle(V, vehicle) && I.sameTeam(V, vehicle)) &&
+        if ((disintegrate ? !I.sameTeam(V, vehicle) : !I.samePlayer(V, vehicle) && I.sameTeam(V, vehicle)) &&
         !vehicle.destroyed && !vehicle.reviveImmortality && !vehicle.phantomEngaged) {
          if (
          ((vehicle.Y <= V.Y && U.sin(V.YZ) >= 0) || (vehicle.Y >= V.Y && U.sin(V.YZ) <= 0) || Math.abs(vehicle.Y - V.Y) < vehicle.collisionRadius) &&//<-inY
@@ -271,7 +287,7 @@ public class Physics {
           if (disintegrate) {
            vehicle.deformParts();
            hitCheck(vehicle);
-           Match.scoreDamage[greenTeam ? 0 : 1] += replay ? 0 : amount;
+           V.scoreDamage += replay ? 0 : amount;
           }
           if (disintegrate || vehicle.isIntegral()) {//<-Reintegration was sometimes making vehicles non-destroyable
            vehicle.addDamage(amount * (disintegrate ? 1 : -1.5));//<-1.5 for reintegration to make a more worthwhile team member
@@ -293,27 +309,31 @@ public class Physics {
    V.death = Vehicle.Death.none;
   } else {
    if (V.MNB != null) {
-    V.MNB.runHitOthers(greenTeam);
+    V.MNB.runHitOthers();
    }
    if (V.death == Vehicle.Death.none) {
     String s = Network.mode == Network.Mode.OFF ? V.name : UI.playerNames[V.index];
     V.death = Vehicle.Death.diedAlone;
+    int logCurrent = MatchLog.listQuantity - 1;
     for (var vehicle : I.vehicles) {
      if (!I.sameTeam(V, vehicle) && vehicleHit == vehicle.index && vehicle.P.vehicleHit == V.index) {
       V.death = Vehicle.Death.killedByAnother;
-      DestructionLog.update();
+      MatchLog.update();
       String s1 = Network.mode == Network.Mode.OFF ? vehicle.name : UI.playerNames[vehicle.index];
-      DestructionLog.names[4][0] = s1;
-      DestructionLog.names[4][1] = s;
-      DestructionLog.nameColors[4][0] = vehicle.index < I.halfThePlayers() ? U.getColor(0, 1, 0) : U.getColor(1, 0, 0);
-      DestructionLog.nameColors[4][1] = greenTeam ? U.getColor(0, 1, 0) : U.getColor(1, 0, 0);
+      MatchLog.names[logCurrent][0] = s1;
+      MatchLog.names[logCurrent][1] = s;
+      MatchLog.middleText[logCurrent] = D.destroyed;
+      MatchLog.nameColors[logCurrent][0] = vehicle.index < I.halfThePlayers() ? U.getColor(0, 1, 0) : U.getColor(1, 0, 0);
+      MatchLog.nameColors[logCurrent][1] = V.greenTeam ? U.getColor(0, 1, 0) : U.getColor(1, 0, 0);
+      vehicle.scoreKill += replay ? 0 : 1;//<-Not the plan to put it here, but whatever
      }
     }
     if (V.death == Vehicle.Death.diedAlone) {
-     DestructionLog.update();
-     DestructionLog.names[4][0] = s;
-     DestructionLog.names[4][1] = "";
-     DestructionLog.nameColors[4][0] = greenTeam ? U.getColor(0, 1, 0) : U.getColor(1, 0, 0);
+     MatchLog.update();
+     MatchLog.names[logCurrent][0] = s;
+     MatchLog.names[logCurrent][1] = "";
+     MatchLog.middleText[logCurrent] = "got destroyed";
+     MatchLog.nameColors[logCurrent][0] = V.greenTeam ? U.getColor(0, 1, 0) : U.getColor(1, 0, 0);
     }
    }
   }
@@ -389,6 +409,7 @@ public class Physics {
    }
    runWheelSpin();
    double maxTurn = V.maxTurn + U.random(V.randomTurnKick);
+   //energyMultiple is not applied to the maximum turn rate, because this will skew the turn properties for vehicles like ThrustSSC, etc.
    if (!replay) {
     runSteering(maxTurn);
     if (V.VT != null) {
@@ -410,7 +431,8 @@ public class Physics {
    }
    runFlight(maxTurn, turnSpeed);
    if (!V.phantomEngaged && !inTornado && !V.floats) {
-    V.speedY += E.gravity * (V.amphibious == Vehicle.Amphibious.ON && inPool && V.Y > 0 ? -1 : 1) * U.tick;
+    boolean buoyant = V.amphibious == Vehicle.Amphibious.ON && inPool && V.Y > 0;
+    V.speedY += E.gravity * (buoyant ? -1 : 1) * U.tick;
    }//There IS better ground traction if the gravity is applied before setting wheel XYZ
    runSetWheelXYZ();
    Tornado.vehicleInteract(V);//<-Up here because Mode.fly gets cancelled below. Must also precede runSetCorePosition() to have any effect
@@ -536,18 +558,18 @@ public class Physics {
   }
  }
 
- private void runSteering(double turnAmount) {
+ private void runSteering(double max) {
   double turnRate = V.turnRate * V.energyMultiple;
   if (V.steerByMouse && turnRate >= Double.POSITIVE_INFINITY) {
-   speedXZ = U.clamp(-turnAmount, Mouse.steerX, turnAmount);
+   speedXZ = U.clamp(-max, Mouse.steerX, max);
   } else {
    if ((V.turnR && !V.turnL) || (V.steerByMouse && speedXZ > Mouse.steerX)) {
     speedXZ -= (speedXZ > 0 ? 2 : 1) * turnRate * U.tick;
-    speedXZ = Math.max(speedXZ, -turnAmount);
+    speedXZ = Math.max(speedXZ, -max);
    }
    if ((V.turnL && !V.turnR) || (V.steerByMouse && speedXZ < Mouse.steerX)) {
     speedXZ += (speedXZ < 0 ? 2 : 1) * turnRate * U.tick;
-    speedXZ = Math.min(speedXZ, turnAmount);
+    speedXZ = Math.min(speedXZ, max);
    }
    if (speedXZ != 0 && !V.turnL && !V.turnR && !V.steerByMouse) {
     if (Math.abs(speedXZ) < turnRate * 2 * U.tick) {
@@ -679,18 +701,18 @@ public class Physics {
   amount = speed < 0 ? -1 : 1;
   if (Math.abs(amount * wheelSpun * U.tick) > 25) {
    double randomAngle = U.randomPlusMinus(360.);
-   wheelSpin[0] = randomAngle;
-   wheelSpin[1] = randomAngle;
+   wheelSpinR = randomAngle;
+   wheelSpinL = randomAngle;
   } else {
-   wheelSpin[0] += amount * wheelSpun * V.energyMultiple * U.tick;
-   wheelSpin[1] += amount * wheelSpun * V.energyMultiple * U.tick;
+   wheelSpinR += amount * wheelSpun * V.energyMultiple * U.tick;
+   wheelSpinL += amount * wheelSpun * V.energyMultiple * U.tick;
    if (V.steerInPlace) {
     double steerSpin = 667 * speedXZ / V.absoluteRadius;
-    wheelSpin[0] += amount * steerSpin * U.tick;
-    wheelSpin[1] -= amount * steerSpin * U.tick;
+    wheelSpinR += amount * steerSpin * U.tick;
+    wheelSpinL -= amount * steerSpin * U.tick;
    }
-   wheelSpin[0] = Math.abs(wheelSpin[0]) > 360 ? 0 : wheelSpin[0];
-   wheelSpin[1] = Math.abs(wheelSpin[1]) > 360 ? 0 : wheelSpin[1];
+   if (Math.abs(wheelSpinR) > 360) wheelSpinR = 0;
+   if (Math.abs(wheelSpinL) > 360) wheelSpinL = 0;
   }
  }
 
@@ -781,7 +803,7 @@ public class Physics {
   if (V.type == Vehicle.Type.vehicle && V.handbrake && mode == Mode.neutral) {
    mode = Mode.stunt;
   }
-  if (V.type == Vehicle.Type.aircraft && (V.drive2 || V.reverse2)) {//<-todo--take note whether allowing reverse2 will cause AI trouble
+  if (V.type == Vehicle.Type.aircraft && (V.drive2 || V.reverse2)) {
    boolean engageFly = mode == Mode.neutral;
    if (mode.name().startsWith(D.drive) && V.reverse) {
     V.Y -= 10;
@@ -923,13 +945,13 @@ public class Physics {
 
  private void runSpeedBoost() {
   if (V.boost && V.speedBoost > 0 && !V.destroyed) {
-   if (Math.abs(V.speedX) < V.topSpeeds[2] || directionAgainstSpeedX()) {
+   if (Math.abs(V.speedX) < V.maximumSpeed || directionAgainstSpeedX()) {
     V.speedX -= V.speedBoost * U.sin(V.XZ) * polarity * U.tick;
    }
-   if (Math.abs(V.speedZ) < V.topSpeeds[2] || directionAgainstSpeedZ()) {
+   if (Math.abs(V.speedZ) < V.maximumSpeed || directionAgainstSpeedZ()) {
     V.speedZ += V.speedBoost * U.cos(V.XZ) * polarity * U.tick;
    }
-   if (Math.abs(V.speedY) < V.topSpeeds[2] || directionAgainstSpeedY()) {
+   if (Math.abs(V.speedY) < V.maximumSpeed || directionAgainstSpeedY()) {
     V.speedY -= V.speedBoost * U.sin(V.YZ) * U.tick;
    }
    if (!V.highGrip()) {
@@ -996,7 +1018,7 @@ public class Physics {
   crashPower = 0;
   boolean spinnerHit = inWall = false, flipped = flipped();
   for (var trackPart : TE.trackParts) {
-   if (!trackPart.trackPlanes.isEmpty() && U.distanceXZ(V, trackPart) <= trackPart.renderRadius + V.renderRadius) {//<-NEEDED--large maps get performance overhead without it!
+   if (!trackPart.trackPlanes.isEmpty() && /**/U.distanceXZ(V, trackPart) <= trackPart.renderRadius + V.renderRadius/*<-NEEDED--large maps get performance overhead without it!*/) {
     for (var trackPlane : trackPart.trackPlanes) {
      double trackX = trackPlane.X + trackPart.X, trackY = trackPlane.Y + trackPart.Y, trackZ = trackPlane.Z + trackPart.Z,
      velocityXZ = Math.abs(sinXZ),
@@ -1204,7 +1226,7 @@ public class Physics {
   }
  }
 
- private void runMoundInteract(double gravityCompensation) {
+ private void runMoundInteract(double gravityCompensation) {//fixme--Vehicles not always at correct angle on mounds/volcano, etc.
   onMoundSlope = atOrAboveAndWithinMoundTopRadius = false;
   if (!V.phantomEngaged) {
    boolean flipped = flipped();
@@ -1275,7 +1297,7 @@ public class Physics {
     }
    }
   }
-  speed = U.clamp(-V.topSpeeds[2], speed, V.topSpeeds[2]);
+  speed = U.clamp(-V.maximumSpeed, speed, V.maximumSpeed);
   if (againstWall() && V.highGrip()) {
    speed = U.timesTick(speed, -.25);
   }

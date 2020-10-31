@@ -7,7 +7,6 @@ import ve.environment.Pool;
 import ve.environment.Volcano;
 import ve.instances.Core;
 import ve.instances.I;
-import ve.trackElements.Arrow;
 import ve.trackElements.TE;
 import ve.ui.Match;
 import ve.ui.UI;
@@ -62,12 +61,6 @@ public enum Camera {//*No need to extend core--a Core for calling location is de
   PC.setTranslateY(0);
   PC.setTranslateZ(0);
   UI.scene3D.setCamera(PC);
-  PerspectiveCamera camera2 = new PerspectiveCamera(true);
-  camera2.setFieldOfView(defaultFOV);
-  camera2.setTranslateX(0);
-  camera2.setTranslateY(0);
-  camera2.setTranslateZ(0);
-  Arrow.scene.setCamera(camera2);
  }
 
  public static void run(Vehicle playerV, boolean gamePlay) {

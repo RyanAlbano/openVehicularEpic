@@ -1,17 +1,12 @@
 package ve.trackElements;
 
 import javafx.scene.paint.PhongMaterial;
-import ve.environment.E;
-import ve.environment.FrustumMound;
-import ve.environment.MapBounds;
-import ve.environment.Sun;
-import ve.environment.Volcano;
+import ve.environment.*;
 import ve.instances.Core;
 import ve.instances.I;
 import ve.trackElements.trackParts.RepairPoint;
 import ve.trackElements.trackParts.TrackPart;
 import ve.ui.Maps;
-import ve.ui.Match;
 import ve.ui.options.Options;
 import ve.utilities.D;
 import ve.utilities.Images;
@@ -31,12 +26,12 @@ public enum TE {//TrackElements
  public static double[] instanceScale = {1, 1, 1};
  public static double randomX, randomY, randomZ;
  public static final long wrapDistance = 40000;
- public static long currentCheckpoint;
- public static boolean lapCheckpoint;
+ private static long currentWaypoint;//<-Just keep for now
+ public static boolean lapWaypoint;
  public static final List<TrackPart> trackParts = new ArrayList<>();
  public static final Collection<FrustumMound> mounds = new ArrayList<>();
  public static final List<Point> points = new ArrayList<>();
- public static final List<Checkpoint> checkpoints = new ArrayList<>();
+ public static final List<Waypoint> waypoints = new ArrayList<>();
 
  public enum MS {//MapSelect
   ;
@@ -47,7 +42,7 @@ public enum TE {//TrackElements
 
  public enum Models {
   road, roadshort, roadturn, roadbendL, roadbendR, roadend, roadincline, offroad, offroadshort, offroadturn, offroadbump, offroadrocky, offroadend, offroadincline, mixroad,
-  checkpoint, repair,
+  waypoint, repair,
   ramp, rampcurved, ramptrapezoid, ramptriangle, rampwall, quarterpipe, pyramid, plateau,
   offramp, offplateau/*<-todo-Remove 'offPlateau' and switch to mounds?*/, mound, pavedmound,//<-'(paved)mound' is needed!
   floor, offfloor, wall, offwall, cube, offcube, spike, spikes, block, blocktower, border, beam, grid, tunnel, lift, speedgate, slowgate, antigravity,
@@ -97,7 +92,7 @@ public enum TE {//TrackElements
    }
    rotation += U.random() < .5 ? 180 : 0;
   }
-  if (model == Models.checkpoint || model == Models.repair) {
+  if (model == Models.waypoint || model == Models.repair) {
    forceTrackPartOutsideExistingParts(s, X, Y, Z, (String[]) null);//<-Always call, since in this case it's only used to set the mound sit
    if (Maps.name.equals("Pyramid Paradise")) {
     forceTrackPartOutsideExistingParts(s, X, Y, Z, Models.pyramid.name());
@@ -105,7 +100,7 @@ public enum TE {//TrackElements
     forceTrackPartOutsideExistingParts(s, X, Y, Z, Models.cube.name(), Models.ramptriangle.name());
    }
   }
-  if (model == Models.checkpoint) {
+  if (model == Models.waypoint) {
    if (Maps.name.equals(D.Maps.highlands)) {
     if (U.random() < .5) {
      (U.random() < .5 ? X : Z)[0] += U.random() < .5 ? 100000 : -100000;
@@ -187,19 +182,19 @@ public enum TE {//TrackElements
    trackParts.get(trackParts.size() - 1).rainbow = true;
   } else if (model == Models.crescent) {
    Sun.enforceCrescent();
-  } else if (model == Models.checkpoint) {
+  } else if (model == Models.waypoint) {
    points.add(new Point());
    points.get(points.size() - 1).X = X[0];
    points.get(points.size() - 1).Y = Y[0];
    points.get(points.size() - 1).Z = Z[0];
-   points.get(points.size() - 1).type = Point.Type.checkpoint;
-   checkpoints.add(new Checkpoint());
-   checkpoints.get(checkpoints.size() - 1).X = X[0];
-   checkpoints.get(checkpoints.size() - 1).Y = Y[0];
-   checkpoints.get(checkpoints.size() - 1).Z = Z[0];
-   checkpoints.get(checkpoints.size() - 1).type = isSidewaysXZ(rotation) ? Checkpoint.Type.passX : Checkpoint.Type.passZ;
-   checkpoints.get(checkpoints.size() - 1).location = points.size() - 1;
-   trackParts.get(trackParts.size() - 1).checkpointNumber = checkpoints.size() - 1;
+   points.get(points.size() - 1).type = Point.Type.waypoint;
+   waypoints.add(new Waypoint());
+   waypoints.get(waypoints.size() - 1).X = X[0];
+   waypoints.get(waypoints.size() - 1).Y = Y[0];
+   waypoints.get(waypoints.size() - 1).Z = Z[0];
+   waypoints.get(waypoints.size() - 1).type = isSidewaysXZ(rotation) ? Waypoint.Type.passX : Waypoint.Type.passZ;
+   waypoints.get(waypoints.size() - 1).location = points.size() - 1;
+   trackParts.get(trackParts.size() - 1).waypointNumber = waypoints.size() - 1;
   } else if (s.contains(").")) {
    points.add(new Point());
    points.get(points.size() - 1).X = X[0];
@@ -263,7 +258,7 @@ public enum TE {//TrackElements
   V.X = U.random(Math.min(50000., MapBounds.right)) + U.random(Math.max(-50000., MapBounds.left));
   V.Z = U.random(Math.min(50000., MapBounds.forward)) + U.random(Math.max(-50000., MapBounds.backward));
   V.XZ = !V.isFixed()/*<-Fixed units face forward for less confusing placement*/ && Maps.randomVehicleStartAngle ? U.randomPlusMinus(180.) : 0;
-  boolean regularPlacement = !V.isFixed() && !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name());
+  boolean regularPlacement = !V.isFixed() && !V.isNuclear();
   if (Maps.name.equals("Vicious Versus V3") && I.vehiclesInMatch > 1) {
    boolean green = V.index < I.halfThePlayers();
    if (green) {
@@ -298,6 +293,9 @@ public enum TE {//TrackElements
   } else if (Maps.name.equals(D.Maps.highlands)) {
    V.X = U.randomPlusMinus(100000);
    V.Z = U.randomPlusMinus(100000);
+  } else if (Maps.name.equals("Vehicular Colosseum")) {
+   V.X = U.randomPlusMinus(30000);
+   V.Z = U.randomPlusMinus(30000);
   } else if (Maps.name.equals(D.Maps.circleRaceXL)) {
    V.Z += 320000;
   } else if (Maps.name.equals(D.Maps.XYLand)) {
@@ -319,7 +317,7 @@ public enum TE {//TrackElements
     V.X = 0;//<-Zero is best--train was 'beached' against walls at match start
     V.Z = U.random(6000.) - U.random(10000.);
    }
-  } else if (Maps.name.equals(D.Maps.everybodyEverything)) {
+  } else if (Maps.name.equals(D.Maps.methodMadness)) {
    V.X = U.random() < .5 ? -2000 : 2000;
    V.Z = U.randomPlusMinus(20000.);
   } else if (Maps.name.equals(D.Maps.theMaze)) {
@@ -359,7 +357,7 @@ public enum TE {//TrackElements
    if (Maps.name.equals(D.Maps.outerSpace1)) {
     V.X = U.randomPlusMinus(500.);
     V.Z = U.random(2000.) - U.random(4000.);
-    if (V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name())) {
+    if (V.isNuclear()) {
      V.X = 0;
      V.Z = 100500;
     }
@@ -391,56 +389,50 @@ public enum TE {//TrackElements
    Point P = points.get(V.point);
    if (P.type == Point.Type.mustPassAbsolute && V.P.mode != Physics.Mode.fly) {
     V.point += U.distance(V, P) < 500 ? 1 : 0;
-   } else if (P.type != Point.Type.checkpoint &&
-   (U.distanceXZ(V, P) < 500 || (V.AI.skipStunts && P.type != Point.Type.mustPassIfClosest) || (!checkpoints.isEmpty() && !Maps.name.equals(D.Maps.devilsStairwell) && U.distance(V, checkpoints.get(V.checkpointsPassed)) <= U.distance(P, checkpoints.get(V.checkpointsPassed))))) {
+   } else if (P.type != Point.Type.waypoint &&
+   (U.distanceXZ(V, P) < 500 || (V.AI.skipStunts && P.type != Point.Type.mustPassIfClosest) || (!waypoints.isEmpty() && !Maps.name.equals(D.Maps.devilsStairwell) && U.distance(V, waypoints.get(V.waypointsPassed)) <= U.distance(P, waypoints.get(V.waypointsPassed))))) {
     V.point++;
    }
   }
-  if (!checkpoints.isEmpty() && !V.phantomEngaged) {
+  if (!waypoints.isEmpty() && !V.phantomEngaged) {
    double checkSize = Maps.name.equals(D.Maps.circleRaceXL) ? V.P.speed : 0;
-   Checkpoint C = checkpoints.get(V.checkpointsPassed);
-   if ((C.type == Checkpoint.Type.passZ || C.type == Checkpoint.Type.passAny) &&
-   Math.abs(V.Z - C.Z) < (60 + checkSize) + Math.abs(V.speedZ) * U.tick && Math.abs(V.X - C.X) < 700 && Math.abs((V.Y - C.Y) + 350) < 450) {
-    V.checkpointsPassed++;
+   Waypoint WP = waypoints.get(V.waypointsPassed);
+   if ((WP.type == Waypoint.Type.passZ || WP.type == Waypoint.Type.passAny) &&
+   Math.abs(V.Z - WP.Z) < (60 + checkSize) + Math.abs(V.speedZ) * U.tick && Math.abs(V.X - WP.X) < 700 && Math.abs((V.Y - WP.Y) + 350) < 450) {
+    V.waypointsPassed++;
     V.point++;
     if (V.index == I.vehiclePerspective) {
-     if (!Match.messageWait) {
-      Match.print = D.Checkpoint;
-      Match.printTimer = 10;
-     }
+     //Some visual indicator here as well, maybe
      if (Options.headsUpDisplay) {
-      Sounds.checkpoint.play(0);
+      Sounds.waypoint.play(0);
      }
     }
-    Match.scoreCheckpoint[V.index < I.halfThePlayers() ? 0 : 1] += replay ? 0 : 1;
-    if (V.checkpointsPassed >= checkpoints.size()) {
-     Match.scoreLap[V.index < I.halfThePlayers() ? 0 : 1] += replay ? 0 : 1;
-     V.checkpointsPassed = V.point = 0;
+    V.scoreWaypoint += replay ? 0 : 1;
+    if (V.waypointsPassed >= waypoints.size()) {
+     V.scoreLap += replay ? 0 : 1;
+     V.waypointsPassed = V.point = 0;
     }
    }
-   if ((C.type == Checkpoint.Type.passX || C.type == Checkpoint.Type.passAny) &&
-   Math.abs(V.X - C.X) < (60 + checkSize) + Math.abs(V.speedX) * U.tick && Math.abs(V.Z - C.Z) < 700 && Math.abs((V.Y - C.Y) + 350) < 450) {
-    V.checkpointsPassed++;
+   if ((WP.type == Waypoint.Type.passX || WP.type == Waypoint.Type.passAny) &&
+   Math.abs(V.X - WP.X) < (60 + checkSize) + Math.abs(V.speedX) * U.tick && Math.abs(V.Z - WP.Z) < 700 && Math.abs((V.Y - WP.Y) + 350) < 450) {
+    V.waypointsPassed++;
     V.point++;
     if (V.index == I.vehiclePerspective) {
-     if (!Match.messageWait) {
-      Match.print = D.Checkpoint;
-      Match.printTimer = 10;
-     }
+     //Some visual indicator here as well, maybe
      if (Options.headsUpDisplay) {
-      Sounds.checkpoint.play(0);
+      Sounds.waypoint.play(0);
      }
     }
-    Match.scoreCheckpoint[V.index < I.halfThePlayers() ? 0 : 1] += replay ? 0 : 1;
-    if (V.checkpointsPassed >= checkpoints.size()) {
-     Match.scoreLap[V.index < I.halfThePlayers() ? 0 : 1] += replay ? 0 : 1;
-     V.checkpointsPassed = V.point = 0;
+    V.scoreWaypoint += replay ? 0 : 1;
+    if (V.waypointsPassed >= waypoints.size()) {
+     V.scoreLap += replay ? 0 : 1;
+     V.waypointsPassed = V.point = 0;
     }
    }
-   V.point = V.checkpointsPassed > 0 ? (int) U.clamp(checkpoints.get(V.checkpointsPassed - 1).location + 1, V.point, checkpoints.get(V.checkpointsPassed).location) : V.point;
+   V.point = V.waypointsPassed > 0 ? (int) U.clamp(waypoints.get(V.waypointsPassed - 1).location + 1, V.point, waypoints.get(V.waypointsPassed).location) : V.point;
    if (V.index == I.vehiclePerspective) {
-    currentCheckpoint = V.checkpointsPassed;
-    lapCheckpoint = V.checkpointsPassed >= checkpoints.size() - 1;
+    currentWaypoint = V.waypointsPassed;
+    lapWaypoint = V.waypointsPassed >= waypoints.size() - 1;
    }
   }
   V.point = V.point >= points.size() || V.point < 0 ? 0 : V.point;
@@ -464,7 +456,7 @@ public enum TE {//TrackElements
   trackParts.clear();
   mounds.clear();
   points.clear();
-  checkpoints.clear();
+  waypoints.clear();
   RepairPoint.instances.clear();
   Bonus.reset();
  }

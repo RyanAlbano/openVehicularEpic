@@ -261,9 +261,9 @@ public enum VS {//VehicleSelect
      }
     }
     String topSpeed = V.topSpeeds[1] >= Long.MAX_VALUE ? D.None :
-    V.speedBoost > 0 && V.topSpeeds[2] >= Long.MAX_VALUE ? "None (with Speed Boost)" :
-    hasWrath ? Math.round(Units.getSpeed(V.topSpeeds[2])) + " " + Units.getSpeedName() + " (with Wrath engaged)" :
-    V.speedBoost > 0 ? Math.round(Units.getSpeed(V.topSpeeds[2])) + " " + Units.getSpeedName() + " (with Speed Boost)" :
+    V.speedBoost > 0 && V.maximumSpeed >= Long.MAX_VALUE ? "None (with Speed Boost)" :
+    hasWrath ? Math.round(Units.getSpeed(V.maximumSpeed)) + " " + Units.getSpeedName() + " (with Wrath engaged)" :
+    V.speedBoost > 0 ? Math.round(Units.getSpeed(V.maximumSpeed)) + " " + Units.getSpeedName() + " (with Speed Boost)" :
     Math.round(Units.getSpeed(V.topSpeeds[1])) + " " + Units.getSpeedName();
     U.textL(topSpeed, lineLR, Y1);
     U.textR("Acceleration Phases:", lineLL, Y2);
@@ -288,7 +288,7 @@ public enum VS {//VehicleSelect
   }
   U.textR("Collision Damage Rating:", lineRL, Y0);
   String damageDealt =
-  V.dealsMassiveDamage() || V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) ? "Instant-Kill" :
+  V.dealsMassiveDamage() || V.isNuclear() ? "Instant-Kill" :
   hasForceField || V.spinner != null ? "'Inconsistent'" :
   String.valueOf((float) V.damageDealt);
   U.textL(damageDealt, lineRR, Y0);

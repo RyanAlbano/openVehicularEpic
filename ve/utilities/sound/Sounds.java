@@ -9,21 +9,23 @@ import ve.instances.I;
 import ve.trackElements.Bonus;
 import ve.ui.UI;
 import ve.utilities.D;
+import ve.utilities.U;
 
 public enum Sounds {
  ;
  public static final String folder = "sounds";
  public static final String extension = ".wav";
  public static final String exception = "Sound-loading Exception: ";
- public static int channels;//<-fixme--or remove if stereo's the only good way for TinySound
+ public static boolean mute;
+ public static boolean useEcho;
  public static int bitDepth;
  public static double sampleRate;
- public static boolean softwareBased;
+ public static boolean softwareBased = U.onLinux;
  public static double bufferSize;
  static final long sampledGainLimit = 80;
  public static double decibelHalf = 6.020599913;
  public static double echoVolume;
- public static FireAndForget checkpoint;
+ public static FireAndForget waypoint;
  public static FireAndForget stunt;
  public static FireAndForget finish;
  //Software-based globals--this optimization only works for TinySound one-shot MemSounds. 'playIfNotPlaying' usage not supported either.
@@ -97,12 +99,12 @@ public enum Sounds {
   Wind.closeSound();
   Volcano.closeSound();
   if (UI.sound != null) UI.sound.close();
-  if (checkpoint != null) checkpoint.close();
+  if (waypoint != null) waypoint.close();
   if (stunt != null) stunt.close();
   Bonus.closeSound();
   if (finish != null) finish.close();
   UI.sound = new FireAndForget("UI", 2);
-  checkpoint = new FireAndForget(D.checkpoint);
+  waypoint = new FireAndForget(D.waypoint);
   stunt = new FireAndForget("stunt");
   Bonus.sound = new Controlled("bonus");
   finish = new FireAndForget("finish", 2);

@@ -9,7 +9,7 @@ import ve.utilities.Camera;
 import ve.utilities.D;
 import ve.utilities.U;
 
-public enum Options {
+public enum Options {//todo--separate into graphics, sound, UI,and system menus?
  ;
  public static long driverSeat, matchLength;
  public static boolean headsUpDisplay = true;
@@ -19,10 +19,8 @@ public enum Options {
 
  public static void run() {
   boolean fromMenu = UI.status == UI.Status.optionsMenu;
-  if (fromMenu) {
-   U.fillRGB(0, 0, 0, UI.colorOpacity.maximal);
-   U.fillRectangle(.5, .5, 1, 1);
-  }
+  U.fillRGB(0, 0, 0, fromMenu ? UI.colorOpacity.maximal : UI.colorOpacity.minimal);
+  U.fillRectangle(.5, .5, 1, 1);
   U.fillRGB(1);
   U.font(.05);
   U.text(D.OPTIONS, .15);

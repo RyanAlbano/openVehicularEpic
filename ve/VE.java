@@ -8,7 +8,7 @@ PROJECT NAMING CONVENTIONS (variable names are usually typed as follows):
 
 wordWord
 
-For example, 'current checkpoint' would be typed as 'currentCheckpoint'.
+For example, 'current waypoint' would be typed as 'currentWaypoint'.
 
 Successive capital letters are usually abbreviations, such as 'PhongMaterial PM' or 'FileInputStream FIS';
 
@@ -28,10 +28,9 @@ enum VE {
  public static void main(String[] s) {
   String trueString = "true";
   System.setProperty("sun.java2d.opengl", trueString);//<-Is this even necessary?
-  System.setProperty("javafx.animation.fullspeed", trueString);//<-Capping the FPS manually seems to actually do a better job than the AnimationTimer at 75Hz--this also lets the user max out the FPS, which is great
+  System.setProperty("javafx.animation.fullspeed", trueString);//<-Capping the FPS manually seems to actually do a better job than the AnimationTimer at 75Hz--this also lets the user max out the FPS
   //Properties must be set BEFORE this point!
   UI.run(s);
  }
- //FIXME--Mini Cooper and the Love of God model files can fail to load on Linux?
  //DON'T FORGET TO UPDATE THE .JAR!
 }

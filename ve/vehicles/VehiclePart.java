@@ -333,7 +333,7 @@ public class VehiclePart extends InstancePart {
        steerXY.setXY((steer.contains(D.thick(D.fromYZ)) ? V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply);
       }
       if (wheel) {
-       steerYZ.setYZ(side > 0 ? V.P.wheelSpin[0] : side < 0 ? V.P.wheelSpin[1] : 0);
+       steerYZ.setYZ(side > 0 ? V.P.wheelSpinR : side < 0 ? V.P.wheelSpinL : 0);
       } else if (steer.contains(D.thick(D.YZ))) {
        steerYZ.setYZ((steer.contains(D.thick(D.fromYZ)) ? -V.P.speedYZ : V.P.speedXZ) * steerAngleMultiply);//<-Master script
       }

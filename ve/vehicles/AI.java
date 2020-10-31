@@ -4,8 +4,8 @@ import ve.environment.Boulder;
 import ve.environment.E;
 import ve.instances.I;
 import ve.trackElements.Bonus;
-import ve.trackElements.Checkpoint;
 import ve.trackElements.TE;
+import ve.trackElements.Waypoint;
 import ve.trackElements.trackParts.RepairPoint;
 import ve.ui.Maps;
 import ve.ui.Match;
@@ -26,11 +26,11 @@ public class AI {
  private double nukeWait;
  public boolean skipStunts;
  private boolean driveTrackBackwards;
- private final boolean guardCheckpoint;
+ private final boolean guardWaypoint;
  private boolean squareAgainstWall;
  private boolean engagingOthers;//<-renamed from 'attacking', since some vehicles engage their teammates instead
  private boolean shooting;
- private boolean atGuardedCheckpoint;
+ private boolean atGuardedWaypoint;
  private final boolean supportInfrastructure;
  public static double speedLimit;
  long airRotationDirectionYZ = U.random() < .5 ? 1 : -1, airRotationDirectionXY = U.random() < .5 ? 1 : -1;
@@ -45,9 +45,9 @@ public class AI {
  AI(Vehicle vehicle) {
   V = vehicle;
   target = U.random(I.vehiclesInMatch);
-  guardCheckpoint = Maps.guardCheckpointAI && !V.isFixed() && V.topSpeeds[1] < 200;
-  nukeWait = V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) ? U.random(Options.matchLength) : nukeWait;
-  waitPoint = U.random(TE.checkpoints.size());
+  guardWaypoint = Maps.guardWaypointAI && !V.isFixed() && V.topSpeeds[1] < 200;
+  nukeWait = V.isNuclear() ? U.random(Options.matchLength) : nukeWait;
+  waitPoint = U.random(TE.waypoints.size());
   boolean supportInfrastructure = V.type == Vehicle.Type.supportInfrastructure;
   for (var special : V.specials) {
    if (special.type == Special.Type.particlereintegrator) {
@@ -59,10 +59,17 @@ public class AI {
  }
 
  public void run() {
-  if (V.index == I.userPlayerIndex) {//*Should ensure that this is only called for auto-aiming turrets, though it's a messy approach
+  if (V.index == I.userPlayerIndex) {
    if (V.VT != null && V.VT.hasAutoAim) {
+    double compareDistance = Double.POSITIVE_INFINITY;
+    for (var vehicle : I.vehicles) {
+     if (!I.sameTeam(V, vehicle) && vehicle.isIntegral() && U.distance(V, vehicle) < compareDistance) {
+      target = vehicle.index;
+      compareDistance = U.distance(V, vehicle);
+     }
+    }
     for (var special : V.specials) {
-     if (special.aimType == Special.AimType.auto) {//*
+     if (special.aimType == Special.AimType.auto) {//*Should ensure that this is only called for auto-aiming turrets, though it's a messy approach
       special.fire = false;
      }
     }
@@ -81,11 +88,10 @@ public class AI {
    }
    boolean needRace =
    V.index < I.halfThePlayers() ?
-   Match.scoreCheckpoint[0] <= Match.scoreCheckpoint[1] || Match.scoreLap[0] < Match.scoreLap[1] :
-   Match.scoreCheckpoint[1] <= Match.scoreCheckpoint[0] || Match.scoreLap[1] < Match.scoreLap[0];
-   long scoreStunt0 = Math.round(Match.scoreStunt[0] * .0005), scoreStunt1 = Math.round(Match.scoreStunt[1] * .0005);
-   skipStunts = !V.landStuntsBothSides && !TE.checkpoints.isEmpty() && !Maps.name.equals(D.Maps.summitOfEpic) &&
-   (V.index < I.halfThePlayers() ? scoreStunt0 > scoreStunt1 : scoreStunt1 > scoreStunt0);
+   Match.scoreWaypoint[0] <= Match.scoreWaypoint[1] || Match.scoreLap[0] < Match.scoreLap[1] :
+   Match.scoreWaypoint[1] <= Match.scoreWaypoint[0] || Match.scoreLap[1] < Match.scoreLap[0];
+   skipStunts = !V.landStuntsBothSides && !TE.waypoints.isEmpty() && !Maps.name.equals(D.Maps.summitOfEpic) &&
+   (V.index < I.halfThePlayers() ? Match.scoreStunt[0] > Match.scoreStunt[1] : Match.scoreStunt[1] > Match.scoreStunt[0]);
    if (driveTrackBackwards) {
     int setPoint = point - 1;
     while (setPoint < 0) setPoint += TE.points.size();
@@ -99,14 +105,14 @@ public class AI {
     precisionXZ = precisionYZ = U.tick;
    } else {
     precisionXZ = precisionYZ = 5;
-    runRaceCheckpointSteeringOptimization();
+    runRaceWaypointSteeringOptimization();
    }
    if (!driveTrackBackwards && !V.isFixed() && !TE.points.isEmpty() && V.topSpeeds[1] < 200) {
     point = U.random(Math.max(1, TE.points.size() - 1));
     driveTrackBackwards = true;
    }
    boolean racing = (V.behavior == Behavior.race || (V.behavior == Behavior.adapt && needRace)) &&
-   (!TE.checkpoints.isEmpty() || (V.behavior == Behavior.race && !V.hasShooting)) && !V.P.wrathEngaged;
+   (!TE.waypoints.isEmpty() || (V.behavior == Behavior.race && !V.hasShooting)) && !V.P.wrathEngaged;
    if (!engagingOthers && !racing && target != V.index && !I.vehicles.get(target).destroyed) {
     engagingOthers = true;
     aimAheadTarget = //<-Gets invalidated by shooting vehicles
@@ -134,11 +140,11 @@ public class AI {
     }
    }
    aimAheadTarget = aimAheadTarget < 0 || I.vehicles.get(target).isFixed() ? 0 : aimAheadTarget;
-   if (guardCheckpoint && !atGuardedCheckpoint) {
-    directionXZ = (TE.checkpoints.get(waitPoint).X - V.X >= 0 ? 270 : 90) + U.arcTan((TE.checkpoints.get(waitPoint).Z - V.Z) / (TE.checkpoints.get(waitPoint).X - V.X));
+   if (guardWaypoint && !atGuardedWaypoint) {
+    directionXZ = (TE.waypoints.get(waitPoint).X - V.X >= 0 ? 270 : 90) + U.arcTan((TE.waypoints.get(waitPoint).Z - V.Z) / (TE.waypoints.get(waitPoint).X - V.X));
    } else if (engagingOthers) {
     Vehicle otherV = I.vehicles.get(target);
-    boolean targetDriveActive = !U.startsWith(otherV.P.mode.name(), Physics.Mode.neutral.name(), Physics.Mode.stunt.name());
+    boolean targetDriveActive = !U.startsWith(otherV.P.mode, Physics.Mode.neutral, Physics.Mode.stunt);
     double pX = otherV.X, pZ = otherV.Z;
     if (targetDriveActive) {
      double addAim = U.distanceXZ(V, otherV) * aimAheadTarget;
@@ -194,14 +200,14 @@ public class AI {
    }
    runFlight();
    runVehicleStunts();
-   if (guardCheckpoint && U.distanceXZ(V, TE.checkpoints.get(waitPoint)) < 500) {
-    atGuardedCheckpoint = true;
+   if (guardWaypoint && U.distanceXZ(V, TE.waypoints.get(waitPoint)) < 500) {
+    atGuardedWaypoint = true;
     if (U.distance(V, I.vehicles.get(target)) > 500) {
      V.drive = V.reverse = false;
      V.handbrake = true;
     }
    } else {
-    atGuardedCheckpoint = false;
+    atGuardedWaypoint = false;
    }
    if (nukeWait > 0) {
     V.drive = V.drive2 = V.reverse = V.reverse2 = false;
@@ -226,7 +232,7 @@ public class AI {
          break;
         }
        }
-       special.fire = (vehicle.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && U.distance(V, vehicle) < 25000) ||
+       special.fire = (vehicle.isNuclear() && U.distance(V, vehicle) < 25000) ||
        special.fire;
       }
      }
@@ -247,7 +253,7 @@ public class AI {
   }
  }
 
- private void runRaceCheckpointSteeringOptimization() {
+ private void runRaceWaypointSteeringOptimization() {
   if (!engagingOthers && TE.points.size() > 1 && !Maps.name.contains("Circle")) {//<-Void is not helpful for AI's in circle races
    int n = V.point + 1;
    while (n >= TE.points.size()) n -= TE.points.size();
@@ -267,7 +273,7 @@ public class AI {
     engagingOthers = true;//<-Always run it--why not?
     target = U.random(I.vehiclesInMatch);
     for (var vehicle : I.vehicles) {
-     if (!I.sameVehicle(V, vehicle) && I.sameTeam(V, vehicle) &&
+     if (!I.samePlayer(V, vehicle) && I.sameTeam(V, vehicle) &&
      vehicle.isIntegral() && vehicle.getDamage(true) > I.vehicles.get(target).getDamage(true)) {
       target = vehicle.index;
      }
@@ -275,9 +281,9 @@ public class AI {
    }
   } else {
    if (target == V.index || targetV.destroyed || I.sameTeam(V.index, target) ||
-   ((targetV.dealsMassiveDamage() || targetV.spinner != null) && !V.hasShooting && !V.dealsMassiveDamage() && !V.explosionType.name().contains(Vehicle.ExplosionType.nuclear.name()) && !V.P.wrathEngaged) ||//<-Not worth attacking
+   ((targetV.dealsMassiveDamage() || targetV.spinner != null) && !V.hasShooting && !V.dealsMassiveDamage() && !V.isNuclear() && !V.P.wrathEngaged) ||//<-Not worth attacking
    (E.viewableMapDistance < Double.POSITIVE_INFINITY && !V.isFixed() && U.distance(V, targetV) > E.viewableMapDistance) ||//<-Out of visible range
-   (driveTrackBackwards && !guardCheckpoint && !V.hasShooting && U.distanceXZ(V, targetV) > Math.min(E.viewableMapDistance, 10000)) ||//<-Too far away when running track backwards
+   (driveTrackBackwards && !guardWaypoint && !V.hasShooting && U.distanceXZ(V, targetV) > Math.min(E.viewableMapDistance, 10000)) ||//<-Too far away when running track backwards
    (targetV.explosionType == Vehicle.ExplosionType.maxnuclear && V.explosionType != Vehicle.ExplosionType.maxnuclear)) {//<-Don't attack max nukes unless bot's also a max nuke
     engagingOthers = false;
     target = U.random(I.vehiclesInMatch);
@@ -298,16 +304,16 @@ public class AI {
    V.turnL = V.XZ < directionXZ;
    V.turnR = V.XZ > directionXZ;
    if (!V.isFixed()) {
-    boolean checkpoints = !TE.checkpoints.isEmpty();
-    double checkpointDistance = checkpoints ? U.distanceXZ(V, TE.checkpoints.get(V.checkpointsPassed)) : 0;
+    boolean waypoints = !TE.waypoints.isEmpty();
+    double waypointDistance = waypoints ? U.distanceXZ(V, TE.waypoints.get(V.waypointsPassed)) : 0;
     BrakeStyle brakeStyle =
     V.type == Vehicle.Type.aircraft && engagingOthers && I.vehicles.get(target).P.mode == Physics.Mode.fly ? BrakeStyle.ignore :
     V.highGrip() ? BrakeStyle.handbrake :
     BrakeStyle.reverseEngine;
     boolean flying = V.P.mode == Physics.Mode.fly,
-    turningInTheRoad = V.maxTurn < 18 && !engagingOthers && !V.P.againstWall() && checkpoints && checkpointDistance < 2545 && differenceXZ > V.maxTurn;
+    turningInTheRoad = V.maxTurn < 18 && !engagingOthers && !V.P.againstWall() && waypoints && waypointDistance < 2545 && differenceXZ > V.maxTurn;
     if (brakeStyle != BrakeStyle.ignore &&
-    differenceXZ >= U.clamp(V.maxTurn, checkpoints && !engagingOthers ? checkpointDistance * .001 : 50, 90) &&
+    differenceXZ >= U.clamp(V.maxTurn, waypoints && !engagingOthers ? waypointDistance * .001 : 50, 90) &&
     V.P.speed > Math.max(50, V.accelerationStages[0] * U.tick) * (turningInTheRoad ? -1 : 1)) {
      if (flying) {
       if (V.P.speed > V.P.minimumFlightSpeedWithoutStall && !(engagingOthers && !V.hasShooting)) {
@@ -479,9 +485,9 @@ public class AI {
    if (V.P.mode == Physics.Mode.fly) {
     long extraY = 350;
     V.handbrake = Math.abs(V.XZ - directionXZ) <= 90;
-    if (!TE.checkpoints.isEmpty() && !engagingOthers) {
-     Checkpoint C = TE.checkpoints.get(V.checkpointsPassed);
-     directionYZ = C.Y - extraY == V.Y ? directionYZ : -((C.Y - extraY < V.Y ? -90 : 90) - U.arcTan(U.netValue(C.Z - V.Z, C.X - V.X) / (C.Y - extraY - V.Y)));
+    if (!TE.waypoints.isEmpty() && !engagingOthers) {
+     Waypoint WP = TE.waypoints.get(V.waypointsPassed);
+     directionYZ = WP.Y - extraY == V.Y ? directionYZ : -((WP.Y - extraY < V.Y ? -90 : 90) - U.arcTan(U.netValue(WP.Z - V.Z, WP.X - V.X) / (WP.Y - extraY - V.Y)));
      if (Math.abs(directionYZ - V.YZ) > precisionYZ) {
       if (directionYZ > V.YZ) {
        V.drive = false;
@@ -544,7 +550,7 @@ public class AI {
  private void runWallHits() {
   if (!V.isFixed()) {
    boolean againstWall = V.P.againstWall();
-   if (againstWall && (!shooting || guardCheckpoint) && !Maps.name.equals(D.Maps.devilsStairwell) && !(U.random() < .5 && U.equals(Maps.name, D.Maps.theBottleneck, D.Maps.testOfDamage, D.Maps.matrix2x3, D.Maps.theMaze, D.Maps.tunnelOfDoom))) {
+   if (againstWall && (!shooting || guardWaypoint) && !Maps.name.equals(D.Maps.devilsStairwell) && !(U.random() < .5 && U.equals(Maps.name, D.Maps.theBottleneck, D.Maps.testOfDamage, D.Maps.matrix2x3, D.Maps.theMaze, D.Maps.tunnelOfDoom))) {
     if (V.P.mode == Physics.Mode.fly) {
      V.drive = false;
      V.reverse = true;
@@ -581,7 +587,7 @@ public class AI {
     avoidDistance += theyHaveSpinner ? vehicle.renderRadius * 2 * Math.abs(vehicle.spinner.speed) : 0;
     if (!I.sameTeam(V, vehicle) && !vehicle.destroyed && U.distance(V, vehicle) < avoidDistance &&
     (theyHaveSpinner || vehicle.dealsMassiveDamage() || (racingSafely && notWorthCrashing &&
-    (vehicle.damageDealt > 7.5 || !U.equals(Maps.name, D.Maps.lapsOfGlory, "the Checkpoint!", D.Maps.vehicularFalls, "Zip n' Cross", D.Maps.theBottleneck, "Railing Against", D.Maps.testOfDamage, D.Maps.matrix2x3))))) {//<-Racers ignoring risk on these maps
+    (vehicle.damageDealt > 7.5 || !U.equals(Maps.name, D.Maps.lapsOfGlory, "Waypoint Derby", D.Maps.vehicularFalls, "Zip n' Cross", D.Maps.theBottleneck, "Railing Against", D.Maps.testOfDamage, D.Maps.matrix2x3))))) {//<-Racers ignoring risk on these maps
      if (V.P.mode != Physics.Mode.fly) {
       V.drive = true;
       V.reverse = V.handbrake = false;
@@ -655,14 +661,14 @@ public class AI {
  }
 
  private void runAimAndShoot(Special special) {
-  if (engagingOthers && special.type != Special.Type.phantom && special.type != Special.Type.teleport) {
+  if (engagingOthers && !U.equals(special.type, Special.Type.selfDestruct, Special.Type.phantom, Special.Type.teleport)) {
    double
    accuracyRangeXZ = special.aimType == Special.AimType.auto ? Math.abs(V.VT.XZ - vehicleTurretDirectionXZ) : Math.abs(V.XZ - directionXZ),
    accuracyRangeYZ = special.aimType == Special.AimType.auto ? Math.abs(V.VT.YZ - vehicleTurretDirectionYZ) : 0;
    boolean shoot = false;
    if (accuracyRangeXZ < special.AIAimPrecision && accuracyRangeYZ < special.AIAimPrecision) {
     for (var vehicle : I.vehicles) {
-     if (!vehicle.destroyed && (supportInfrastructure ? !I.sameVehicle(V, vehicle) && I.sameTeam(V, vehicle) : !I.sameTeam(V, vehicle))) {
+     if (!vehicle.destroyed && (supportInfrastructure ? !I.samePlayer(V, vehicle) && I.sameTeam(V, vehicle) : !I.sameTeam(V, vehicle))) {
       shoot = true;
       break;
      }
@@ -686,8 +692,8 @@ public class AI {
 
  private void runMineDeploy(Special special) {
   special.fire = false;
-  for (var checkpoint : TE.checkpoints) {
-   if (U.distance(V, checkpoint) < 500) {
+  for (var waypoint : TE.waypoints) {
+   if (U.distance(V, waypoint) < 500) {
     special.fire = true;
     break;
    }
@@ -708,7 +714,7 @@ public class AI {
    V.VT.turnL = V.VT.turnR = false;
    double turretZ = V.Z;//<-Elaborate later if needed
    Vehicle otherV = I.vehicles.get(target);
-   boolean targetDriveActive = !U.startsWith(otherV.P.mode.name(), Physics.Mode.neutral.name(), Physics.Mode.stunt.name());
+   boolean targetDriveActive = !U.startsWith(otherV.P.mode, Physics.Mode.neutral, Physics.Mode.stunt);
    double pX = otherV.X, pZ = otherV.Z;
    if (targetDriveActive) {
     double addAim = U.distance(V.X, otherV.X, turretZ, otherV.Z) * aimAheadTarget;
@@ -752,9 +758,9 @@ public class AI {
     V.amphibious =
     V.Y > I.vehicles.get(target).Y ? Vehicle.Amphibious.ON :
     Vehicle.Amphibious.OFF;
-   } else if (!TE.checkpoints.isEmpty()) {
+   } else if (!TE.waypoints.isEmpty()) {
     V.amphibious =
-    V.Y > TE.checkpoints.get(V.checkpointsPassed).Y ? Vehicle.Amphibious.ON :
+    V.Y > TE.waypoints.get(V.waypointsPassed).Y ? Vehicle.Amphibious.ON :
     Vehicle.Amphibious.OFF;
    }
   }
@@ -765,10 +771,13 @@ public class AI {
    V.passBonus = false;
    double yourDamage = V.getDamage(true);
    for (var otherV : I.vehicles) {
-    if (!I.sameVehicle(otherV, V) && I.sameTeam(V, otherV) && !otherV.destroyed && U.distance(V, otherV) < V.collisionRadius + otherV.collisionRadius &&
-    otherV.durability > V.durability && V.fragility > otherV.fragility && (yourDamage > otherV.getDamage(true) || V.selfRepair < otherV.selfRepair)) {//<-Trying to guess what's the best reasoning for an AI passing the bonus to another teammate
-     V.passBonus = true;
-     break;
+    if (!I.samePlayer(otherV, V) && I.sameTeam(V, otherV) && !otherV.destroyed && U.distance(V, otherV) < V.collisionRadius + otherV.collisionRadius) {
+     boolean moreDamaged = yourDamage > otherV.getDamage(true);
+     if ((moreDamaged && I.sameVehicle(otherV, V)) ||
+     (otherV.durability > V.durability && V.fragility > otherV.fragility && (moreDamaged || V.selfRepair < otherV.selfRepair))) {//<-Trying to guess what's the best reasoning for an AI passing the bonus to another teammate
+      V.passBonus = true;
+      break;
+     }
     }
    }
   }

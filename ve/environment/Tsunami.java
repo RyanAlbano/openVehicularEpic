@@ -2,9 +2,7 @@ package ve.environment;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
-
 import ve.instances.Core;
-import ve.ui.Match;
 import ve.ui.UI;
 import ve.utilities.D;
 import ve.utilities.Nodes;
@@ -33,7 +31,7 @@ public enum Tsunami {
   forward, backward, right, left;
 
   static Direction random() {
-   return Direction.values()[U.random(Direction.values().length)];
+   return values()[U.random(values().length)];
   }
  }
 
@@ -88,7 +86,7 @@ public enum Tsunami {
    for (var part : parts) {
     part.run();
    }
-   if (!Match.muteSound && update) {
+   if (!Sounds.mute && update) {
     double soundDistance = Double.POSITIVE_INFINITY;
     for (var part : parts) {
      soundDistance = Math.min(soundDistance, U.distance(part));

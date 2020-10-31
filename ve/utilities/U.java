@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
@@ -48,7 +49,7 @@ public enum U {//Low-level utilities, such as math functions
  public static final String modelLoadingError = "Model-Loading Error: ";
  public static final DecimalFormat DF = new DecimalFormat("0.#E0");
  public static final Quaternion inert = new Quaternion();
- //public static final boolean onLinux = System.getProperty("os.name").toLowerCase().contains("linux");
+ public static final boolean onLinux = System.getProperty("os.name").toLowerCase(Locale.ENGLISH).contains("linux");
  public static final long maxMemory = Runtime.getRuntime().maxMemory();
 
  public static String getString(CharSequence s, int index) {
@@ -165,9 +166,29 @@ public enum U {//Low-level utilities, such as math functions
   return false;
  }
 
+ public static boolean equals(Enum in, Enum... prefixes) {
+  String name = in.name();
+  for (var e : prefixes) {
+   if (name.equals(e.name())) {
+    return true;
+   }
+  }
+  return false;
+ }
+
  public static boolean startsWith(String in, String... prefixes) {
   for (var s : prefixes) {
    if (in.startsWith(s)) {
+    return true;
+   }
+  }
+  return false;
+ }
+
+ public static boolean startsWith(Enum in, Enum... prefixes) {
+  String name = in.name();
+  for (var e : prefixes) {
+   if (name.startsWith(e.name())) {
     return true;
    }
   }
@@ -450,6 +471,16 @@ public enum U {//Low-level utilities, such as math functions
    //'depthTolerance' is also being used to adjust the distance objects are render-cut from viewableMapDistance. Not to be confused with 'absoluteRadius' usage.
   }
   return true;
+ }
+
+ public static double to2DX(double inX, double inZ) {//*
+  inX = inX * 40 * UI.height / UI.width / Camera.FOV;
+  return .5 + inX / Math.max(Double.MIN_VALUE, inZ);
+ }//*todo--not totally accurate yet--values can 'sway' out of sync with 3D scene
+
+ public static double to2DY(double inY, double inZ) {//*
+  inY = inY * 40 * UI.width / UI.height / Camera.FOV;
+  return .5 + inY / Math.max(Double.MIN_VALUE, inZ);
  }
 
  public static void setFPS() {

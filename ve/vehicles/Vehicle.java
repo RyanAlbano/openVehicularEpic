@@ -42,12 +42,15 @@ public class Vehicle extends Instance {
  public final List<VehiclePart> parts = new ArrayList<>();
  public Color terrainRGB = U.getColor(0);
  public static String vehicleMaker = "";
+ public final int index;
+ public final boolean greenTeam;
  //CORE PROPERTIES--keep the order!
  public String name = "";
  public Type type = Vehicle.Type.vehicle;
  boolean floats;
  public final double[] accelerationStages = new double[2];
- public final double[] topSpeeds = {0, 0, Double.POSITIVE_INFINITY};
+ public final double[] topSpeeds = {0, 0};
+ public double maximumSpeed;
  public double turnRate;
  double maxTurn;
  double randomTurnKick;
@@ -92,8 +95,7 @@ public class Vehicle extends Instance {
  public double energyMultiple = 1;
  public double cameraShake;
  public PointLight burnLight;
- public final int index;
- public int checkpointsPassed;
+ public int waypointsPassed;
  public int point;
  public final double height;
  double steerAngleMultiply = 1;
@@ -124,6 +126,9 @@ public class Vehicle extends Instance {
  public boolean hasShooting;
  public final List<Explosion> explosions = new ArrayList<>();
  public int currentExplosion;
+ //
+ public long scoreWaypoint, scoreLap, scoreKill;
+ public double scoreStunt, scoreDamage;
 
  public enum Type {vehicle, aircraft, turret, supportInfrastructure}
 
@@ -149,6 +154,7 @@ public class Vehicle extends Instance {
 
  public Vehicle(int model, int inIndex, boolean isReal, boolean show) {
   index = inIndex;
+  greenTeam = index < I.halfThePlayers();
   realVehicle = isReal;
   modelName = I.vehicleModels.get(model);
   long n;
@@ -278,9 +284,9 @@ public class Vehicle extends Instance {
      accelerationStages[1] = U.getValue(s, 1);
     } else if (s.startsWith("speeds(")) {
      topSpeeds[0] = U.getValue(s, 0);
-     topSpeeds[1] = U.getValue(s, 1);
-     try {
-      topSpeeds[2] = Math.abs(U.getValue(s, 2));
+     topSpeeds[1] = maximumSpeed = U.getValue(s, 1);
+     try {//Maximum speed defaults to top forward speed, unless otherwise defined
+      maximumSpeed = Math.abs(U.getValue(s, 2));
      } catch (RuntimeException ignored) {
      }
     }
@@ -442,7 +448,7 @@ public class Vehicle extends Instance {
   }
   I.trainEngineInMatch = engine == Engine.train || I.trainEngineInMatch;
   collisionRadius = spinner == null ? absoluteRadius * .2 : Math.min(renderRadius * .75, absoluteRadius * .2);//<-Optimized for CALAMITUS MAXIMUS
-  explosionType = explosionsWhenDestroyed > 0 && !explosionType.name().contains(ExplosionType.nuclear.name()) ? ExplosionType.normal : explosionType;
+  explosionType = explosionsWhenDestroyed > 0 && !isNuclear() ? ExplosionType.normal : explosionType;
   X = Y = Z = XZ = 0;
   for (var part : parts) {
    Nodes.add(part.MV);
@@ -604,7 +610,7 @@ public class Vehicle extends Instance {
     special.time();
     special.load();
    }
-   if (!explosionType.name().contains(ExplosionType.nuclear.name())) {
+   if (!isNuclear()) {
     P.explosionDiameter = 500;
     P.explosionDamage = 250;
    }
@@ -628,6 +634,10 @@ public class Vehicle extends Instance {
 
  public boolean isFixed() {
   return type == Type.turret || type == Type.supportInfrastructure;
+ }
+
+ public boolean isNuclear() {
+  return explosionType.name().contains(ExplosionType.nuclear.name());
  }
 
  public void addDamage(double in) {
@@ -808,7 +818,7 @@ public class Vehicle extends Instance {
  public void setTurretY() {
   if (isFixed()) {
    Y = 0;
-   if (!U.equals(Maps.name, D.Maps.everybodyEverything)) {
+   if (!U.equals(Maps.name, D.Maps.methodMadness)) {
     E.setTerrainSit(this, true);
    }
    Y -= turretBaseY;
@@ -829,12 +839,11 @@ public class Vehicle extends Instance {
 
  public void runMiscellaneous(boolean gamePlay) {//<-todo--turn this into a runLogic() and give it a reasonable call location?
   steerByMouse = index == I.userPlayerIndex && Match.cursorDriving;
-  int n;
   inDriverView = index == I.vehiclePerspective && Camera.view == Camera.View.driver;
   if (!specials.isEmpty()) {
    phantomEngaged = false;//This block is probably best at the top, so that phantom is already engaged by the time collisions, destruction events, etc. are handled
    for (var special : specials) {
-    if (special.fire && special.type == Special.Type.phantom) {
+    if (special.type == Special.Type.phantom && special.fire) {
      phantomEngaged = true;
      break;
     }
@@ -849,47 +858,13 @@ public class Vehicle extends Instance {
   }
   cameraShake -= cameraShake > 0 ? U.tick : 0;
   P.inWrath = false;
-  if (isIntegral()) {
-   destroyed = P.subtractExplodeStage = false;
-   P.destructTimer = P.explodeStage = 0;
-   onFire = Maps.name.equals(D.Maps.theSun) && onFire;
-   addDamage(gamePlay ? -selfRepair * U.tick : 0);
-   for (var part : parts) {
-    part.explodeStage = VehiclePart.ExplodeStage.intact;
-   }
-  } else {
-   onFire = true;
-   if (P.destructTimer <= 0) {
-    VA.death.play(VA.distanceVehicleToCamera);
-    setCameraShake(Camera.shakeIntensity.vehicleDeath);
-    if (explosionsWhenDestroyed > 0) {
-     if (VA.deathExplode != null) {//<-Nukes don't have this
-      VA.deathExplode.play(Double.NaN, VA.distanceVehicleToCamera * Sounds.gainMultiples.deathExplode);
-     }
-     nukeDetonate();
-    }
-    P.destructTimer = Double.MIN_VALUE;//<-Prevents recursive calls of this block
-   }
-   if (gamePlay) {
-    destroyed = (P.destructTimer += U.tick) >= 8 || destroyed;
-    if (VA.burn != null && destroyed) {
-     VA.burn.loop(VA.distanceVehicleToCamera);
-    }
-    double reviveWait = explosionType == ExplosionType.maxnuclear ? Double.POSITIVE_INFINITY : explosionType == ExplosionType.nuclear ? 2 : 1;
-    P.subtractExplodeStage = P.explodeStage > 100 * reviveWait || P.subtractExplodeStage;
-    P.explodeStage += U.tick * (P.subtractExplodeStage ? -1 : 1);
-    if (P.explodeStage < 0) {
-     repair(true);
-     reviveImmortality = true;
-    }
-   }
-  }
+  runDamageControl(gamePlay);
   if (MNB != null) {
    MNB.runLogic(gamePlay);
   }
   if (passBonus && Bonus.holder == index) {
    for (var vehicle : I.vehicles) {
-    if (!I.sameVehicle(this, vehicle) && I.sameTeam(this, vehicle) && U.distance(this, vehicle) < collisionRadius + vehicle.collisionRadius) {
+    if (!I.samePlayer(this, vehicle) && I.sameTeam(this, vehicle) && U.distance(this, vehicle) < collisionRadius + vehicle.collisionRadius) {
      Bonus.setHolder(vehicle);//^Checking same team, so sameVehicle check IS needed
     }
    }
@@ -899,15 +874,18 @@ public class Vehicle extends Instance {
   }
   Tsunami.vehicleInteract(this);
   boolean isJet = U.contains(engine, Engine.jet, Engine.turbine, Engine.rocket),
-  thrustDrive = drive2 || (drive && P.mode != Physics.Mode.fly);
-  thrusting = !destroyed && ((speedBoost > 0 && boost) || exhausting > 0 || (P.mode != Physics.Mode.stunt && isJet &&
+  thrustDrive = drive2 || (drive && P.mode != Physics.Mode.fly),
+  speedBoosting = speedBoost > 0 && boost;
+  thrusting = !destroyed &&
+  (speedBoosting || exhausting > 0 ||
+  (P.mode != Physics.Mode.stunt && isJet &&
   (thrustDrive || (P.mode == Physics.Mode.fly && engine != Engine.turbine && VA.engineClipQuantity * (Math.abs(P.speed) / topSpeeds[1]) >= 1))));
   if (thrusting) {
-   boolean forceOut = isJet || (speedBoost > 0 && boost);
+   boolean forceOut = isJet || speedBoosting;
    double sinXZ = U.sin(XZ), cosXZ = U.cos(XZ), sinYZ = U.sin(YZ);
    for (var part : parts) {
     if (part.thrustTrails != null) {
-     for (n = 4; --n >= 0; ) {
+     for (int n = 4; --n >= 0; ) {
       part.thrustTrails.get(part.currentThrustTrail).deploy(forceOut, sinXZ, cosXZ, sinYZ);
       part.currentThrustTrail = ++part.currentThrustTrail >= ThrustTrail.defaultQuantity ? 0 : part.currentThrustTrail;
      }
@@ -947,8 +925,50 @@ public class Vehicle extends Instance {
   VA.run(gamePlay);
  }
 
+ private void runDamageControl(boolean gamePlay) {
+  if (isIntegral()) {
+   destroyed = P.subtractExplodeStage = false;
+   P.destructTimer = P.explodeStage = 0;
+   onFire = Maps.name.equals(D.Maps.theSun) && onFire;
+   addDamage(gamePlay ? -selfRepair * U.tick : 0);
+   for (var part : parts) {
+    part.explodeStage = VehiclePart.ExplodeStage.intact;
+   }
+  } else {
+   onFire = true;
+   if (P.destructTimer <= 0) {
+    VA.death.play(VA.distanceVehicleToCamera);
+    setCameraShake(Camera.shakeIntensity.vehicleDeath);
+    if (explosionsWhenDestroyed > 0) {
+     if (VA.deathExplode != null) {//<-Nukes don't have this
+      VA.deathExplode.play(Double.NaN, VA.distanceVehicleToCamera * Sounds.gainMultiples.deathExplode);
+     }
+     nukeDetonate();
+    }
+    P.destructTimer = Double.MIN_VALUE;//<-Prevents recursive calls of this block
+   }
+   if (gamePlay) {
+    if ((P.destructTimer += U.tick) >= 8) {
+     destroyed = true;
+    }
+    if (VA.burn != null && destroyed) {
+     VA.burn.loop(VA.distanceVehicleToCamera);
+    }
+    double reviveWait = explosionType == ExplosionType.maxnuclear ? Double.POSITIVE_INFINITY : explosionType == ExplosionType.nuclear ? 2 : 1;
+    if (P.explodeStage > 100 * reviveWait) {
+     P.subtractExplodeStage = true;
+    }
+    P.explodeStage += U.tick * (P.subtractExplodeStage ? -1 : 1);
+    if (P.explodeStage < 0) {
+     repair(true);
+     reviveImmortality = true;
+    }
+   }
+  }
+ }
+
  private void nukeDetonate() {
-  if (explosionType.name().contains(ExplosionType.nuclear.name())) {
+  if (isNuclear()) {
    screenFlash = 1;
    if (explosionType == ExplosionType.maxnuclear) {
     MNB.setSingularity();
@@ -973,7 +993,7 @@ public class Vehicle extends Instance {
      double spinReward = Math.abs(P.stuntXZ) >= 180 ? Math.abs(P.stuntXZ) * .75 : spinCheck[0] || spinCheck[1] ? 270 : 0;
      spinReward *= spinCheck[0] && spinCheck[1] ? 2 : 1;
      P.stuntReward = (rollReward + flipReward + spinReward) * (offTheEdge ? 2 : 1);
-     Match.scoreStunt[index < I.halfThePlayers() ? 0 : 1] += replay ? 0 : P.stuntReward;
+     scoreStunt += replay ? 0 : P.stuntReward;
      Match.processStunt(this);
     }
     P.stuntXY = P.stuntYZ = P.stuntXZ = 0;

@@ -1,10 +1,9 @@
 package ve.vehicles.specials;
 
-import ve.instances.I;
-import ve.ui.Match;
 import ve.ui.UI;
 import ve.utilities.Camera;
 import ve.utilities.U;
+import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
 
 public class Spinner {
@@ -47,7 +46,7 @@ public class Spinner {
   speed = U.clamp(-1, speed, 1);
   int spinSound = (int) (Math.round(Math.abs(speed) * 9) - 2);
   for (int n = V.VA.spinner.clipHolders.size(); --n >= 0; ) {
-   if (n != spinSound) {
+   if (n != spinSound || Sounds.mute/*<-This may be needed*/) {
     V.VA.spinner.stop(n);
    }
   }
@@ -69,7 +68,7 @@ public class Spinner {
      V.P.hitCheck(vehicle);//<-Must come BEFORE any damage is added, or the target vehicle might not be integral when checked!
      double damageAmount = vehicle.durability * absSpeed * speedReduction + (speedReduction >= 1 ? vehicle.damageCeiling() - vehicle.durability : 0);
      vehicle.addDamage(damageAmount);
-     Match.scoreDamage[V.index < I.halfThePlayers() ? 0 : 1] += UI.status == UI.Status.replay ? 0 : damageAmount;
+     V.scoreDamage += UI.status == UI.Status.replay ? 0 : damageAmount;
      if (absSpeed > .5) {
       for (var wheel : vehicle.wheels) {
        wheel.sparks(false);

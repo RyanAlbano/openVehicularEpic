@@ -57,7 +57,7 @@ enum HowToPlay {
    U.text("+", .65, .225);
    U.fillRGB(1);
    U.text("While Driving on the GROUND, Spacebar is the Handbrake", .5);
-   U.text("For standard CARS and TRUCKS, press Spacebar to perform Stunts for points", .525);
+   U.text("For GROUND vehicles, press Spacebar to perform Stunts for points", .525);
    U.text("For AIRCRAFT vehicles, press (W or S) + Down Arrow to engage flight at any time", .55);
    U.text("While FLYING, hold Spacebar to yaw-steer instead of steer by banking, and use W and S to control throttle", .575);
    U.text("For FIXED TURRETS, Spacebar enables finer Precision while Aiming", .6);
@@ -80,7 +80,7 @@ enum HowToPlay {
    U.font(.0125);
    U.text("The primary objective in this game is to Maximize your (team's) score.", .2);
    U.text("There are several ways to do this:", .225);
-   U.text("Checkpoints--how many checkpoints you/your team passed through", .275);
+   U.text("Waypoints--how many waypoints you/your team passed through", .275);
    U.text("Laps--completing more laps than the opposition can be the key to winning", .3);
    U.text("Stunts--landing stunts can be supported by most vehicles (except turrets)", .325);
    U.text("Damage Dealt--How much damage is dealt to the opposition", .35);
@@ -102,7 +102,7 @@ enum HowToPlay {
    U.text("Other Important Information", .125);
    U.font(.0125);
    U.text("Based on the given circumstances, pick the best strategy (race, fight, etc.)", .175);
-   U.text("Press 'C' to toggle the guidance arrow between pointing to the Vehicles or Racetrack", .2);
+   U.text("The type of strategy needed can vary widely depending on which vehicles and map are in use.", .2);
    U.text("Your vehicle will revive shortly after being destroyed.", .25);
    U.text("However, you can Repair it before then by passing through a Repair Singularity (if one exists on the map)", .275);
    drawSingularity();
@@ -115,8 +115,8 @@ enum HowToPlay {
    U.text("It's important to note that vehicles on the same team don't 'interact',", .475);
    U.text("so there's no need to worry about crashing into your own team members, friendly fire, etc.", .5);
    U.fillRGB(1, 1, .5);
-   U.text("Not all maps have checkpoints and a designated route.", .55);
-   U.text("You'll need to score points using methods besides checkpoints and laps", .575);
+   U.text("Not all maps have waypoints and a designated route.", .55);
+   U.text("You'll need to score points using methods besides waypoints and laps", .575);
    U.text("such as good stunts, fighting opponents, or keeping the bonus.", .6);
    U.fillRGB(0, 1, 1);
    U.text("Some Maps have special environments or may be less straightforward.", .65);
@@ -145,7 +145,7 @@ enum HowToPlay {
    U.text("(Press < and > simultaneously to view yourself again)", .45);
    U.fillRGB(1);
    U.text("H = Heads-up Display ON/OFF", .475);
-   U.text("L = Destruction Log ON/OFF", .5);
+   U.text("L = Match Log ON/OFF", .5);
    U.text("I = Show/Hide Application Info", .525);
    U.text("There are many other aspects not covered here in these instructions,", .7);
    U.text("but you will learn with experience.", .725);

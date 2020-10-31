@@ -9,7 +9,7 @@ public enum D {
  public static final String
  autoAim = "autoAim", aerialOnly = "aerialOnly", antigravity = "antigravity",
  base = "base", basic = "basic", boulder = "boulder", brightmetal = "brightmetal", BiDirectional = "BiDirectional", blink = "blink", bounce = "bounce", blueJet = "blueJet", BONUS = "BONUS", BonusOpen = "BonusOpen",
- controller = "controller", checkpoint = "checkpoint", checkPointWord = "checkPointWord", Checkpoint = "Checkpoint", chuff = "chuff", curve = "curve", cactus = "cactus", CANCEL = "CANCEL", crashSoft = "crashSoft", crashHard = "crashHard", crashDestroy = "crashDestroy",
+ controller = "controller", chuff = "chuff", curve = "curve", cactus = "cactus", CANCEL = "CANCEL", crashSoft = "crashSoft", crashHard = "crashHard", crashDestroy = "crashDestroy",
  destroyed = "destroyed", drive = "drive", death = "death", deathExplode = "deathExplode",
  END = "END", exhaust = "exhaust",
  fire = "fire", firelight = "firelight", flick1 = "flick1", flick2 = "flick2", force = "force", fromXZ = "fromXZ", fromYZ = "fromYZ", foliage = "foliage", fastCull = "fastCull", fastCullB = "fastCullB", fastCullF = "fastCullF", fastCullR = "fastCullR", fastCullL = "fastCullL",
@@ -17,7 +17,7 @@ public enum D {
  hard = "hard", HostReady = "HostReady", hide = "hide", hitShot = "hitShot", hitRicochet = "hitRicochet", hitExplosive = "hitExplosive",
  Instant = "Instant", ice = "ice",
  jetfighter = "jetfighter", joinerReady = "joinerReady",
- light = "light", lit = "lit", line = "line", landingGear = "landingGear", lapWord = "lapWord",
+ light = "light", lit = "lit", line = "line", landingGear = "landingGear",
  metal = "metal", meteor = "meteor", Meshes_/*:*/ = "Meshes: ", Map = "Map", MatchLength = "MatchLength", massiveHit = "massiveHit", mineExplode = "mineExplode",
  name = "name", Name = "Name", None = "None", nuke = "nuke", nukeMax = "nukeMax", noTexture = "noTexture", noSpecular = "noSpecular",
  OPEN_VEHICULAR_EPIC = "OPEN VEHICULAR EPIC", OPTIONS = "OPTIONS",
@@ -27,7 +27,7 @@ public enum D {
  type = "type", texture = "texture", tree = "tree", turret = "turret", turretBarrel = "turretBarrel", train = "train", thrust = "thrust", thrustBlue = "thrustBlue", thrustWhite = "thrustWhite", theRandomColor = "theRandomColor", tornado = "tornado", tsunami = "tsunami", tsunamiSplash = "tsunamiSplash", TargetHost = "TargetHost",
  UserName = "UserName",
  vehicles = "vehicles", Vehicle = "Vehicle", Vertices_/*:*/ = "Vertices: ",
- white = "white", wood = "wood", wheel = "wheel", water = "water", wheelPoint = "wheelPoint", wheelFaces = "wheelFaces", wheelRingFaces = "wheelRingFaces",
+ white = "white", waypoint = "waypoint", Waypoint = "Waypoint", wood = "wood", wheel = "wheel", water = "water", wheelPoint = "wheelPoint", wheelFaces = "wheelFaces", wheelRingFaces = "wheelRingFaces",
  XY = "XY", XZ = "XZ", YZ = "YZ";
 
  /**
@@ -53,7 +53,7 @@ public enum D {
   devilsStairwell = "Devil's Stairwell",
   highlands = "Highlands",
   ghostCity = "Ghost City",
-  everybodyEverything = "Everybody Everything",
+  methodMadness = "is there a Method to the Madness?",
   circleRaceXL = "Circle Race XL",
   volcanicProphecy = "Volcanic Prophecy",
   theMaze = "the Maze",

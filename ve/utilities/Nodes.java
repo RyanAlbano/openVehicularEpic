@@ -7,7 +7,6 @@ import javafx.scene.paint.Color;
 import ve.environment.E;
 import ve.environment.Ground;
 import ve.environment.Sun;
-import ve.trackElements.Arrow;
 import ve.ui.UI;
 
 public enum Nodes {
@@ -84,6 +83,5 @@ public enum Nodes {
   add(E.ambientLight, addSunBack ? Sun.S : null, addGroundBack ? Ground.C : null);
   addPointLight(addSunlightBack ? Sun.light : null);
   add(E.lights);
-  Arrow.group.getChildren().clear();
  }
 }

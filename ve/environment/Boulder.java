@@ -2,15 +2,9 @@ package ve.environment;
 
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
-
-import ve.instances.CoreAdvanced;
-import ve.ui.Match;
 import ve.effects.Dust;
-import ve.utilities.D;
-import ve.utilities.Images;
-import ve.utilities.Nodes;
-import ve.utilities.Phong;
-import ve.utilities.U;
+import ve.instances.CoreAdvanced;
+import ve.utilities.*;
 import ve.utilities.sound.Controlled;
 import ve.utilities.sound.Sounds;
 import ve.vehicles.Vehicle;
@@ -106,7 +100,7 @@ public enum Boulder {
    } else {
     S.setVisible(false);
    }
-   if (!Match.muteSound && update) {
+   if (!Sounds.mute && update) {
     sound.loop(Math.sqrt(U.distance(this)) * Sounds.standardGain(1));
    } else {
     sound.stop();

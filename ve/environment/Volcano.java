@@ -22,12 +22,12 @@ import ve.vehicles.Vehicle;
 import java.util.ArrayList;
 import java.util.List;
 
-public enum Volcano {
+public enum Volcano {//todo--Record rock positions in replay? (Probably not worth it)
  ;
  public static final Core C = new Core();
  public static boolean exists;
  public static final double radiusBottom = 53000, radiusTop = 3000, height = 50000;
- private static double eruptionStage;
+ public static double eruptionStage;
  public static double cameraShake;
  private static final MeshView MV;
  public static final List<Rock> rocks = new ArrayList<>();
@@ -119,6 +119,10 @@ public enum Volcano {
   MV.setCullFace(CullFace.NONE);
  }
 
+ public static boolean isActive() {
+  return exists && !rocks.isEmpty();
+ }
+
  public static void load(String s) {
   if (s.startsWith("volcano(")) {
    PhongMaterial volcanoPM = new PhongMaterial();
@@ -180,7 +184,7 @@ public enum Volcano {
      for (var rock : rocks) {
       rock.deploy();
      }
-     eruptionStage = 1;
+     eruptionStage = Double.MIN_VALUE;
      setCameraShake();
      sound.play(Math.sqrt(U.distance(Camera.C.X, C.X, Camera.C.Y, -height, Camera.C.Z, C.Z)) * Sounds.standardGain(Sounds.gainMultiples.volcano));
     }

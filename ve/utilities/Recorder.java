@@ -1,9 +1,15 @@
 package ve.utilities;
 
+import ve.environment.Tornado;
+import ve.environment.Tsunami;
+import ve.environment.Volcano;
+import ve.environment.storm.Lightning;
 import ve.instances.I;
 import ve.trackElements.Bonus;
 import ve.ui.Keys;
 import ve.ui.UI;
+import ve.vehicles.Physics;
+import ve.vehicles.Vehicle;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +23,7 @@ public enum Recorder {
  public static long recorded;
  private static final double[] bonusX, bonusY, bonusZ;
  private static final int[] bonusHolder;
- public static final List<Vehicle> vehicles = new ArrayList<>();
+ public static final List<recordedVehicle> vehicles = new ArrayList<>();
 
  private static boolean[] recBoolean() {
   return new boolean[totalFrames];
@@ -37,20 +43,30 @@ public enum Recorder {
   bonusY = recDouble();
   bonusZ = recDouble();
   for (int n = I.maxPlayers; --n >= 0; ) {
-   vehicles.add(new Vehicle());
+   vehicles.add(new recordedVehicle());
   }
  }
 
- enum Tsunami {
+ enum recordedTornado {
   ;
-  static final double[] tsunamiX = recDouble(), tsunamiZ = recDouble();
-  static final ve.environment.Tsunami.Direction[] direction = new ve.environment.Tsunami.Direction[totalFrames];
+  static final double[] X = recDouble(), Z = recDouble();
  }
 
- enum Lightning {
+ enum recordedTsunami {
+  ;
+  static final double[] X = recDouble(), Z = recDouble();
+  static final Tsunami.Direction[] direction = new Tsunami.Direction[totalFrames];
+ }
+
+ enum recordedLightning {
   ;
   static final double[] X = recDouble(), Z = recDouble();
   static final double[] strikeStage = recDouble();
+ }
+
+ enum recordedVolcano {
+  ;
+  static double[] eruptionStage = recDouble();
  }
 
  public static void updateFrame() {
@@ -65,15 +81,22 @@ public enum Recorder {
   bonusX[gameFrame] = Bonus.C.X;
   bonusY[gameFrame] = Bonus.C.Y;
   bonusZ[gameFrame] = Bonus.C.Z;
-  if (ve.environment.Tsunami.exists) {
-   Tsunami.tsunamiX[gameFrame] = ve.environment.Tsunami.X;
-   Tsunami.tsunamiZ[gameFrame] = ve.environment.Tsunami.Z;
-   Tsunami.direction[gameFrame] = ve.environment.Tsunami.direction;
+  if (Tornado.exists()) {
+   recordedTornado.X[gameFrame] = Tornado.parts.get(0).X;
+   recordedTornado.Z[gameFrame] = Tornado.parts.get(0).Z;
   }
-  if (ve.environment.storm.Lightning.exists) {
-   Lightning.X[gameFrame] = ve.environment.storm.Lightning.X;
-   Lightning.Z[gameFrame] = ve.environment.storm.Lightning.Z;
-   Lightning.strikeStage[gameFrame] = ve.environment.storm.Lightning.strikeStage;
+  if (Tsunami.exists) {
+   recordedTsunami.X[gameFrame] = Tsunami.X;
+   recordedTsunami.Z[gameFrame] = Tsunami.Z;
+   recordedTsunami.direction[gameFrame] = Tsunami.direction;
+  }
+  if (Lightning.exists) {
+   recordedLightning.X[gameFrame] = Lightning.X;
+   recordedLightning.Z[gameFrame] = Lightning.Z;
+   recordedLightning.strikeStage[gameFrame] = Lightning.strikeStage;
+  }
+  if (Volcano.isActive()) {
+   recordedVolcano.eruptionStage[gameFrame] = Volcano.eruptionStage;
   }
  }
 
@@ -92,15 +115,22 @@ public enum Recorder {
    Bonus.C.X = bonusX[recordFrame];
    Bonus.C.Y = bonusY[recordFrame];
    Bonus.C.Z = bonusZ[recordFrame];
-   if (ve.environment.Tsunami.exists) {
-    ve.environment.Tsunami.X = Tsunami.tsunamiX[recordFrame];
-    ve.environment.Tsunami.Z = Tsunami.tsunamiZ[recordFrame];
-    ve.environment.Tsunami.direction = Tsunami.direction[recordFrame];
+   if (Tornado.exists()) {
+    Tornado.parts.get(0).X = recordedTornado.X[recordFrame];
+    Tornado.parts.get(0).Z = recordedTornado.Z[recordFrame];
    }
-   if (ve.environment.storm.Lightning.exists) {
-    ve.environment.storm.Lightning.X = Lightning.X[recordFrame];
-    ve.environment.storm.Lightning.Z = Lightning.Z[recordFrame];
-    ve.environment.storm.Lightning.strikeStage = Lightning.strikeStage[recordFrame];
+   if (Tsunami.exists) {
+    Tsunami.X = recordedTsunami.X[recordFrame];
+    Tsunami.Z = recordedTsunami.Z[recordFrame];
+    Tsunami.direction = recordedTsunami.direction[recordFrame];
+   }
+   if (Lightning.exists) {
+    Lightning.X = recordedLightning.X[recordFrame];
+    Lightning.Z = recordedLightning.Z[recordFrame];
+    Lightning.strikeStage = recordedLightning.strikeStage[recordFrame];
+   }
+   if (Volcano.isActive()) {
+    Volcano.eruptionStage = recordedVolcano.eruptionStage[recordFrame];
    }
    for (int n = I.vehiclesInMatch; --n >= 0; ) {
     vehicles.get(n).playBack();
@@ -109,7 +139,7 @@ public enum Recorder {
   }
  }
 
- public static class Vehicle {
+ public static class recordedVehicle {
   private final double[] X = recDouble(), Y = recDouble(), Z = recDouble(),
   XZ = recDouble(), XY = recDouble(), YZ = recDouble(),
   vehicleTurretXZ = recDouble(), vehicleTurretYZ = recDouble(), speed = recDouble();
@@ -123,9 +153,9 @@ public enum Recorder {
   private boolean subtractExplodeStage;//<-Had to be added to ensure correct operation--at least a whole array wasn't required!
   private final double[] spinnerSpeed = recDouble();
   private final boolean[] wrathEngaged = recBoolean();
-  private final ve.vehicles.Physics.Mode[] mode = new ve.vehicles.Physics.Mode[totalFrames];
+  private final Physics.Mode[] mode = new Physics.Mode[totalFrames];
 
-  public void recordVehicle(ve.vehicles.Vehicle vehicle) {
+  public void recordVehicle(Vehicle vehicle) {
    if (UI.status == UI.Status.play) {
     X[gameFrame] = vehicle.X;
     Y[gameFrame] = vehicle.Y;
@@ -168,7 +198,7 @@ public enum Recorder {
   }
 
   void playBack() {
-   ve.vehicles.Vehicle vehicle = I.vehicles.get(vehicles.indexOf(this));
+   Vehicle vehicle = I.vehicles.get(vehicles.indexOf(this));
    vehicle.X = X[recordFrame];
    vehicle.Y = Y[recordFrame];
    vehicle.Z = Z[recordFrame];

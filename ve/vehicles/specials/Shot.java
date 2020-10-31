@@ -10,7 +10,6 @@ import ve.instances.Core;
 import ve.instances.CoreAdvanced;
 import ve.instances.I;
 import ve.trackElements.TE;
-import ve.ui.Match;
 import ve.utilities.Images;
 import ve.utilities.Nodes;
 import ve.utilities.Phong;
@@ -24,20 +23,16 @@ public class Shot extends CoreAdvanced {
  private final Special S;
  public final MeshView MV;
  private MeshView thrust;
- private double behindX;
- private double behindY;
- private double behindZ;
+ private double behindX, behindY, behindZ;
  public double stage;
  private double speed;
- private double sinXZ;
- private double cosXZ;
- private double sinYZ;
- private double cosYZ;//<-Performance optimization
+ private double sinXZ, cosXZ, sinYZ, cosYZ;//<-Performance optimization
  private double gravityDistance;
  private double homeYZ;
  private long hit;
  private boolean[] doneDamaging;
  private final double homingSteerSpeed;
+ private double mineBlink;
  public static final long defaultQuantity = 96;
 
  Shot(Vehicle vehicle, Special special) {
@@ -222,6 +217,9 @@ public class Shot extends CoreAdvanced {
     b = Math.max(0, 1 - (stage * .0625));
     Phong.setDiffuseRGB((PhongMaterial) MV.getMaterial(), r, g, b, .25);
     Phong.setSpecularRGB((PhongMaterial) MV.getMaterial(), r, g, b);
+   } else if (S.type == Special.Type.mine) {
+    mineBlink = (mineBlink += U.tick) >= 10 ? 0 : mineBlink;
+    ((PhongMaterial) MV.getMaterial()).setSelfIlluminationMap(mineBlink > 8 ? V.greenTeam ? Images.green : Images.red : null);
    }
    U.setTranslate(MV, this);
    if (S.type == Special.Type.flamethrower || S.type == Special.Type.forcefield || S.type == Special.Type.thewrath || S.type.name().contains(Special.Type.blaster.name())) {
@@ -284,7 +282,7 @@ public class Shot extends CoreAdvanced {
   }
  }
 
- public void vehicleInteract(Vehicle vehicle, boolean throughWeapon, boolean replay, boolean greenTeam) {
+ public void vehicleInteract(Vehicle vehicle, boolean throughWeapon, boolean replay) {
   if (stage > 0 && hit < 1 && (doneDamaging == null || !doneDamaging[vehicle.index]) && (S.type != Special.Type.missile || vehicle.isIntegral()) && !(S.type == Special.Type.mine && (U.distance(this, vehicle) > 2000 || !vehicle.isIntegral()))) {
    if (advancedCollisionCheck(vehicle, (S.type == Special.Type.mine ? vehicle.P.netSpeed : S.diameter) + vehicle.collisionRadius)) {
     V.P.hitCheck(vehicle);
@@ -299,7 +297,7 @@ public class Shot extends CoreAdvanced {
     }
     vehicle.addDamage(shotDamage);
     if (vehicle.isIntegral() && !replay) {
-     Match.scoreDamage[greenTeam ? 0 : 1] += shotDamage;
+     V.scoreDamage += shotDamage;
      if (vehicle.index != I.userPlayerIndex && U.distance(vehicle, V) < U.distance(vehicle, I.vehicles.get(vehicle.AI.target))) {
       vehicle.AI.target = V.index;
      }
@@ -321,7 +319,7 @@ public class Shot extends CoreAdvanced {
     }
     if (S.type == Special.Type.heavymachinegun || S.type == Special.Type.blaster) {
      V.VA.hitShot.play(U.random(7), shotToCameraSoundDistance);//<-May not call effectively on Linux, but it's not so important since there's the default call above anyway
-    } else if (S.type == Special.Type.heavyblaster || S.type == Special.Type.thewrath) {//<-These specials don't load 'hitExplosive' audio, so don't call!
+    } else if (S.type == Special.Type.heavyblaster || S.type == Special.Type.thewrath) {//<-These specials don't load 'hitExplosive' audio, thus secured in this block without it
      V.VA.crashDestroy.play(Double.NaN, shotToCameraSoundDistance);
     } else if (S.type.name().contains(Special.Type.shell.name()) || S.type == Special.Type.missile || S.type == Special.Type.bomb) {
      V.VA.crashDestroy.play(Double.NaN, shotToCameraSoundDistance);
@@ -331,9 +329,9 @@ public class Shot extends CoreAdvanced {
       V.VA.crashHard.play(Double.NaN, shotToCameraSoundDistance);
      }
     } else if (S.type == Special.Type.forcefield) {
-     V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
-     V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
-     V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
+     for (int n = 3; --n >= 0; ) {
+      V.VA.crashHard.play(Double.NaN, V.VA.distanceVehicleToCamera);
+     }
     } else if (S.type == Special.Type.mine) {
      V.VA.mineExplosion.play(shotToCameraSoundDistance);
     }

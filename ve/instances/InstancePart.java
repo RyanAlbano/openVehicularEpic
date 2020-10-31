@@ -427,7 +427,7 @@ public class InstancePart extends Core {
  }
 
  private static void logNonexistentFaceFunction(long vertexQuantity, Instance I, FaceFunction function) {
-  System.out.println("Face-loading issue in model file '" + (I == null ? "null" : I.modelName) + "'");
+  System.out.println("Face-loading issue in model file '" + (I == null ? "null" : I.modelName) + "'");//<-It's better to state the filename since duplicate files are impossible
   System.out.println(vertexQuantity + "-vertex '" + function.name() + "' face function has not (yet) been developed. Contact the developer for further help.");
  }
 }

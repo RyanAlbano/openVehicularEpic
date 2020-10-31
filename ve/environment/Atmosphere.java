@@ -113,7 +113,7 @@ public enum Atmosphere {
   }
  }
 
- public static class Ring extends MeshView {
+ static class Ring extends MeshView {
   boolean show;
  }
 

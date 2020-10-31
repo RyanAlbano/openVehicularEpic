@@ -22,7 +22,7 @@ public enum SoundOptions {
   U.text(UI.RETURN, .875 + UI.textOffset);
   U.fillRGB(1);
   U.text("Software-based Processing [" + (Sounds.softwareBased ? UI.ON : UI.OFF) + "]", .3 + UI.textOffset);
-  U.text("Channels [" + Sounds.channels + " (" + (Sounds.channels < 2 ? "MONO" : "STEREO") + ")]", .35 + UI.textOffset);
+  U.text("Echo (for applicable maps) [" + (Sounds.useEcho ? UI.ON : UI.OFF) + "]", .35 + UI.textOffset);
   U.text("Bit-Depth [" + Sounds.bitDepth + "]", .4 + UI.textOffset);
   if (Sounds.softwareBased) {
    U.text("SampleRate [" + Sounds.sampleRate + "]", .45 + UI.textOffset);
@@ -57,9 +57,9 @@ public enum SoundOptions {
     Sounds.reset();
    }
   } else if (UI.selected == 2) {
-   U.text("Choose Mono or Stereo sound", .75 + UI.textOffset);
+   U.text("Disable if there are large frame spikes on echo-enabled maps", .75 + UI.textOffset);
    if ((Keys.enter || Keys.space) && UI.selectionReady()) {
-    Sounds.channels = Sounds.channels == 1 ? 2 : 1;
+    Sounds.useEcho = !Sounds.useEcho;
     Sounds.reset();
    }
   } else if (UI.selected == 3) {

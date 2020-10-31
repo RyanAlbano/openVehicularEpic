@@ -26,11 +26,10 @@ public class TrackPart extends Instance {
  private Sphere foliageSphere;
  final boolean vehicleModel;
  public boolean wraps;
- private boolean sidewaysXZ;
+ private boolean sidewaysXZ;//<-Keep for now
  boolean tree;
  public boolean rainbow;
- boolean checkpointSignRotation;
- public long checkpointNumber = -1;
+ public long waypointNumber = -1;//<-Keep for now
  public final List<TrackPlane> trackPlanes = new ArrayList<>();
  UniversalPhongMaterialUsage universalPhongMaterialUsage;
 
@@ -55,7 +54,7 @@ public class TrackPart extends Instance {
   vehicleModel = isVehicleModel;
   if (model != null || vehicleModel) {
    modelName = model;
-   if (modelName.equals(TE.Models.checkpoint.name())) {//<-Checkpoint sign may glitch otherwise
+   if (modelName.equals(TE.Models.waypoint.name())) {//<-(no longer an issue as the 3D signs have been removed) Waypoint sign may glitch otherwise
     while (angle >= 90) angle -= 180;
     while (angle <= -90) angle += 180;//Will always end up at '90' rather then '-90'
    }
@@ -138,8 +137,6 @@ public class TrackPart extends Instance {
        InstancePart.FaceFunction.squares.name(),
        InstancePart.FaceFunction.triangles.name(),
        D.base);
-       type.append(s.startsWith("checkpointWord") ? D.thick(D.checkPointWord) : "");
-       type.append(s.startsWith(D.lapWord) ? D.thick(D.lapWord) : "");
        if (s.startsWith(D.controller)) {
         type.append(D.thick(D.controller)).append(s.contains(D.XY) ? " controllerXY " : s.contains(D.XZ) ? " controllerXZ " : "");
        } else if (s.startsWith(D.wheel)) {
@@ -427,9 +424,6 @@ public class TrackPart extends Instance {
    }
    boolean showFoliageSphere = false;
    if (U.getDepth(this) > -renderRadius) {
-    if (checkpointNumber >= 0 && checkpointNumber == TE.currentCheckpoint) {
-     checkpointSignRotation = sidewaysXZ ? (XZ > 0 ? Camera.C.X < X : Camera.C.X > X) : Camera.C.Z > Z;//If checkpoint, XZ is never > Math.abs(90)
-    }
     double distanceToCameraTimesFOV = U.distance(this) * Camera.FOV;
     if (vehicleModel) {
      for (var part : parts) {

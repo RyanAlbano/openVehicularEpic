@@ -25,11 +25,10 @@ import ve.environment.Volcano;
 import ve.environment.Wind;
 import ve.environment.storm.Storm;
 import ve.instances.I;
-import ve.trackElements.Arrow;
 import ve.trackElements.Bonus;
-import ve.trackElements.Checkpoint;
 import ve.trackElements.Point;
 import ve.trackElements.TE;
+import ve.trackElements.Waypoint;
 import ve.trackElements.trackParts.RepairPoint;
 import ve.trackElements.trackParts.TrackPart;
 import ve.utilities.Camera;
@@ -57,9 +56,9 @@ import java.util.Objects;
 public enum Maps {
  ;
  public static int map;
- public static final List<String> maps = new ArrayList<>(Arrays.asList(D.basic, "lapsGlory", D.checkpoint, "gunpowder", "underOver", D.antigravity, "versus1", "versus2", "versus3", "trackless", "desert", "3DRace", "trip", "raceNowhere", "moonlight", "bottleneck", "railing", "twisted", "deathPit", "falls", "pyramid", "combustion", "darkDivide", "arctic", "scenicRoute", "winterMode", "mountainHop", "damage", "crystalCavern", "southPole", "aerialControl", "matrix", "mist", "vansLand", "dustDevil", "forest", "columns", "zipCross", "highlands", "coldFury", D.tornado, "volcanic", D.tsunami, D.boulder, "sands", D.meteor, "speedway", "submersion", "endurance", "tunnel", "circle", "circleXL", "circles", "everything", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "lastStand", "parkingLot", "city", "machine", "military", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "space3", "summit", "portal", "blackHole", "doomsday", "+UserMap & TUTORIAL+"));
+ public static final List<String> maps = new ArrayList<>(Arrays.asList(D.basic, "lapsGlory", "derby", "gunpowder", "underOver", D.antigravity, "versus1", "versus2", "versus3", "trackless", "desert", "3DRace", "trip", "raceNowhere", "moonlight", "bottleneck", "railing", "twisted", "deathPit", "falls", "pyramid", "combustion", "darkDivide", "arctic", "scenicRoute", "winterMode", "mountainHop", "damage", "crystalCavern", "southPole", "aerialControl", "matrix", "mist", "vansLand", "dustDevil", "forest", "columns", "zipCross", "highlands", "coldFury", D.tornado, "volcanic", D.tsunami, D.boulder, "sands", D.meteor, "speedway", "submersion", "endurance", "tunnel", "circle", "circleXL", "circles", "methodMadness", "linear", "maze", "xy", "stairwell", "immense", "showdown", "ocean", "lastStand", "parkingLot", "city", "machine", "military", "underwater", "hell", "moon", "mars", "sun", "space1", "space2", "space3", "summit", "portal", "blackHole", "doomsday", "+UserMap & TUTORIAL+"));
  public static String name = "";
- public static boolean randomVehicleStartAngle, guardCheckpointAI;
+ public static boolean randomVehicleStartAngle, guardWaypointAI;
  public static double defaultVehicleLightBrightness;
  private static final String folder = "maps";
 
@@ -71,7 +70,6 @@ public enum Maps {
    UI.scene.setCursor(Cursor.WAIT);
   } else if (UI.status == UI.Status.mapLoadPass1) {
    Nodes.reset();
-   Arrow.addToScene();
    I.vehicles.clear();
    E.reset();
    TE.reset();
@@ -79,13 +77,13 @@ public enum Maps {
    Camera.PC.setFarClip(Camera.clipRange.maximumFar);
    UI.scene3D.setFill(U.getColor(0));
    defaultVehicleLightBrightness = 0;
-   randomVehicleStartAngle = guardCheckpointAI = false;
+   randomVehicleStartAngle = guardWaypointAI = false;
    AI.speedLimit = Double.POSITIVE_INFINITY;
   }
   int n;
   String s = "";
   try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(getMapFile(map)), U.standardChars))) {
-   for (; (s = BR.readLine()) != null; ) {
+   while ((s = BR.readLine()) != null) {
     s = s.trim();
     if (UI.status == UI.Status.mapLoadPass2) {
      name = s.startsWith(D.name) ? U.getString(s, 0) : name;
@@ -104,11 +102,8 @@ public enum Maps {
      } else if (s.startsWith("soundTravel(")) {
       E.soundMultiple = U.getValue(s, 0);
      } else if (s.startsWith("echo(")) {
-      Echo.presence = Math.round(U.getValue(s, 0));//<-The respective fields represent the same 'delay' property
+      Echo.presence = Math.round(U.getValue(s, 0));
       Sounds.echoVolume = Sounds.decibelToLinear(-Echo.presence * .05);
-      if (Sounds.softwareBased && I.vehiclesInMatch > 2) {
-       //TimerEcho.presence = 0;//<-No echo, as this is WAY too much for TinySound to handle!//<-todo-check--will probably need reinstating!
-      }
      }
      E.gravity = s.startsWith("gravity(") ? U.getValue(s, 0) : E.gravity;
      Sun.load(s);
@@ -122,7 +117,7 @@ public enum Maps {
      MapBounds.slowVehicles = s.startsWith("slowVehiclesWhenAtLimit") || MapBounds.slowVehicles;
      AI.speedLimit = s.startsWith("speedLimit(") ? U.getValue(s, 0) : AI.speedLimit;
      Ground.level = s.startsWith("noGround") ? Double.POSITIVE_INFINITY : Ground.level;
-     guardCheckpointAI = s.startsWith("guardCheckpoint") || guardCheckpointAI;
+     guardWaypointAI = s.startsWith("guardWaypoint") || guardWaypointAI;
      if (s.startsWith("snow(")) {
       for (n = 0; n < U.getValue(s, 0); n++) {
        Snow.instances.add(new Snow.Ball());
@@ -201,7 +196,7 @@ public enum Maps {
        }
       }
       long[] random = {Math.round(U.randomPlusMinus(TE.randomX)), Math.round(U.randomPlusMinus(TE.randomY)), Math.round(U.randomPlusMinus(TE.randomZ))};
-      if (model == TE.Models.checkpoint) {
+      if (model == TE.Models.waypoint) {
        long cornerDisplace = name.equals("Death Pit") ? 12000 : name.equals("Arctic Slip") ? 4500 : 0;
        random[0] += U.random() < .5 ? cornerDisplace : -cornerDisplace;
        random[2] += U.random() < .5 ? cornerDisplace : -cornerDisplace;
@@ -299,13 +294,13 @@ public enum Maps {
      TE.points.add(new Point());
      TE.points.get(TE.points.size() - 1).X = xRandom;
      TE.points.get(TE.points.size() - 1).Z = zRandom;
-     TE.points.get(TE.points.size() - 1).type = Point.Type.checkpoint;
-     TE.checkpoints.add(new Checkpoint());
-     TE.checkpoints.get(TE.checkpoints.size() - 1).X = xRandom;
-     TE.checkpoints.get(TE.checkpoints.size() - 1).Z = zRandom;
-     TE.checkpoints.get(TE.checkpoints.size() - 1).type = Checkpoint.Type.passAny;
-     TE.checkpoints.get(TE.checkpoints.size() - 1).location = TE.points.size() - 1;
-     TE.trackParts.get(TE.trackParts.size() - 1).checkpointNumber = TE.checkpoints.size() - 1;
+     TE.points.get(TE.points.size() - 1).type = Point.Type.waypoint;
+     TE.waypoints.add(new Waypoint());
+     TE.waypoints.get(TE.waypoints.size() - 1).X = xRandom;
+     TE.waypoints.get(TE.waypoints.size() - 1).Z = zRandom;
+     TE.waypoints.get(TE.waypoints.size() - 1).type = Waypoint.Type.passAny;
+     TE.waypoints.get(TE.waypoints.size() - 1).location = TE.points.size() - 1;
+     TE.trackParts.get(TE.trackParts.size() - 1).waypointNumber = TE.waypoints.size() - 1;
     }
    }
    if (Pool.type == Pool.Type.lava) {
@@ -374,9 +369,6 @@ public enum Maps {
   for (int n = Fog.spheres.size(); --n >= 0; ) {//<-Adding spheres in forward order doesn't layer fog correctly
    Nodes.add(Fog.spheres.get(n));
   }
-  for (var instance : Atmosphere.rings) {
-   //Nodes.add(instance);
-  }
   for (int n = Atmosphere.rings.size(); --n >= 0; ) {//<-Adding in forward order doesn't layer correctly
    Nodes.add(Atmosphere.rings.get(n));
   }
@@ -419,13 +411,16 @@ public enum Maps {
  }
 
  public static void runQuickSelect(boolean gamePlay) {
+  UI.scene.setCursor(Cursor.CROSSHAIR);
   if (Network.mode == Network.Mode.JOIN) {
    U.font(.03);
    U.text(UI.Please_Wait_For_ + UI.playerNames[0] + " to Select Map..", .5, .5);
   } else {
    String mapMaker;
    name = mapMaker = "";
-   map = Tournament.stage > 0 ? U.random(maps.size()) : map;
+   if (Tournament.stage > 0) {
+    map = U.random(maps.size());
+   }
    String s;
    try (BufferedReader BR = new BufferedReader(new InputStreamReader(Objects.requireNonNull(getMapFile(map)), U.standardChars))) {
     for (String s1; (s1 = BR.readLine()) != null; ) {
@@ -478,6 +473,7 @@ public enum Maps {
  }
 
  public static void runView(boolean gamePlay) {
+  UI.scene.setCursor(Cursor.CROSSHAIR);
   Camera.runAroundTrack();
   U.rotate(Camera.PC, Camera.YZ, -Camera.XZ);
   E.run(gamePlay);
@@ -494,12 +490,12 @@ public enum Maps {
   for (var mound : TE.mounds) {
    mound.runGraphics();
   }
-  UI.scene.setCursor(Cursor.CROSSHAIR);
   U.font(.015);
   U.fillRGB(Ground.RGB.invert());
   U.text(UI._LAST, .2, .75);
   U.text(UI.NEXT_, .8, .75);
-  U.text(UI.CONTINUE, .75);
+  U.font(.02);
+  U.text("GO", .75);
   U.font(.01);
   U.text(UI.notifyUserOfArrowKeyNavigation, .95);
   U.fillRGB(E.skyRGB.invert());
